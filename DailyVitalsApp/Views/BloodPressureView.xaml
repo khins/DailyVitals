@@ -30,6 +30,8 @@
         <ComboBox Grid.Row="0" Grid.Column="1"
                   Width="220"
                   Margin="0,5"
+                  ItemsSource="{Binding Persons}"
+                  DisplayMemberPath="FullName"
                   />
 
         <!-- Systolic -->
