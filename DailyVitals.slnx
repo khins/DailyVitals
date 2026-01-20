@@ -6,6 +6,6 @@
     <Project Path="DailyVitals.Domain/DailyVitals.Domain.csproj" />
   </Folder>
   <Folder Name="/Presentation/">
-    <Project Path="DailyVitalsApp/DailyVitalsApp.csproj" />
+    <Project Path="DailyVitalsApp/DailyVitals.App.csproj" />
   </Folder>
 </Solution>

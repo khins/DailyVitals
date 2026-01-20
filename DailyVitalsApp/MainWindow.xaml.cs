@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using DailyVitals.App.Views;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -9,7 +10,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace DailyVitalsApp
+namespace DailyVitals.App
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -19,6 +20,17 @@ namespace DailyVitalsApp
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        private void OpenBloodPressure_Click(object sender, RoutedEventArgs e)
+        {
+            var bpView = new BloodPressureView();
+            bpView.Show();
+        }
+
+        private void Exit_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
         }
     }
 }
