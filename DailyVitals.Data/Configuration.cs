@@ -24,7 +24,22 @@ namespace DailyVitals.Data.Configuration
         {
             using var conn = Create();
             conn.Open();
+
+            using var cmd = new NpgsqlCommand("SELECT 1", conn);
+            var result = cmd.ExecuteScalar();
+
+            if ((int)result != 1)
+                throw new Exception("Unexpected test query result");
+
+            using var cmd2 = new NpgsqlCommand(
+                    "SELECT COUNT(*) FROM person",
+                    conn
+);
+
+            var count = (long)cmd2.ExecuteScalar();
+
         }
+
 
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using DailyVitals.Data.Configuration;
+using Npgsql.Replication;
 
 namespace DailyVitalsApp
 {
@@ -22,6 +23,8 @@ namespace DailyVitalsApp
                     MessageBoxButton.OK,
                     MessageBoxImage.Information
                 );
+
+                DbConnectionFactory.TestConnection();
             }
             catch (Exception ex)
             {
