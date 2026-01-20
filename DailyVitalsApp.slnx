@@ -1,6 +1,11 @@
 <Solution>
-  <Folder Name="/DataAccess/" />
-  <Folder Name="/Domain/" />
-  <Folder Name="/Presentation/" />
-  <Project Path="DailyVitalsApp/DailyVitalsApp.csproj" />
+  <Folder Name="/DataAccess/">
+    <Project Path="DailyVitals.Data/DailyVitals.Data.csproj" />
+  </Folder>
+  <Folder Name="/Domain/">
+    <Project Path="DailyVitals.Domain/DailyVitals.Domain.csproj" />
+  </Folder>
+  <Folder Name="/Presentation/">
+    <Project Path="DailyVitals/DailyVitals.csproj" />
+  </Folder>
 </Solution>
