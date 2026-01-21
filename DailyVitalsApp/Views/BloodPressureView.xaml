@@ -31,6 +31,7 @@
                   Width="220"
                   Margin="0,5"
                   ItemsSource="{Binding Persons}"
+                  SelectedItem="{Binding SelectedPerson, Mode=TwoWay}"
                   DisplayMemberPath="FullName"
                   />
 
@@ -41,7 +42,8 @@
 
         <TextBox Grid.Row="1" Grid.Column="1"
                  Width="100"
-                 Margin="0,5"/>
+                 Margin="0,5"
+                 Text="{Binding Systolic, UpdateSourceTrigger=PropertyChanged}"/>
 
         <!-- Diastolic -->
         <TextBlock Grid.Row="2" Grid.Column="0"
@@ -50,7 +52,8 @@
 
         <TextBox Grid.Row="2" Grid.Column="1"
                  Width="100"
-                 Margin="0,5"/>
+                 Margin="0,5"
+                 Text="{Binding Diastolic, UpdateSourceTrigger=PropertyChanged}"/>
 
         <!-- Pulse -->
         <TextBlock Grid.Row="3" Grid.Column="0"
@@ -59,7 +62,8 @@
 
         <TextBox Grid.Row="3" Grid.Column="1"
                  Width="100"
-                 Margin="0,5"/>
+                 Margin="0,5"
+                 Text="{Binding Pulse, UpdateSourceTrigger=PropertyChanged}"/>
 
         <!-- Reading Time -->
         <TextBlock Grid.Row="4" Grid.Column="0"
@@ -80,7 +84,8 @@
                  Height="80"
                  TextWrapping="Wrap"
                  AcceptsReturn="True"
-                 Margin="0,5"/>
+                 Margin="0,5"
+                 Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"/>
 
         <!-- Buttons -->
         <StackPanel Grid.Row="6"
@@ -91,10 +96,13 @@
 
             <Button Content="Save"
                     Width="100"
-                    Margin="0,0,10,0"/>
+                    Margin="0,0,10,0"
+                    Click="Save_Click"
+                    IsEnabled="{Binding CanSave}"/>
 
             <Button Content="Cancel"
-                    Width="100"/>
+                    Width="100"
+                    Click="Cancel_Click"/>
         </StackPanel>
 
     </Grid>
