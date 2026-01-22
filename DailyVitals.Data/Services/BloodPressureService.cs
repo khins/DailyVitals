@@ -89,9 +89,7 @@ namespace DailyVitals.Data.Services
                         diastolic = @diastolic,
                         pulse = @pulse,
                         reading_time = @reading_time,
-                        notes = @notes,
-                        updated_at = NOW(),
-                        updated_by = @updated_by
+                        notes = @notes
                     WHERE bp_id = @bp_id;
                 ";
 
@@ -102,8 +100,7 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("pulse", pulse);
             cmd.Parameters.AddWithValue("reading_time", readingTime);
             cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("updated_by", updatedBy);
-
+            
             cmd.ExecuteNonQuery();
         }
 

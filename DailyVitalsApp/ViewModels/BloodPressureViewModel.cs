@@ -2,6 +2,8 @@
 using DailyVitals.Domain.Models;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+
+using System.Windows.Media;
 using System.Windows;
 using System.Windows.Input;
 
@@ -43,6 +45,8 @@ namespace DailyVitals.App.ViewModels
                 OnPropertyChanged(nameof(Systolic));
                 CommandManager.InvalidateRequerySuggested();
                 OnPropertyChanged(nameof(CanSave));
+                OnPropertyChanged(nameof(SeverityText));
+                OnPropertyChanged(nameof(SeverityBrush));
             }
         }
 
@@ -56,6 +60,8 @@ namespace DailyVitals.App.ViewModels
                 OnPropertyChanged(nameof(Diastolic));
                 CommandManager.InvalidateRequerySuggested();
                 OnPropertyChanged(nameof(CanSave));
+                OnPropertyChanged(nameof(SeverityText));
+                OnPropertyChanged(nameof(SeverityBrush));
             }
         }
         public string Pulse { get; set; }
@@ -115,7 +121,12 @@ namespace DailyVitals.App.ViewModels
 
             var systolic = Convert.ToInt32(Systolic);
             var diastolic = Convert.ToInt32(Diastolic);
-            var pulse = Convert.ToInt32(Pulse);
+            int pulse = 0; // default when blank
+            if (!string.IsNullOrWhiteSpace(Pulse))
+            {
+                if (!int.TryParse(Pulse, out pulse))
+                    throw new InvalidOperationException("Invalid pulse value.");
+            }
 
             if (systolic <= diastolic)
                 throw new InvalidOperationException("Systolic must be greater than diastolic.");
@@ -205,6 +216,9 @@ namespace DailyVitals.App.ViewModels
             var records = _bpService.GetHistoryForPerson(SelectedPerson.PersonId);
             foreach (var r in records)
                 History.Add(r);
+            OnPropertyChanged(nameof(SeverityText));
+            OnPropertyChanged(nameof(SeverityBrush));
+
         }
 
         private void LoadFromHistory()
@@ -223,6 +237,65 @@ namespace DailyVitals.App.ViewModels
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Pulse));
         }
+
+        public string SeverityText
+        {
+            get
+            {
+                if (!int.TryParse(Systolic, out var s) ||
+                    !int.TryParse(Diastolic, out var d))
+                    return string.Empty;
+
+                if (s < 120 && d < 80)
+                    return "Normal";
+
+                if (s < 130 && d < 80)
+                    return "Elevated";
+
+                return "High";
+            }
+        }
+
+        public Brush SeverityBrush
+        {
+            get
+            {
+                return SeverityText switch
+                {
+                    "Normal" => Brushes.LightGreen,
+                    "Elevated" => Brushes.Gold,
+                    "High" => Brushes.IndianRed,
+                    _ => Brushes.Transparent
+                };
+            }
+        }
+
+        public void BeginNewReading()
+        {
+            // 🔑 Exit edit mode
+            _currentBpId = null;
+
+            // 🔑 Clear selected history FIRST
+            SelectedHistory = null;
+
+            // 🔑 Clear input fields
+            Systolic = string.Empty;
+            Diastolic = string.Empty;
+            Pulse = string.Empty;
+
+            // 🔑 Reset reading time explicitly
+            ReadingTime = DateTime.Now;
+
+            // 🔑 Restore default note
+            Notes = "Morning reading, seated";
+
+            // 🔑 Clear severity indicator
+            OnPropertyChanged(nameof(SeverityText));
+            OnPropertyChanged(nameof(SeverityBrush));
+            OnPropertyChanged(nameof(Pulse));
+            OnPropertyChanged(nameof(ReadingTime));
+        }
+
 
 
         private void OnPropertyChanged(string name)

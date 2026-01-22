@@ -50,7 +50,7 @@ namespace DailyVitals.App.Views
 
         private void NewReading_Click(object sender, RoutedEventArgs e)
         {
-            _vm.ClearFields();
+            _vm.BeginNewReading();
         }
     }
 }
