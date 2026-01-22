@@ -138,6 +138,22 @@ namespace DailyVitals.Data.Services
             return list;
         }
 
+        public void DeleteBloodPressure(long bpId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            const string sql = @"
+                    DELETE FROM blood_pressure
+                    WHERE bp_id = @bp_id;
+                ";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("bp_id", bpId);
+
+            cmd.ExecuteNonQuery();
+        }
+
 
     }
 }

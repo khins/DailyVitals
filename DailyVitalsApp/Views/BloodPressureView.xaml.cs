@@ -52,5 +52,22 @@ namespace DailyVitals.App.Views
         {
             _vm.BeginNewReading();
         }
+
+        private void Delete_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_vm.CanDelete)
+                return;
+
+            var result = MessageBox.Show(
+                "Are you sure you want to delete this blood pressure reading?",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _vm.DeleteSelected();
+            }
+        }
     }
 }

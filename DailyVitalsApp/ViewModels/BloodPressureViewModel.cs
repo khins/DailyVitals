@@ -107,6 +107,8 @@ namespace DailyVitals.App.ViewModels
                 !string.IsNullOrWhiteSpace(Diastolic);
         }
 
+        public bool CanDelete => SelectedHistory != null;
+
 
         private void LoadPersons()
         {
@@ -202,6 +204,7 @@ namespace DailyVitals.App.ViewModels
             {
                 _selectedHistory = value;
                 OnPropertyChanged(nameof(SelectedHistory));
+                OnPropertyChanged(nameof(CanDelete));
                 LoadFromHistory();
             }
         }
@@ -294,6 +297,20 @@ namespace DailyVitals.App.ViewModels
             OnPropertyChanged(nameof(SeverityBrush));
             OnPropertyChanged(nameof(Pulse));
             OnPropertyChanged(nameof(ReadingTime));
+        }
+
+        public void DeleteSelected()
+        {
+            if (SelectedHistory == null)
+                return;
+
+            _bpService.DeleteBloodPressure(SelectedHistory.BloodPressureId);
+
+            // Refresh history
+            LoadHistory();
+
+            // Reset form to New Reading state
+            BeginNewReading();
         }
 
 
