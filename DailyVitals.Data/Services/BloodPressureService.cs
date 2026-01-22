@@ -1,7 +1,6 @@
-﻿using System;
-using System.Data;
+﻿using DailyVitals.Data.Configuration;
+using DailyVitals.Domain.Models;
 using Npgsql;
-using DailyVitals.Data.Configuration;
 
 namespace DailyVitals.Data.Services
 {
@@ -40,5 +39,108 @@ namespace DailyVitals.Data.Services
 
             return Convert.ToInt64(result);
         }
+
+        public BloodPressureReading GetLatestForPerson(long personId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            const string sql = @"
+                    SELECT bp_id, systolic, diastolic, pulse, reading_time, notes
+                    FROM blood_pressure
+                    WHERE person_id = @person_id
+                    ORDER BY reading_time DESC
+                    LIMIT 1;
+                ";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read())
+                return null;
+
+            return new BloodPressureReading
+            {
+                BloodPressureId = reader.GetInt64(0),
+                Systolic = reader.GetInt32(1),
+                Diastolic = reader.GetInt32(2),
+                Pulse = reader.GetInt32(3),
+                ReadingTime = reader.GetDateTime(4),
+                Notes = reader.IsDBNull(5) ? null : reader.GetString(5)
+            };
+        }
+
+        public void UpdateBloodPressure(
+                    long bpId,
+                    int systolic,
+                    int diastolic,
+                    int pulse,
+                    DateTime readingTime,
+                    string notes,
+                    string updatedBy)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            const string sql = @"
+                    UPDATE blood_pressure
+                    SET systolic = @systolic,
+                        diastolic = @diastolic,
+                        pulse = @pulse,
+                        reading_time = @reading_time,
+                        notes = @notes,
+                        updated_at = NOW(),
+                        updated_by = @updated_by
+                    WHERE bp_id = @bp_id;
+                ";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("bp_id", bpId);
+            cmd.Parameters.AddWithValue("systolic", systolic);
+            cmd.Parameters.AddWithValue("diastolic", diastolic);
+            cmd.Parameters.AddWithValue("pulse", pulse);
+            cmd.Parameters.AddWithValue("reading_time", readingTime);
+            cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("updated_by", updatedBy);
+
+            cmd.ExecuteNonQuery();
+        }
+
+        public List<BloodPressureReading> GetHistoryForPerson(long personId)
+        {
+            var list = new List<BloodPressureReading>();
+
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            const string sql = @"
+                    SELECT bp_id, systolic, diastolic, pulse, reading_time, notes
+                    FROM blood_pressure
+                    WHERE person_id = @person_id
+                    ORDER BY reading_time DESC;
+                ";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(new BloodPressureReading
+                {
+                    BloodPressureId = reader.GetInt64(0),
+                    Systolic = reader.GetInt32(1),
+                    Diastolic = reader.GetInt32(2),
+                    Pulse = reader.GetInt32(3),
+                    ReadingTime = reader.GetDateTime(4),
+                    Notes = reader.IsDBNull(5) ? null : reader.GetString(5)
+                });
+            }
+
+            return list;
+        }
+
+
     }
 }

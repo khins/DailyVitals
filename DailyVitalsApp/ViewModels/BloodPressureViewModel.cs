@@ -1,10 +1,9 @@
-﻿using System;
+﻿using DailyVitals.Data.Services;
+using DailyVitals.Domain.Models;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
-using DailyVitals.Domain.Models;
-using DailyVitals.Data.Services;
 
 
 namespace DailyVitals.App.ViewModels
@@ -13,6 +12,10 @@ namespace DailyVitals.App.ViewModels
     {
         private readonly PersonService _personService;
         private readonly BloodPressureService _bpService;
+
+        private long? _currentBpId;
+        public bool IsEditMode => _currentBpId.HasValue;
+
 
         public ObservableCollection<Person> Persons { get; }
 
@@ -24,6 +27,8 @@ namespace DailyVitals.App.ViewModels
             {
                 _selectedPerson = value;
                 OnPropertyChanged(nameof(SelectedPerson));
+                LoadLatestBloodPressure();
+                LoadHistory();
                 CommandManager.InvalidateRequerySuggested();
             }
         }
@@ -115,17 +120,109 @@ namespace DailyVitals.App.ViewModels
             if (systolic <= diastolic)
                 throw new InvalidOperationException("Systolic must be greater than diastolic.");
 
-            return _bpService.InsertBloodPressure(
-                SelectedPerson.PersonId,
-                Convert.ToInt32(systolic),
-                Convert.ToInt32(diastolic),
-                Convert.ToInt32(pulse),
-                ReadingTime,
-                Notes,
-                Environment.UserName
-            );
+
+            if (IsEditMode)
+            {
+                _bpService.UpdateBloodPressure(
+                    _currentBpId.Value,
+                    systolic,
+                    diastolic,
+                    pulse,
+                    ReadingTime,
+                    Notes,
+                    Environment.UserName
+                );
+
+                return _currentBpId.Value;
+            }
+            else
+            {
+                return _bpService.InsertBloodPressure(
+                    SelectedPerson.PersonId,
+                    systolic,
+                    diastolic,
+                    pulse,
+                    ReadingTime,
+                    Notes,
+                    Environment.UserName
+                );
+            }
         }
 
+        private void LoadLatestBloodPressure()
+        {
+            ClearFields();
+
+            if (SelectedPerson == null)
+                return;
+
+            var bp = _bpService.GetLatestForPerson(SelectedPerson.PersonId);
+
+            if (bp == null)
+                return;
+
+            _currentBpId = bp.BloodPressureId;
+
+            Systolic = bp.Systolic.ToString();
+            Diastolic = bp.Diastolic.ToString();
+            Pulse = bp.Pulse.ToString();
+            ReadingTime = bp.ReadingTime;
+            Notes = bp.Notes;
+        }
+
+        public void ClearFields()
+        {
+            _currentBpId = null;
+            Systolic = string.Empty;
+            Diastolic = string.Empty;
+            Pulse = string.Empty;
+            Notes = "Morning reading, seated";
+            ReadingTime = DateTime.Now;
+        }
+
+        public ObservableCollection<BloodPressureReading> History { get; }
+                 = new ObservableCollection<BloodPressureReading>();
+
+        private BloodPressureReading _selectedHistory;
+        public BloodPressureReading SelectedHistory
+        {
+            get => _selectedHistory;
+            set
+            {
+                _selectedHistory = value;
+                OnPropertyChanged(nameof(SelectedHistory));
+                LoadFromHistory();
+            }
+        }
+
+        private void LoadHistory()
+        {
+            History.Clear();
+
+            if (SelectedPerson == null)
+                return;
+
+            var records = _bpService.GetHistoryForPerson(SelectedPerson.PersonId);
+            foreach (var r in records)
+                History.Add(r);
+        }
+
+        private void LoadFromHistory()
+        {
+            if (SelectedHistory == null)
+                return;
+
+            _currentBpId = SelectedHistory.BloodPressureId;
+
+            Systolic = SelectedHistory.Systolic.ToString();
+            Diastolic = SelectedHistory.Diastolic.ToString();
+            Pulse = SelectedHistory.Pulse.ToString();
+            ReadingTime = SelectedHistory.ReadingTime;
+            Notes = SelectedHistory.Notes;
+
+            OnPropertyChanged(nameof(ReadingTime));
+            OnPropertyChanged(nameof(Pulse));
+        }
 
 
         private void OnPropertyChanged(string name)
