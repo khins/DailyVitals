@@ -221,7 +221,7 @@ namespace DailyVitals.App.ViewModels
                 History.Add(r);
             OnPropertyChanged(nameof(SeverityText));
             OnPropertyChanged(nameof(SeverityBrush));
-
+         
         }
 
         private void LoadFromHistory()
@@ -237,6 +237,7 @@ namespace DailyVitals.App.ViewModels
             ReadingTime = SelectedHistory.ReadingTime;
             Notes = SelectedHistory.Notes;
 
+            OnPropertyChanged(nameof(Notes));
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Pulse));
         }

@@ -32,5 +32,14 @@ namespace DailyVitals.App
         {
             Application.Current.Shutdown();
         }
+
+        private void OpenBloodGlucose_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new BloodGlucoseView
+            {
+                Owner = this
+            };
+            window.ShowDialog();
+        }
     }
 }
