@@ -131,6 +131,13 @@
                         Orientation="Horizontal">
 
                 <Button Width="100"
+            Height="32"
+            Margin="0,0,10,0"
+            Content="Delete"
+            Click="Delete_Click"
+            IsEnabled="{Binding CanDelete}"/>
+                
+                <Button Width="100"
                         Height="32"
                         Margin="0,0,10,0"
                         Content="Save"

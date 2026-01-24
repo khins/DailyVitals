@@ -19,20 +19,16 @@ namespace DailyVitals.Data.Services
             using var conn = DbConnectionFactory.Create();
             conn.Open();
 
-            const string sql = @"
-            INSERT INTO blood_glucose
-                (person_id, glucose_value, reading_time, notes )
-            VALUES
-                (@person_id, @glucose_value, @reading_time, @notes)
-            RETURNING glucose_id;
-        ";
+            using var cmd = new NpgsqlCommand(
+              "SELECT sp_insert_blood_glucose(@p_person_id, @p_glucose_value, @p_reading_time, @p_notes, @p_entered_by)",
+              conn);
 
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("person_id", personId);
-            cmd.Parameters.AddWithValue("glucose_value", glucose_value);
-            cmd.Parameters.AddWithValue("reading_time", readingTime);
-            cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
-        
+            cmd.Parameters.AddWithValue("p_person_id", personId);
+            cmd.Parameters.AddWithValue("p_glucose_value", glucose_value);
+            cmd.Parameters.AddWithValue("p_reading_time", readingTime);
+            cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_entered_by", enteredBy);
+
             return (long)cmd.ExecuteScalar();
         }
 
@@ -74,6 +70,22 @@ namespace DailyVitals.Data.Services
 
             return list;
         }
+
+        public void DeleteBloodGlucose(long glucoseId, string enteredBy)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            using var cmd = new NpgsqlCommand(
+                "SELECT sp_delete_blood_glucose(@p_glucose_id, @p_entered_by)",
+                conn);
+
+            cmd.Parameters.AddWithValue("p_glucose_id", glucoseId);
+            cmd.Parameters.AddWithValue("p_entered_by", enteredBy);
+
+            cmd.ExecuteNonQuery();
+        }
+
     }
 
 }

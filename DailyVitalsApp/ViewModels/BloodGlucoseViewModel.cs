@@ -36,7 +36,7 @@ namespace DailyVitals.App.ViewModels
             foreach (var r in _service.GetHistory(SelectedPerson.PersonId))
                 History.Add(r);
         }
-
+        public bool CanDelete => SelectedHistory != null;
 
         public ObservableCollection<BloodGlucoseReading> History { get; }
             = new();
@@ -81,6 +81,7 @@ namespace DailyVitals.App.ViewModels
             {
                 _selectedHistory = value;
                 OnPropertyChanged(nameof(SelectedHistory));
+                OnPropertyChanged(nameof(CanDelete));
                 LoadFromHistory();
             }
         }
@@ -125,6 +126,20 @@ namespace DailyVitals.App.ViewModels
                 Notes,
                 Environment.UserName);
         }
+
+        public void DeleteSelected()
+        {
+            if (SelectedHistory == null)
+                return;
+
+            _service.DeleteBloodGlucose(
+                SelectedHistory.GlucoseId,
+                Environment.UserName);
+
+            LoadHistoryForSelectedPerson();
+            BeginNew();
+        }
+
     }
 
 }

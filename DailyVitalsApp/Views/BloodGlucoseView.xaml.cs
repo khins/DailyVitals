@@ -71,5 +71,29 @@ namespace DailyVitals.App.Views
         {
             this.Close();
         }
+
+        private void Delete_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_vm.CanDelete)
+                return;
+
+            var result = MessageBox.Show(
+                "Are you sure you want to delete this blood glucose reading?",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _vm.DeleteSelected();
+
+                MessageBox.Show(
+                    "Blood glucose reading deleted.",
+                    "Deleted",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+
     }
 }
