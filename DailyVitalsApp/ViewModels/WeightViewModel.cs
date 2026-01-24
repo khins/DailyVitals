@@ -34,10 +34,22 @@ namespace DailyVitals.App.ViewModels
                 _selectedHistory = value;
                 OnPropertyChanged();
                 LoadFromHistory();
+                
             }
         }
 
-        public string WeightValue { get; set; }
+        private string _weightValue;
+        public string WeightValue
+        {
+            get => _weightValue;
+            set
+            {
+                _weightValue = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanSave));
+            }
+        }
+
         public string WeightUnit { get; set; } = "lb";
         public DateTime ReadingTime { get; set; } = DateTime.Now;
         public string Notes { get; set; } = "Morning weigh-in";
@@ -114,6 +126,20 @@ namespace DailyVitals.App.ViewModels
             LoadHistory();
             BeginNew();
         }
+
+        public void DeleteSelected()
+        {
+            if (SelectedHistory == null)
+                return;
+
+            _service.DeleteWeight(
+                SelectedHistory.WeightId,
+                Environment.UserName);
+
+            LoadHistory();
+            BeginNew();
+        }
+
     }
 
 }

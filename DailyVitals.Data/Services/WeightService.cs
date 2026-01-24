@@ -65,6 +65,22 @@ namespace DailyVitals.Data.Services
 
             return list;
         }
+
+        public void DeleteWeight(long weightId, string enteredBy)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            using var cmd = new NpgsqlCommand(
+                "SELECT sp_delete_weight(@p_weight_id, @p_entered_by)",
+                conn);
+
+            cmd.Parameters.AddWithValue("p_weight_id", weightId);
+            cmd.Parameters.AddWithValue("p_entered_by", enteredBy);
+
+            cmd.ExecuteNonQuery();
+        }
+
     }
 
 }

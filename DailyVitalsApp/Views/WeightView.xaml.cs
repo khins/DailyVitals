@@ -31,5 +31,24 @@ namespace DailyVitals.App.Views
         private void New_Click(object sender, RoutedEventArgs e) => _vm.BeginNew();
 
         private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
+
+        private void Delete_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm.SelectedHistory == null)
+                return;
+
+            var result = MessageBox.Show(
+                "Are you sure you want to delete this weight entry?",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _vm.DeleteSelected();
+                MessageBox.Show("Weight entry deleted.", "Deleted");
+            }
+        }
+
     }
 }
