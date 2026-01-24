@@ -41,5 +41,11 @@ namespace DailyVitals.App
             };
             window.ShowDialog();
         }
+
+        private void OpenWeight_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new WeightView { Owner = this };
+            window.ShowDialog();
+        }
     }
 }

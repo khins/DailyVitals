@@ -1,0 +1,137 @@
+﻿<Window x:Class="DailyVitals.App.Views.WeightView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Weight Entry"
+        Height="520"
+        Width="680"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="15">
+
+        <!-- MAIN ROWS -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Person -->
+            <RowDefinition Height="200"/>
+            <!-- History -->
+            <RowDefinition Height="Auto"/>
+            <!-- Entry -->
+            <RowDefinition Height="Auto"/>
+            <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- PERSON SELECTOR -->
+        <ComboBox Grid.Row="0"
+                  Width="260"
+                  ItemsSource="{Binding Persons}"
+                  SelectedItem="{Binding SelectedPerson}"
+                  DisplayMemberPath="FullName"/>
+
+        <!-- HISTORY GRID -->
+        <DataGrid Grid.Row="1"
+                  Margin="0,10,0,0"
+                  ItemsSource="{Binding History}"
+                  SelectedItem="{Binding SelectedHistory}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True">
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Date"
+                                    Width="140"
+                                    Binding="{Binding ReadingTime, StringFormat=d}"/>
+
+                <DataGridTextColumn Header="Weight"
+                                    Width="100"
+                                    Binding="{Binding WeightValue}"/>
+
+                <DataGridTextColumn Header="Unit"
+                                    Width="60"
+                                    Binding="{Binding WeightUnit}"/>
+
+                <DataGridTextColumn Header="Notes"
+                                    Width="*"
+                                    Binding="{Binding Notes}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- ENTRY FORM -->
+        <Grid Grid.Row="2" Margin="0,15,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- WEIGHT -->
+            <TextBlock Grid.Row="0"
+                       Text="Weight:"
+                       VerticalAlignment="Center"/>
+
+            <TextBox Grid.Row="0"
+                     Grid.Column="1"
+                     Width="120"
+                     Text="{Binding WeightValue, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <!-- READING TIME -->
+            <TextBlock Grid.Row="1"
+                       Text="Reading Time:"
+                       VerticalAlignment="Center"/>
+
+            <DatePicker Grid.Row="1"
+                        Grid.Column="1"
+                        Width="160"
+                        SelectedDate="{Binding ReadingTime}"/>
+
+            <!-- NOTES -->
+            <TextBlock Grid.Row="2"
+                       Text="Notes:"
+                       VerticalAlignment="Top"/>
+
+            <TextBox Grid.Row="2"
+                     Grid.Column="1"
+                     Height="70"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     Text="{Binding Notes}"/>
+        </Grid>
+
+        <!-- BUTTON BAR -->
+        <Grid Grid.Row="3" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- NEW (FAR LEFT) -->
+            <Button Grid.Column="0"
+                    Width="100"
+                    Height="32"
+                    Content="New"
+                    Click="New_Click"/>
+
+            <!-- SAVE / CANCEL (RIGHT) -->
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal">
+
+                <Button Width="100"
+                        Height="32"
+                        Margin="0,0,10,0"
+                        Content="Save"
+                        IsEnabled="{Binding CanSave}"
+                        Click="Save_Click"/>
+
+                <Button Width="100"
+                        Height="32"
+                        Content="Cancel"
+                        Click="Cancel_Click"/>
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+</Window>
