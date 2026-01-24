@@ -9,6 +9,9 @@ namespace DailyVitals.App.ViewModels
     {
         private readonly WeightService _service = new();
         private readonly PersonService _personService = new();
+        public bool IsEditMode => SelectedHistory != null;
+        public bool CanUpdate => IsEditMode && CanSave;
+
 
         public ObservableCollection<Person> Persons { get; } = new();
         public ObservableCollection<WeightReading> History { get; } = new();
@@ -115,13 +118,26 @@ namespace DailyVitals.App.ViewModels
             if (!decimal.TryParse(WeightValue, out var weight))
                 throw new InvalidOperationException("Invalid weight value.");
 
-            _service.InsertWeight(
-                SelectedPerson.PersonId,
-                weight,
-                WeightUnit,
-                ReadingTime,
-                Notes,
-                Environment.UserName);
+            if (IsEditMode)
+            {
+                _service.UpdateWeight(
+                    SelectedHistory.WeightId,
+                    weight,
+                    WeightUnit,
+                    ReadingTime,
+                    Notes,
+                    Environment.UserName);
+            }
+            else
+            {
+                _service.InsertWeight(
+                    SelectedPerson.PersonId,
+                    weight,
+                    WeightUnit,
+                    ReadingTime,
+                    Notes,
+                    Environment.UserName);
+            }
 
             LoadHistory();
             BeginNew();

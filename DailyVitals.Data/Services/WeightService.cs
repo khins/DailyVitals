@@ -81,6 +81,31 @@ namespace DailyVitals.Data.Services
             cmd.ExecuteNonQuery();
         }
 
+        public void UpdateWeight(
+                long weightId,
+                decimal weightValue,
+                string weightUnit,
+                DateTime readingTime,
+                string notes,
+                string enteredBy)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            using var cmd = new NpgsqlCommand(
+                "SELECT sp_update_weight(@id,@val,@unit,@time,@notes,@by)", conn);
+
+            cmd.Parameters.AddWithValue("id", weightId);
+            cmd.Parameters.AddWithValue("val", weightValue);
+            cmd.Parameters.AddWithValue("unit", weightUnit);
+            cmd.Parameters.AddWithValue("time", readingTime);
+            cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("by", enteredBy);
+
+            cmd.ExecuteNonQuery();
+        }
+
+
     }
 
 }
