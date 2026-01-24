@@ -41,7 +41,7 @@ namespace DailyVitals.Data.Services
             conn.Open();
 
             const string sql = @"
-            SELECT weight_id, weight_value, weight_unit, reading_time, notes
+            SELECT weight_id, weight_value, weight_unit, reading_time, notes, height_ft
             FROM weight
             WHERE person_id = @person_id
             ORDER BY reading_time DESC;
@@ -59,9 +59,11 @@ namespace DailyVitals.Data.Services
                     WeightValue = reader.GetDecimal(1),
                     WeightUnit = reader.GetString(2),
                     ReadingTime = reader.GetDateTime(3),
-                    Notes = reader.IsDBNull(4) ? null : reader.GetString(4)
+                    Notes = reader.IsDBNull(4) ? null : reader.GetString(4),
+                    HeightFt = reader.IsDBNull(5) ? null : reader.GetDecimal(5)
                 });
             }
+
 
             return list;
         }

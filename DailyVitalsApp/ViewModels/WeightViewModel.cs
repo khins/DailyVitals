@@ -2,6 +2,9 @@
 using System.Collections.ObjectModel;
 using DailyVitals.Data.Services;
 using DailyVitals.Domain.Models;
+using DailyVitals.Domain.Models.Calculations;
+using System.Windows.Media;
+
 
 namespace DailyVitals.App.ViewModels
 {
@@ -28,6 +31,37 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
+        public string BMICategory
+        {
+            get
+            {
+                if (BMI == null) return string.Empty;
+
+                var bmi = BMI.Value;
+
+                if (bmi < 18.5m) return "Underweight";
+                if (bmi < 25.0m) return "Normal";
+                if (bmi < 30.0m) return "Overweight";
+                return "Obese";
+            }
+        }
+
+        public Brush BMIBrush
+        {
+            get
+            {
+                if (BMI == null) return Brushes.Transparent;
+
+                var bmi = BMI.Value;
+
+                if (bmi < 18.5m) return Brushes.LightBlue;
+                if (bmi < 25.0m) return Brushes.LightGreen;
+                if (bmi < 30.0m) return Brushes.Khaki;
+                return Brushes.IndianRed;
+            }
+        }
+
+
         private WeightReading _selectedHistory;
         public WeightReading SelectedHistory
         {
@@ -50,6 +84,9 @@ namespace DailyVitals.App.ViewModels
                 _weightValue = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanSave));
+                OnPropertyChanged(nameof(BMICategory));
+                OnPropertyChanged(nameof(BMIBrush));
+                OnPropertyChanged(nameof(BMI));
             }
         }
 
@@ -89,11 +126,13 @@ namespace DailyVitals.App.ViewModels
             WeightUnit = SelectedHistory.WeightUnit;
             ReadingTime = SelectedHistory.ReadingTime;
             Notes = SelectedHistory.Notes;
+            HeightFt = SelectedHistory.HeightFt?.ToString("0.##");
 
             OnPropertyChanged(nameof(WeightValue));
             OnPropertyChanged(nameof(WeightUnit));
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Notes));
+            OnPropertyChanged(nameof(HeightFt));
         }
 
         public void BeginNew()
@@ -155,6 +194,32 @@ namespace DailyVitals.App.ViewModels
             LoadHistory();
             BeginNew();
         }
+
+        private string _heightFt;
+        public string HeightFt
+        {
+            get => _heightFt;
+            set
+            {
+                _heightFt = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(BMI));
+                OnPropertyChanged(nameof(BMICategory));
+                OnPropertyChanged(nameof(BMIBrush));
+            }
+        }
+
+        public decimal? BMI
+        {
+            get
+            {
+                if (!decimal.TryParse(WeightValue, out var w)) return null;
+                if (!decimal.TryParse(HeightFt, out var h)) return null;
+
+                return HealthMetrics.CalculateBMI(w, h);
+            }
+        }
+
 
     }
 
