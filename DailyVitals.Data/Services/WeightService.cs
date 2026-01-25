@@ -145,6 +145,39 @@ namespace DailyVitals.Data.Services
             };
         }
 
+        public List<TrendPoint> GetWeightTrend(long personId, int maxPoints = 10)
+        {
+            var list = new List<TrendPoint>();
+
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            const string sql = @"
+                    SELECT reading_time, weight_value
+                    FROM weight
+                    WHERE person_id = @person_id
+                    ORDER BY reading_time DESC
+                    LIMIT @limit;
+                ";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("limit", maxPoints);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(new TrendPoint
+                {
+                    Date = reader.GetDateTime(0),
+                    Value = reader.GetDecimal(1)
+                });
+            }
+
+            // Reverse so chart draws left → right chronologically
+            list.Reverse();
+            return list;
+        }
 
 
     }

@@ -1,4 +1,6 @@
-﻿using DailyVitals.Data.Services;
+﻿using System.Windows;
+using System.Windows.Media;
+using DailyVitals.Data.Services;
 using DailyVitals.Domain.Models;
 using DailyVitals.Domain.Models.Calculations;
 using System;
@@ -16,6 +18,7 @@ namespace DailyVitals.App.ViewModels
         private readonly WeightService _weightService = new();
 
         public ObservableCollection<Person> Persons { get; } = new();
+        public ObservableCollection<Point> WeightTrendPoints { get; } = new();
 
         private Person _selectedPerson;
         public Person SelectedPerson
@@ -64,7 +67,52 @@ namespace DailyVitals.App.ViewModels
             OnPropertyChanged(nameof(LatestGlucose));
             OnPropertyChanged(nameof(LatestWeight));
             OnPropertyChanged(nameof(BMI));
+            OnPropertyChanged(nameof(BMIBrush));
         }
+        public Brush BMIBrush
+        {
+            get
+            {
+                if (LatestWeight?.HeightFt == null)
+                    return Brushes.Transparent;
+
+                var bmi = HealthMetrics.CalculateBMI(
+                    LatestWeight.WeightValue,
+                    LatestWeight.HeightFt.Value);
+
+                if (bmi < 18.5m) return Brushes.LightBlue;
+                if (bmi < 25.0m) return Brushes.LightGreen;
+                if (bmi < 30.0m) return Brushes.Khaki;
+                return Brushes.IndianRed;
+            }
+        }
+
+
+        private void BuildWeightTrend(IEnumerable<TrendPoint> trend)
+        {
+            WeightTrendPoints.Clear();
+
+            var values = trend.Select(t => (double)t.Value).ToList();
+            if (values.Count < 2)
+                return;
+
+            double min = values.Min();
+            double max = values.Max();
+            double range = Math.Max(max - min, 1); // avoid divide-by-zero
+
+            double width = 120;
+            double height = 30;
+
+            for (int i = 0; i < values.Count; i++)
+            {
+                double x = i * (width / (values.Count - 1));
+                double y = height - ((values[i] - min) / range * height);
+                WeightTrendPoints.Add(new Point(x, y));
+            }
+        }
+
+
+
     }
 
 }

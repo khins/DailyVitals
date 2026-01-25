@@ -28,5 +28,21 @@ namespace DailyVitals.App.Views
         {
             Close();
         }
+
+        private void WeightCard_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is not VitalsDashboardViewModel vm ||
+                vm.SelectedPerson == null)
+                return;
+
+            var window = new WeightTrendView(
+                vm.SelectedPerson.PersonId,
+                vm.SelectedPerson.FullName)
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+        }
     }
 }

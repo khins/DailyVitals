@@ -2,67 +2,113 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Vitals Dashboard"
-        Height="500"
-        Width="720"
-        WindowStartupLocation="CenterOwner">
+        Height="520"
+        Width="760"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
 
     <Grid Margin="15">
+
+        <!-- ROWS -->
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <!-- Person -->
             <RowDefinition Height="*"/>
+            <!-- Cards -->
             <RowDefinition Height="Auto"/>
+            <!-- Close -->
         </Grid.RowDefinitions>
 
         <!-- PERSON SELECT -->
-        <ComboBox Width="260"
+        <ComboBox Grid.Row="0"
+                  Width="260"
                   ItemsSource="{Binding Persons}"
                   SelectedItem="{Binding SelectedPerson}"
                   DisplayMemberPath="FullName"/>
 
-        <!-- VITALS PANELS -->
+        <!-- DASHBOARD CARDS -->
         <UniformGrid Grid.Row="1"
                      Columns="3"
-                     Margin="0,15,0,0">
+                     Margin="0,16,0,0">
 
-            <!-- BLOOD PRESSURE -->
+            <!-- BLOOD PRESSURE CARD -->
             <Border Margin="8"
-                    Padding="10"
+                    Padding="12"
                     CornerRadius="6"
                     BorderBrush="Gray"
                     BorderThickness="1"
                     Background="{Binding LatestBP.SeverityBrush}">
+
                 <StackPanel>
-                    <TextBlock Text="Blood Pressure" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding LatestBP.DisplayValue}"/>
-                    <TextBlock Text="{Binding LatestBP.ReadingTime, StringFormat=d}"/>
+                    <TextBlock Text="Blood Pressure"
+                               FontWeight="Bold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Text="{Binding LatestBP.DisplayValue}"
+                               FontSize="16"
+                               FontWeight="SemiBold"/>
+
+                    <TextBlock Text="{Binding LatestBP.ReadingTime, StringFormat=d}"
+                               FontSize="12"
+                               Foreground="DimGray"/>
                 </StackPanel>
             </Border>
 
-            <!-- GLUCOSE -->
+            <!-- BLOOD GLUCOSE CARD -->
             <Border Margin="8"
-                    Padding="10"
+                    Padding="12"
                     CornerRadius="6"
                     BorderBrush="Gray"
                     BorderThickness="1"
                     Background="{Binding LatestGlucose.SeverityBrush}">
+
                 <StackPanel>
-                    <TextBlock Text="Blood Glucose" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding LatestGlucose.GlucoseValue}"/>
-                    <TextBlock Text="{Binding LatestGlucose.ReadingTime, StringFormat=d}"/>
+                    <TextBlock Text="Blood Glucose"
+                               FontWeight="Bold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Text="{Binding LatestGlucose.GlucoseValue}"
+                               FontSize="16"
+                               FontWeight="SemiBold"/>
+
+                    <TextBlock Text="{Binding LatestGlucose.ReadingTime, StringFormat=d}"
+                               FontSize="12"
+                               Foreground="DimGray"/>
                 </StackPanel>
             </Border>
 
-            <!-- WEIGHT / BMI -->
+            <!-- WEIGHT / BMI CARD WITH MINI TREND -->
             <Border Margin="8"
-                    Padding="10"
+                    Padding="12"
                     CornerRadius="6"
                     BorderBrush="Gray"
                     BorderThickness="1"
-                    Background="{Binding BMIBrush}">
+                    Background="{Binding BMIBrush}"
+                    Cursor="Hand"
+                    MouseLeftButtonUp="WeightCard_Click">
+
                 <StackPanel>
-                    <TextBlock Text="Weight / BMI" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding LatestWeight.WeightValue}"/>
-                    <TextBlock Text="{Binding BMI, StringFormat=F1}"/>
+                    <TextBlock Text="Weight / BMI"
+                               FontWeight="Bold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Text="{Binding LatestWeight.WeightValue}"
+                               FontSize="16"
+                               FontWeight="SemiBold"/>
+
+                    <TextBlock Text="{Binding BMI, StringFormat=BMI: {0:F1}}"
+                               FontSize="13"
+                               Margin="0,2,0,6"/>
+
+                    <!-- MINI TREND CHART -->
+                    <Canvas Width="140"
+                            Height="34"
+                            Margin="0,6,0,0">
+
+                        <Polyline Stroke="Black"
+                                  StrokeThickness="2"
+                                  Points="{Binding WeightTrendPoints}"/>
+                    </Canvas>
                 </StackPanel>
             </Border>
 
@@ -70,12 +116,12 @@
 
         <!-- CLOSE BUTTON -->
         <Button Grid.Row="2"
-        Content="Close"
-        Width="90"
-        Height="32"
-        HorizontalAlignment="Right"
-        Margin="0,12,0,0"
-        Click="Close_Click"/>
+                Content="Close"
+                Width="90"
+                Height="32"
+                HorizontalAlignment="Right"
+                Margin="0,14,0,0"
+                Click="Close_Click"/>
 
     </Grid>
 </Window>
