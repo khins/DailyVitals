@@ -68,6 +68,9 @@ namespace DailyVitals.App.ViewModels
             OnPropertyChanged(nameof(LatestWeight));
             OnPropertyChanged(nameof(BMI));
             OnPropertyChanged(nameof(BMIBrush));
+            OnPropertyChanged(nameof(WeightTrendArrow));
+            OnPropertyChanged(nameof(WeightTrendBrush));
+
         }
         public Brush BMIBrush
         {
@@ -111,7 +114,47 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
+        public string WeightTrendArrow
+        {
+            get
+            {
+                if (LatestWeight == null)
+                    return string.Empty;
 
+                var trend = _weightService.GetWeightTrend(
+                    SelectedPerson.PersonId, 2);
+
+                if (trend.Count < 2)
+                    return "→";
+
+                var delta = trend.Last().Value - trend.First().Value;
+
+                if (delta > 0) return "↑";
+                if (delta < 0) return "↓";
+                return "→";
+            }
+        }
+
+        public Brush WeightTrendBrush
+        {
+            get
+            {
+                if (LatestWeight == null)
+                    return Brushes.Gray;
+
+                var trend = _weightService.GetWeightTrend(
+                    SelectedPerson.PersonId, 2);
+
+                if (trend.Count < 2)
+                    return Brushes.Gray;
+
+                var delta = trend.Last().Value - trend.First().Value;
+
+                if (delta > 0) return Brushes.IndianRed;
+                if (delta < 0) return Brushes.ForestGreen;
+                return Brushes.Gray;
+            }
+        }
 
     }
 
