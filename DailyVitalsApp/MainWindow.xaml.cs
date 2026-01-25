@@ -53,5 +53,11 @@ namespace DailyVitals.App
             var window = new VitalsDashboardView { Owner = this };
             window.ShowDialog();
         }
+
+        private void OpenMedicationEntry_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new MedicationEntryView { Owner = this };
+            window.ShowDialog();
+        }
     }
 }
