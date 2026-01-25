@@ -86,6 +86,40 @@ namespace DailyVitals.Data.Services
             cmd.ExecuteNonQuery();
         }
 
+        public BloodGlucoseReading? GetLatestForPerson(long personId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            const string sql = @"
+                    SELECT glucose_id,
+                           glucose_value,
+                           reading_time,
+                           notes
+                    FROM blood_glucose
+                    WHERE person_id = @person_id
+                    ORDER BY reading_time DESC
+                    LIMIT 1;
+                ";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+
+            using var reader = cmd.ExecuteReader();
+
+            if (!reader.Read())
+                return null;
+
+            return new BloodGlucoseReading
+            {
+                GlucoseId = reader.GetInt64(0),
+                GlucoseValue = reader.GetInt32(1),
+                ReadingTime = reader.GetDateTime(2),
+                Notes = reader.IsDBNull(3) ? null : reader.GetString(3)
+            };
+        }
+
+
     }
 
 }

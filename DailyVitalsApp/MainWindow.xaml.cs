@@ -47,5 +47,11 @@ namespace DailyVitals.App
             var window = new WeightView { Owner = this };
             window.ShowDialog();
         }
+
+        private void OpenDashboard_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new VitalsDashboardView { Owner = this };
+            window.ShowDialog();
+        }
     }
 }

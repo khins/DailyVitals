@@ -107,6 +107,45 @@ namespace DailyVitals.Data.Services
             cmd.ExecuteNonQuery();
         }
 
+        public WeightReading? GetLatestForPerson(long personId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            const string sql = @"
+                    SELECT
+                        weight_id,
+                        weight_value,
+                        weight_unit,
+                        height_ft,
+                        reading_time,
+                        notes
+                    FROM weight
+                    WHERE person_id = @person_id
+                    ORDER BY reading_time DESC
+                    LIMIT 1;
+                ";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+
+            using var reader = cmd.ExecuteReader();
+
+            if (!reader.Read())
+                return null;
+
+            return new WeightReading
+            {
+                WeightId = reader.GetInt64(0),
+                WeightValue = reader.GetDecimal(1),
+                WeightUnit = reader.GetString(2),
+                HeightFt = reader.IsDBNull(3) ? null : reader.GetDecimal(3),
+                ReadingTime = reader.GetDateTime(4),
+                Notes = reader.IsDBNull(5) ? null : reader.GetString(5)
+            };
+        }
+
+
 
     }
 
