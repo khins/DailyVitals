@@ -1,0 +1,60 @@
+﻿<Window x:Class="DailyVitals.App.Views.MedicationListView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Medications"
+        Height="450"
+        Width="800"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Person -->
+        <ComboBox ItemsSource="{Binding Persons}"
+                  SelectedItem="{Binding SelectedPerson}"
+                  DisplayMemberPath="FullName"
+                  Width="250"/>
+
+        <!-- Medication Grid -->
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding Medications}"
+                  SelectedItem="{Binding SelectedMedication}"
+                  AutoGenerateColumns="False"
+                  Margin="0,10,0,10">
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Medication" Binding="{Binding MedicationName}"/>
+                <DataGridTextColumn Header="Dosage (mg)" Binding="{Binding DosageMg}"/>
+                <DataGridTextColumn Header="Form" Binding="{Binding DosageForm}"/>
+                <DataGridCheckBoxColumn Header="Morning" Binding="{Binding TakeMorning}"/>
+                <DataGridCheckBoxColumn Header="Noon" Binding="{Binding TakeNoon}"/>
+                <DataGridCheckBoxColumn Header="Evening" Binding="{Binding TakeEvening}"/>
+                <DataGridCheckBoxColumn Header="Bedtime" Binding="{Binding TakeBedtime}"/>
+                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="Deactivate"
+                    Width="100"
+                    Margin="0,0,10,0"
+                    Click="Deactivate_Click"/>
+            <Button Content="Close"
+                    Width="80"
+                    Margin="0,0,10,0"
+                    Click="Close_Click"/>
+            <Button Content="Edit"
+                    Width="80"
+                    Margin="0,0,10,0"
+                    Click="Edit_Click"/>
+
+        </StackPanel>
+    </Grid>
+</Window>

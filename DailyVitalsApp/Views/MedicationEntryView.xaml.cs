@@ -1,4 +1,5 @@
 ﻿using DailyVitals.App.ViewModels;
+using DailyVitals.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -18,11 +19,22 @@ namespace DailyVitals.App.Views
     /// </summary>
     public partial class MedicationEntryView : Window
     {
+        public MedicationEntryView(Medication medication)
+        {
+            InitializeComponent();
+            DataContext = new MedicationViewModel(medication);
+            Title = "Edit Medication";
+        }
+
+        // ✅ Add mode
         public MedicationEntryView()
         {
             InitializeComponent();
             DataContext = new MedicationViewModel();
+            Title = "Add Medication";
         }
+
+
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
@@ -30,6 +42,7 @@ namespace DailyVitals.App.Views
             {
                 ((MedicationViewModel)DataContext).Save();
                 MessageBox.Show("Medication saved.");
+                Close();
             }
             catch (Exception ex)
             {
