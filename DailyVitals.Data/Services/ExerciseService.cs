@@ -131,7 +131,8 @@ namespace DailyVitals.Data.Services
                         SELECT COALESCE(SUM(duration_minutes), 0)
                         FROM exercise_session
                         WHERE person_id = @person_id
-                          AND start_time >= date_trunc('week', CURRENT_DATE);
+                          AND start_time >= date_trunc('week', CURRENT_DATE) - INTERVAL '7 days'
+                          AND start_time <  date_trunc('week', CURRENT_DATE);
                     ";
 
                 using var cmd = new NpgsqlCommand(sql, conn);
@@ -139,6 +140,25 @@ namespace DailyVitals.Data.Services
 
                 return Convert.ToInt32(cmd.ExecuteScalar());
             }
+
+            //GetLastWeekTotalMinutes
+            public int GetLastWeekTotalMinutes(long personId)
+            {
+                using var conn = DbConnectionFactory.Create();
+                conn.Open();
+
+                using var cmd = new NpgsqlCommand(@"
+                        SELECT COALESCE(SUM(duration_minutes), 0)
+                        FROM exercise_session
+                        WHERE person_id = @person_id
+                          AND start_time >= date_trunc('week', CURRENT_TIMESTAMP);
+                    ", conn);
+
+                cmd.Parameters.AddWithValue("person_id", personId);
+
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+
         }
     }
 

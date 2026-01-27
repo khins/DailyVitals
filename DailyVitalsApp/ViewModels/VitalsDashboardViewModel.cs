@@ -34,6 +34,31 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
+        public string ExerciseTrendArrow =>
+                        WeeklyExerciseMinutes > LastWeekExerciseMinutes ? "▲" :
+                        WeeklyExerciseMinutes < LastWeekExerciseMinutes ? "▼" :
+                        "▶";
+
+        public Brush ExerciseTrendBrush =>
+                    WeeklyExerciseMinutes > LastWeekExerciseMinutes ? Brushes.Green :
+                    WeeklyExerciseMinutes < LastWeekExerciseMinutes ? Brushes.Red :
+                    Brushes.Gray;
+
+        private int _lastWeekExerciseMinutes;
+        public int LastWeekExerciseMinutes
+        {
+            get => _lastWeekExerciseMinutes;
+            set
+            {
+                if (_lastWeekExerciseMinutes != value)
+                {
+                    _lastWeekExerciseMinutes = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+
         public BloodPressureReading LatestBP { get; private set; }
         public BloodGlucoseReading LatestGlucose { get; private set; }
         public WeightReading LatestWeight { get; private set; }
@@ -68,12 +93,20 @@ namespace DailyVitals.App.ViewModels
             WeeklyExerciseMinutes = _exerciseService
                     .GetWeeklyTotalMinutes(SelectedPerson.PersonId);
 
+            WeeklyExerciseMinutes =
+                    _exerciseService.GetWeeklyTotalMinutes(SelectedPerson.PersonId);
+
+            LastWeekExerciseMinutes =
+                _exerciseService.GetLastWeekTotalMinutes(SelectedPerson.PersonId);
+
+            OnPropertyChanged(nameof(WeeklyExerciseMinutes));
             OnPropertyChanged(nameof(LatestBP));
             OnPropertyChanged(nameof(LatestGlucose));
             OnPropertyChanged(nameof(LatestWeight));
             OnPropertyChanged(nameof(BMI));
             OnPropertyChanged(nameof(BMIBrush));
             OnPropertyChanged(nameof(WeightTrendArrow));
+            OnPropertyChanged(nameof(WeightTrendBrush));
             OnPropertyChanged(nameof(WeightTrendBrush));
 
         }
