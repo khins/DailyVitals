@@ -1,12 +1,13 @@
-﻿using System.Windows;
-using System.Windows.Media;
-using DailyVitals.Data.Services;
+﻿using DailyVitals.Data.Services;
+using DailyVitals.Data.Services.DailyVitals.App.Services;
 using DailyVitals.Domain.Models;
 using DailyVitals.Domain.Models.Calculations;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
+using System.Windows;
+using System.Windows.Media;
 
 namespace DailyVitals.App.ViewModels
 {
@@ -16,6 +17,7 @@ namespace DailyVitals.App.ViewModels
         private readonly BloodPressureService _bpService = new();
         private readonly BloodGlucoseService _bgService = new();
         private readonly WeightService _weightService = new();
+        private readonly ExerciseService _exerciseService = new();
 
         public ObservableCollection<Person> Persons { get; } = new();
         public ObservableCollection<Point> WeightTrendPoints { get; } = new();
@@ -63,6 +65,9 @@ namespace DailyVitals.App.ViewModels
             LatestGlucose = _bgService.GetLatestForPerson(SelectedPerson.PersonId);
             LatestWeight = _weightService.GetLatestForPerson(SelectedPerson.PersonId);
 
+            WeeklyExerciseMinutes = _exerciseService
+                    .GetWeeklyTotalMinutes(SelectedPerson.PersonId);
+
             OnPropertyChanged(nameof(LatestBP));
             OnPropertyChanged(nameof(LatestGlucose));
             OnPropertyChanged(nameof(LatestWeight));
@@ -89,7 +94,6 @@ namespace DailyVitals.App.ViewModels
                 return Brushes.IndianRed;
             }
         }
-
 
         private void BuildWeightTrend(IEnumerable<TrendPoint> trend)
         {
@@ -155,6 +159,18 @@ namespace DailyVitals.App.ViewModels
                 return Brushes.Gray;
             }
         }
+
+        private int _weeklyExerciseMinutes;
+        public int WeeklyExerciseMinutes
+        {
+            get => _weeklyExerciseMinutes;
+            set
+            {
+                _weeklyExerciseMinutes = value;
+                OnPropertyChanged();
+            }
+        }
+
 
     }
 

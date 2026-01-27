@@ -122,6 +122,23 @@ namespace DailyVitals.Data.Services
                 cmd.ExecuteNonQuery();
             }
 
+            public int GetWeeklyTotalMinutes(long personId)
+            {
+                using var conn = DbConnectionFactory.Create();
+                conn.Open();
+
+                const string sql = @"
+                        SELECT COALESCE(SUM(duration_minutes), 0)
+                        FROM exercise_session
+                        WHERE person_id = @person_id
+                          AND start_time >= date_trunc('week', CURRENT_DATE);
+                    ";
+
+                using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("person_id", personId);
+
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
         }
     }
 

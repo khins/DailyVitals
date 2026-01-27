@@ -117,6 +117,32 @@
                 </StackPanel>
             </Border>
 
+            <Border
+    CornerRadius="8"
+    Padding="12"
+    Background="#E8F5E9"
+    Margin="10">
+
+                <StackPanel>
+                    <TextBlock
+            Text="Exercise This Week"
+            FontWeight="Bold"
+            FontSize="14"/>
+
+                    <TextBlock
+            Text="{Binding WeeklyExerciseMinutes}"
+            FontSize="28"
+            FontWeight="Bold"
+            Margin="0,6,0,0"/>
+
+                    <TextBlock
+            Text="minutes"
+            FontSize="12"
+            Foreground="Gray"/>
+                </StackPanel>
+            </Border>
+
+
         </UniformGrid>
 
         <!-- CLOSE BUTTON -->
