@@ -35,5 +35,11 @@ namespace DailyVitals.Data.Services
 
             return persons;
         }
+
+        public List<Person> GetPeople()
+        {
+            return GetAllPersons();
+        }
+
     }
 }

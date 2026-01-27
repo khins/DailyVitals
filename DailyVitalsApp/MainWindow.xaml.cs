@@ -69,5 +69,10 @@ namespace DailyVitals.App
 
             window.ShowDialog();
         }
+
+        private void OpenExercise_Click(object sender, RoutedEventArgs e)
+        {
+            new ExerciseEntryView { Owner = this }.ShowDialog();
+        }
     }
 }
