@@ -73,22 +73,10 @@ namespace DailyVitals.Data.Services
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
 
-                const string sql = """
-                SELECT es.exercise_session_id,
-                       es.exercise_type_id,
-                       et.exercise_name,
-                       es.start_time,
-                       es.duration_minutes,
-                       es.intensity,
-                       es.notes
-                FROM exercise_session es
-                JOIN exercise_type et ON et.exercise_type_id = es.exercise_type_id
-                WHERE es.person_id = @person_id
-                ORDER BY es.start_time DESC;
-            """;
+                using var cmd = new NpgsqlCommand(
+                    "SELECT * FROM sp_get_exercise_history(@p_person_id)", conn);
 
-                using var cmd = new NpgsqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("person_id", personId);
+                cmd.Parameters.AddWithValue("p_person_id", personId);
 
                 using var reader = cmd.ExecuteReader();
                 while (reader.Read())
