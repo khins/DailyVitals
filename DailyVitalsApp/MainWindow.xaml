@@ -4,6 +4,67 @@
         Title="DailyVitals"
         Height="470"
         Width="400">
+    <Window.Resources>
+
+        <Style x:Key="MainMenuButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="220"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Margin" Value="6"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#707070"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="Black"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                       x:Name="border"
+                       Background="{TemplateBinding Background}"
+                       BorderBrush="{TemplateBinding BorderBrush}"
+                       BorderThickness="{TemplateBinding BorderThickness}"
+                       CornerRadius="6">
+
+                            <ContentPresenter
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           RecognizesAccessKey="True"/>
+                        </Border>
+
+                        <!-- Visual states -->
+                        <ControlTemplate.Triggers>
+
+                            <!-- Hover -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border"
+                                   Property="Background"
+                                   Value="#D6D6D6"/>
+                            </Trigger>
+
+                            <!-- Pressed -->
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border"
+                                   Property="Background"
+                                   Value="#C8C8C8"/>
+                            </Trigger>
+
+                            <!-- Disabled -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border"
+                                   Property="Background"
+                                   Value="#EEEEEE"/>
+                                <Setter Property="Foreground"
+                                   Value="#888888"/>
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -18,48 +79,32 @@
                     HorizontalAlignment="Center">
 
             <Button Content="Enter Blood Pressure"
-                    Width="220"
-                    Height="40"
-                    Margin="0,0,0,15"
+Style="{StaticResource MainMenuButtonStyle}"
                     Click="OpenBloodPressure_Click"/>
 
             <Button Content="Enter Blood Glucose"
-                    Width="220"
-                    Height="40"
-                    Margin="0,0,0,15"
+Style="{StaticResource MainMenuButtonStyle}"
                     Click="OpenBloodGlucose_Click"/>
 
             <Button Content="Enter Weight"
-                    Width="220"
-                    Height="40"
-                    Margin="0,0,0,12"
+Style="{StaticResource MainMenuButtonStyle}"
                     Click="OpenWeight_Click"/>
 
             <!-- NEW: Medication Entry -->
             <Button Content="Enter Medications"
-            Width="220"
-            Height="45"
-            Margin="0,0,0,12"
+Style="{StaticResource MainMenuButtonStyle}"
             Click="OpenMedicationEntry_Click"/>
 
             <Button Content="Manage Medications"
-                Width="220"
-                Height="40"
-                Margin="0,0,0,15"
+Style="{StaticResource MainMenuButtonStyle}"
                 Click="OpenMedicationList_Click"/>
 
             <Button Content="Enter Exercise"
-                Width="220"
-                Height="40"
-                Margin="0,0,0,15"
+Style="{StaticResource MainMenuButtonStyle}"
                 Click="OpenExercise_Click"/>
 
-
-
             <Button Content="Vitals Dashboard"
-        Width="220"
-        Height="40"
-        Margin="0,5,0,0"
+Style="{StaticResource MainMenuButtonStyle}"
         Click="OpenDashboard_Click"/>
 
         </StackPanel>
@@ -67,8 +112,8 @@
         <!-- EXIT -->
         <Button Grid.Row="1"
                 Content="Exit"
-                Width="80"
-                Height="30"
+Style="{StaticResource MainMenuButtonStyle}"
+                Width="150"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
                 Click="Exit_Click"/>
