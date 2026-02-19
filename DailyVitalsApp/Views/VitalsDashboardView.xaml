@@ -37,6 +37,8 @@
                     CornerRadius="6"
                     BorderBrush="Gray"
                     BorderThickness="1"
+                    MouseLeftButtonUp="BloodPressureCard_Click"
+                    Cursor="Hand"
                     Background="{Binding LatestBP.SeverityBrush}">
 
                 <StackPanel>

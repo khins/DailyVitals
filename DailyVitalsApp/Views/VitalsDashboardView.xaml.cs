@@ -44,5 +44,23 @@ namespace DailyVitals.App.Views
 
             window.ShowDialog();
         }
+
+        private void BloodPressureCard_Click(object sender, MouseButtonEventArgs e)
+        {
+            var vm = (VitalsDashboardViewModel)DataContext;
+
+            if (vm.SelectedPerson == null)
+                return;
+
+            var window = new BloodPressureTrendView(
+                vm.SelectedPerson.PersonId,
+                vm.SelectedPerson.FullName)
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+        }
+
     }
 }
