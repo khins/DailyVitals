@@ -1,0 +1,209 @@
+﻿<Window x:Class="DailyVitals.App.Views.BloodPressureTrendView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Blood Pressure Trend"
+        Height="700"
+        Width="900"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+
+        <Style x:Key="MainMenuButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="220"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Margin" Value="6"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#707070"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="Black"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                       x:Name="border"
+                       Background="{TemplateBinding Background}"
+                       BorderBrush="{TemplateBinding BorderBrush}"
+                       BorderThickness="{TemplateBinding BorderThickness}"
+                       CornerRadius="6">
+
+                            <ContentPresenter
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           RecognizesAccessKey="True"/>
+                        </Border>
+
+                        <!-- Visual states -->
+                        <ControlTemplate.Triggers>
+
+                            <!-- Hover -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border"
+                                   Property="Background"
+                                   Value="#D6D6D6"/>
+                            </Trigger>
+
+                            <!-- Pressed -->
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border"
+                                   Property="Background"
+                                   Value="#C8C8C8"/>
+                            </Trigger>
+
+                            <!-- Disabled -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border"
+                                   Property="Background"
+                                   Value="#EEEEEE"/>
+                                <Setter Property="Foreground"
+                                   Value="#888888"/>
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
+
+    <Grid Margin="20">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Header -->
+            <RowDefinition Height="Auto"/>
+            <!-- Filters -->
+            <RowDefinition Height="*"/>
+            <!-- Chart -->
+            <RowDefinition Height="Auto"/>
+            <!-- Legend -->
+        </Grid.RowDefinitions>
+        
+        <StackPanel Grid.Row="1"
+            Orientation="Horizontal"
+             HorizontalAlignment="Center"       Margin="0,0,0,10">
+            <TextBlock Text="From:" VerticalAlignment="Center"/>
+            <DatePicker SelectedDate="{Binding StartDate}" Width="120" Margin="5"/>
+
+            <TextBlock Text="To:" VerticalAlignment="Center"/>
+            <DatePicker SelectedDate="{Binding EndDate}" Width="120" Margin="5"/>
+
+            <Button Content="Apply"
+            Command="{Binding RefreshCommand}"
+            Width="75"
+            Style="{StaticResource MainMenuButtonStyle}"/>
+        </StackPanel>
+
+        <!-- HEADER -->
+        <TextBlock Grid.Row="0"
+                   Text="{Binding HeaderText}"
+                   FontSize="20"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,15"/>
+
+        <!-- CHART AREA -->
+        <Border Grid.Row="2"
+                BorderBrush="#DDD"
+                BorderThickness="1"
+                Background="White"
+                Padding="10">
+
+            <Canvas Height="350"
+                    Background="White">
+                <ItemsControl ItemsSource="{Binding SystolicLabels}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style>
+                            <Setter Property="Canvas.Left" Value="{Binding X}" />
+                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Value}"
+                       Foreground="Red"
+                       FontWeight="Bold"
+                       FontSize="12"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding DiastolicLabels}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style>
+                            <Setter Property="Canvas.Left" Value="{Binding X}" />
+                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Value}"
+                       Foreground="Blue"
+                       FontWeight="Bold"
+                       FontSize="12"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- SYSTOLIC LINE -->
+                <Polyline Points="{Binding SystolicPoints}"
+                          Stroke="Red"
+                          StrokeThickness="3"/>
+
+                <!-- DIASTOLIC LINE -->
+                <Polyline Points="{Binding DiastolicPoints}"
+                          Stroke="Blue"
+                          StrokeThickness="3"/>
+
+            </Canvas>
+        </Border>
+
+        <!-- LEGEND -->
+        <StackPanel Grid.Row="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,15,0,0">
+
+            <StackPanel Orientation="Horizontal"
+                        Margin="20,0">
+                <Rectangle Width="20"
+                           Height="3"
+                           Fill="Red"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="  Systolic"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal"
+                        Margin="20,0">
+                <Rectangle Width="20"
+                           Height="3"
+                           Fill="Blue"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="  Diastolic"
+                           VerticalAlignment="Center"/>
+
+                <Button Grid.Column="1"
+                    Content="Close"
+                    Width="90"
+                    Height="32"
+                    Margin="20,0,0,0"
+                    Style="{StaticResource MainMenuButtonStyle}"
+                    Click="Close_Click"/>
+            </StackPanel>
+
+        </StackPanel>
+ 
+    </Grid>
+
+</Window>
