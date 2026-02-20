@@ -154,6 +154,41 @@ namespace DailyVitals.Data.Services
             cmd.ExecuteNonQuery();
         }
 
+        public List<BloodPressureReading> GetTrend(
+    long personId,
+    DateTime startDate,
+    DateTime endDate)
+        {
+            var list = new List<BloodPressureReading>();
+
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            using var cmd = new NpgsqlCommand(
+                "SELECT * FROM sp_get_bp_trend(@p_person_id, @p_start_date, @p_end_date)",
+                conn);
+
+            cmd.Parameters.AddWithValue("p_person_id", personId);
+            cmd.Parameters.AddWithValue("p_start_date", startDate.Date);
+            cmd.Parameters.AddWithValue("p_end_date", endDate.Date.AddDays(1));
+            // AddDays(1) makes the end date inclusive
+
+            using var reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                list.Add(new BloodPressureReading
+                {
+                    ReadingTime = reader.GetDateTime(0),
+                    Systolic = reader.GetInt32(1),
+                    Diastolic = reader.GetInt32(2)
+                });
+            }
+
+            return list;
+        }
+
+
 
     }
 }

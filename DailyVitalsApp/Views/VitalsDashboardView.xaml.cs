@@ -61,6 +61,5 @@ namespace DailyVitals.App.Views
 
             window.ShowDialog();
         }
-
     }
 }
