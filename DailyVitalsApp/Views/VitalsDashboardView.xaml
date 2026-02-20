@@ -99,9 +99,9 @@
                     CornerRadius="6"
                     BorderBrush="Gray"
                     BorderThickness="1"
+                    Background="#E8F5E9"
                     MouseLeftButtonUp="BloodPressureCard_Click"
-                    Cursor="Hand"
-                    Background="{Binding LatestBP.SeverityBrush}">
+                    Cursor="Hand">
 
                 <StackPanel>
                     <TextBlock Text="Blood Pressure"
