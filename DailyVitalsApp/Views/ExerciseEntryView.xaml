@@ -5,7 +5,67 @@
         Height="550"
         Width="900"
         WindowStartupLocation="CenterOwner">
+    <Window.Resources>
 
+        <Style x:Key="MainMenuButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="220"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Margin" Value="6"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#707070"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="Black"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                       x:Name="border"
+                       Background="{TemplateBinding Background}"
+                       BorderBrush="{TemplateBinding BorderBrush}"
+                       BorderThickness="{TemplateBinding BorderThickness}"
+                       CornerRadius="6">
+
+                            <ContentPresenter
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           RecognizesAccessKey="True"/>
+                        </Border>
+
+                        <!-- Visual states -->
+                        <ControlTemplate.Triggers>
+
+                            <!-- Hover -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border"
+                                   Property="Background"
+                                   Value="#D6D6D6"/>
+                            </Trigger>
+
+                            <!-- Pressed -->
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border"
+                                   Property="Background"
+                                   Value="#C8C8C8"/>
+                            </Trigger>
+
+                            <!-- Disabled -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border"
+                                   Property="Background"
+                                   Value="#EEEEEE"/>
+                                <Setter Property="Foreground"
+                                   Value="#888888"/>
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -99,7 +159,8 @@
                          Margin="0,8,0,0"
                          Width="240"
                          HorizontalAlignment="Left"
-                         Text="{Binding DurationMinutes}"/>
+                         Text="{Binding DurationMinutes, UpdateSourceTrigger=PropertyChanged}"
+                         PreviewTextInput="Duration_PreviewTextInput"/>
 
                 <!-- Intensity -->
                 <TextBlock Text="Intensity:"
@@ -144,23 +205,27 @@
                     Width="100"
                     Height="32"
                     Margin="0,0,10,0"
+                    Style="{StaticResource MainMenuButtonStyle}"
                     Click="Save_Click"/>
 
             <Button Content="Delete"
                     Width="100"
                     Height="32"
                     Margin="0,0,10,0"
+                    Style="{StaticResource MainMenuButtonStyle}"
                     Click="Delete_Click"/>
 
             <Button Content="Edit Selected"
                     Width="120"
                     Height="32"
                     Margin="0,0,10,0"
+                    Style="{StaticResource MainMenuButtonStyle}"
                     Click="Edit_Click"/>
 
             <Button Content="Close"
                     Width="100"
                     Height="32"
+                    Style="{StaticResource MainMenuButtonStyle}"
                     Click="Close_Click"/>
         </StackPanel>
     </Grid>

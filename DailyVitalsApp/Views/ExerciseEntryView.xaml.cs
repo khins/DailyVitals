@@ -69,5 +69,13 @@ namespace DailyVitals.App.Views
                 _vm.DeleteSelected();
             }
         }
+
+        private void Duration_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            string proposed = textBox.Text.Insert(textBox.CaretIndex, e.Text);
+
+            e.Handled = !decimal.TryParse(proposed, out _);
+        }
     }
 }
