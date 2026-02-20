@@ -14,7 +14,7 @@ namespace DailyVitals.Data.Services
                 long personId,
                 long exerciseTypeId,
                 DateTime startTime,
-                int durationMinutes,
+                decimal durationMinutes,
                 string intensity,
                 string notes,
                 string enteredBy)
@@ -87,7 +87,7 @@ namespace DailyVitals.Data.Services
                         ExerciseTypeId = reader.GetInt64(1),
                         ExerciseName = reader.GetString(2),
                         StartTime = reader.GetDateTime(3),
-                        DurationMinutes = reader.GetInt32(4),
+                        DurationMinutes = reader.GetDecimal(4),
                         Intensity = reader.GetString(5),
                         Notes = reader.IsDBNull(6) ? null : reader.GetString(6)
                     });

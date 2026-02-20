@@ -16,7 +16,7 @@ namespace DailyVitals.Domain.Models
 
         public DateTime StartTime { get; set; }
 
-        public int DurationMinutes { get; set; }
+        public decimal DurationMinutes { get; set; }
 
         public string Intensity { get; set; } = string.Empty;
 

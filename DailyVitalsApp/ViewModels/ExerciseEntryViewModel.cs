@@ -3,6 +3,9 @@ using DailyVitals.Data.Services.DailyVitals.App.Services;
 using DailyVitals.Domain.Models;
 using System;
 using System.Collections.ObjectModel;
+using System.Net.WebSockets;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace DailyVitals.App.ViewModels
 {
@@ -69,7 +72,6 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
-
         public ExerciseEntryViewModel()
         {
             foreach (var p in _personService.GetPeople())
@@ -94,9 +96,6 @@ namespace DailyVitals.App.ViewModels
         {
             if (SelectedSession == null)
                 return;
-
-            //SelectedExercise = ExerciseTypes.FirstOrDefault(
-            //    x => x.ExerciseTypeId == SelectedSession.ExerciseTypeId);
 
             DurationMinutes = SelectedSession.DurationMinutes.ToString();
             SelectedIntensity = SelectedSession.Intensity;
@@ -140,14 +139,21 @@ namespace DailyVitals.App.ViewModels
             if (SelectedPerson == null || SelectedExercise == null)
                 throw new InvalidOperationException("Select person and exercise type.");
 
-            if (!int.TryParse(DurationMinutes, out var minutes) || minutes <= 0)
-                throw new InvalidOperationException("Duration must be a positive number.");
+            if (SelectedExercise == null)
+                throw new InvalidOperationException("Select exercise type.");
+
+            if (!decimal.TryParse(DurationMinutes, out var durationMinutes))
+                throw new InvalidOperationException("Duration must be a valid number.");
+
+            if (durationMinutes <= 0)
+                throw new InvalidOperationException("Duration must be greater than zero.");
+
 
             _service.InsertExerciseSession(
                 SelectedPerson.PersonId,
                 SelectedExercise.ExerciseTypeId,
                 StartTime,
-                minutes,
+                durationMinutes,
                 Intensity,
                 Notes,
                 Environment.UserName
