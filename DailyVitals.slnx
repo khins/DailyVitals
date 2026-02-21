@@ -2,6 +2,40 @@
   <Folder Name="/DataAccess/">
     <Project Path="DailyVitals.Data/DailyVitals.Data.csproj" />
   </Folder>
+  <Folder Name="/Database/">
+    <File Path="database/.gitkeep" />
+    <File Path="database/one complete DDL script.sql" />
+  </Folder>
+  <Folder Name="/Database/Functions/">
+    <File Path="database/functions/.gitkeep" />
+    <File Path="database/functions/evaluate_severity_escalation.sql" />
+    <File Path="database/functions/one complete DDL script.sql" />
+    <File Path="database/functions/sp_deactivate_medication.sql" />
+    <File Path="database/functions/sp_delete_blood_glucose.sql" />
+    <File Path="database/functions/sp_delete_exercise_session.sql" />
+    <File Path="database/functions/sp_delete_weight.sql" />
+    <File Path="database/functions/sp_get_bp_trend.sql" />
+    <File Path="database/functions/sp_get_exercise_history.sql" />
+    <File Path="database/functions/sp_insert_blood_glucose.sql" />
+    <File Path="database/functions/sp_insert_exercise_session.sql" />
+    <File Path="database/functions/sp_insert_renal_diet_food.sql" />
+    <File Path="database/functions/sp_insert_weight.sql" />
+    <File Path="database/functions/sp_update_medication.sql" />
+    <File Path="database/functions/sp_update_weight.sql" />
+  </Folder>
+  <Folder Name="/Database/Sequences/">
+    <File Path="database/sequences/SEQUENCES.sql" />
+  </Folder>
+  <Folder Name="/Database/Tables/">
+    <File Path="database/tables/.gitkeep" />
+    <File Path="database/tables/data_entry_log.sql" />
+    <File Path="database/tables/exercise_type.sql" />
+    <File Path="database/tables/medication.sql" />
+    <File Path="database/tables/nutrient_classification.sql" />
+    <File Path="database/tables/vital_alert.sql" />
+    <File Path="database/tables/vital_threshold.sql" />
+    <File Path="database/tables/weight.sql" />
+  </Folder>
   <Folder Name="/Domain/">
     <Project Path="DailyVitals.Domain/DailyVitals.Domain.csproj" />
   </Folder>
