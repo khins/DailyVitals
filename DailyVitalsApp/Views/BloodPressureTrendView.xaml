@@ -104,69 +104,107 @@
                    Margin="0,0,0,15"/>
 
         <!-- CHART AREA -->
-        <Border Grid.Row="2"
-                BorderBrush="#DDD"
-                BorderThickness="1"
-                Background="White"
-                Padding="10">
+        <Grid Grid.Row="2">
 
-            <Canvas Height="350"
-                    Background="White">
-                <ItemsControl ItemsSource="{Binding SystolicLabels}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Canvas/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemContainerStyle>
-                        <Style>
-                            <Setter Property="Canvas.Left" Value="{Binding X}" />
-                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
-                        </Style>
-                    </ItemsControl.ItemContainerStyle>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Value}"
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- Date Row -->
+                <RowDefinition Height="*"/>
+                <!-- Chart -->
+            </Grid.RowDefinitions>
+
+            <!-- DATE LABEL ROW -->
+            <Grid Grid.Row="0" Margin="5,0,5,5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- START DATE -->
+                <TextBlock Grid.Column="0"
+                   Text="{Binding StartDate, StringFormat='{}{0:MMM dd, yyyy}'}"
+                   HorizontalAlignment="Left"
+                   FontSize="12"
+                   Foreground="Gray"/>
+
+                <!-- END DATE -->
+                <TextBlock Grid.Column="1"
+                   Text="{Binding EndDate, StringFormat='{}{0:MMM dd, yyyy}'}"
+                   HorizontalAlignment="Right"
+                   FontSize="12"
+                   Foreground="Gray"/>
+            </Grid>
+
+            <!-- CHART -->
+            <Border Grid.Row="1"
+            BorderBrush="#DDD"
+            BorderThickness="1"
+            Background="White"
+            Padding="10">
+
+                <Canvas Width="750"
+                Height="350"
+                Background="White">
+
+                    <!-- existing polylines + labels -->
+                    <ItemsControl ItemsSource="{Binding SystolicLabels}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style>
+                                <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Value}"
                        Foreground="Red"
                        FontWeight="Bold"
                        FontSize="12"/>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <ItemsControl ItemsSource="{Binding DiastolicLabels}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Canvas/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemContainerStyle>
-                        <Style>
-                            <Setter Property="Canvas.Left" Value="{Binding X}" />
-                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
-                        </Style>
-                    </ItemsControl.ItemContainerStyle>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Value}"
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding DiastolicLabels}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style>
+                                <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Value}"
                        Foreground="Blue"
                        FontWeight="Bold"
                        FontSize="12"/>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                <!-- SYSTOLIC LINE -->
-                <Polyline Points="{Binding SystolicPoints}"
+                    <!-- SYSTOLIC LINE -->
+                    <Polyline Points="{Binding SystolicPoints}"
                           Stroke="Red"
                           StrokeThickness="3"/>
 
-                <!-- DIASTOLIC LINE -->
-                <Polyline Points="{Binding DiastolicPoints}"
+                    <!-- DIASTOLIC LINE -->
+                    <Polyline Points="{Binding DiastolicPoints}"
                           Stroke="Blue"
                           StrokeThickness="3"/>
 
-            </Canvas>
-        </Border>
+                </Canvas>
+
+            </Border>
+
+        </Grid>
 
         <!-- LEGEND -->
         <StackPanel Grid.Row="3"
