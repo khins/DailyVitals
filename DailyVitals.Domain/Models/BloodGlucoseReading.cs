@@ -9,7 +9,7 @@ namespace DailyVitals.Domain.Models
         public long GlucoseId { get; set; }
         public long GlucoseValue{ get; set; }
         public DateTime ReadingTime { get; set; }
-        public string Notes { get; set; }
+        public string? Notes { get; set; }
     }
 
 }

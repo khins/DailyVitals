@@ -1,9 +1,7 @@
-﻿using DailyVitals.Data.Services;
+using DailyVitals.Data.Services;
 using DailyVitals.Domain.Models;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
 
 namespace DailyVitals.App.ViewModels
 {
@@ -12,10 +10,13 @@ namespace DailyVitals.App.ViewModels
         private readonly MedicationService _service = new();
         private readonly PersonService _personService = new();
 
+        private Person? _selectedPerson;
+        private Medication? _selectedMedication;
+
         public ObservableCollection<Person> Persons { get; } = new();
         public ObservableCollection<Medication> Medications { get; } = new();
 
-        public Person SelectedPerson
+        public Person? SelectedPerson
         {
             get => _selectedPerson;
             set
@@ -25,9 +26,16 @@ namespace DailyVitals.App.ViewModels
                 LoadMedications();
             }
         }
-        private Person _selectedPerson;
 
-        public Medication SelectedMedication { get; set; }
+        public Medication? SelectedMedication
+        {
+            get => _selectedMedication;
+            set
+            {
+                _selectedMedication = value;
+                OnPropertyChanged();
+            }
+        }
 
         public MedicationListViewModel()
         {
@@ -37,8 +45,8 @@ namespace DailyVitals.App.ViewModels
         private void LoadPersons()
         {
             Persons.Clear();
-            foreach (var p in _personService.GetAllPersons())
-                Persons.Add(p);
+            foreach (var person in _personService.GetAllPersons())
+                Persons.Add(person);
         }
 
         private void LoadMedications()
@@ -48,8 +56,8 @@ namespace DailyVitals.App.ViewModels
             if (SelectedPerson == null)
                 return;
 
-            foreach (var m in _service.GetMedications(SelectedPerson.PersonId))
-                Medications.Add(m);
+            foreach (var medication in _service.GetMedications(SelectedPerson.PersonId))
+                Medications.Add(medication);
         }
 
         public void DeactivateSelected()
@@ -68,7 +76,5 @@ namespace DailyVitals.App.ViewModels
         {
             LoadMedications();
         }
-
     }
-
 }

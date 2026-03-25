@@ -1,11 +1,8 @@
-﻿using DailyVitals.Data.Services;
+using DailyVitals.Data.Services;
 using DailyVitals.Data.Services.DailyVitals.App.Services;
 using DailyVitals.Domain.Models;
 using System;
 using System.Collections.ObjectModel;
-using System.Net.WebSockets;
-using System.Windows.Controls;
-using System.Windows.Input;
 
 namespace DailyVitals.App.ViewModels
 {
@@ -18,9 +15,9 @@ namespace DailyVitals.App.ViewModels
         public ObservableCollection<ExerciseType> ExerciseTypes { get; } = new();
         public ObservableCollection<ExerciseSession> History { get; } = new();
 
-        private Person _selectedPerson;
-        public Person SelectedPerson
-        { 
+        private Person? _selectedPerson;
+        public Person? SelectedPerson
+        {
             get => _selectedPerson;
             set
             {
@@ -28,11 +25,10 @@ namespace DailyVitals.App.ViewModels
                 OnPropertyChanged();
                 LoadHistory();
             }
-        
         }
 
-        private ExerciseType _selectedExercise;
-        public ExerciseType SelectedExercise
+        private ExerciseType? _selectedExercise;
+        public ExerciseType? SelectedExercise
         {
             get => _selectedExercise;
             set
@@ -42,8 +38,8 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
-        private ExerciseSession _selectedSession;
-        public ExerciseSession SelectedSession
+        private ExerciseSession? _selectedSession;
+        public ExerciseSession? SelectedSession
         {
             get => _selectedSession;
             set
@@ -52,16 +48,14 @@ namespace DailyVitals.App.ViewModels
                 OnPropertyChanged();
             }
         }
-        //public ExerciseType? SelectedExerciseType { get; set; }
 
         public bool IsEditMode { get; private set; }
         public long? EditingExerciseSessionId { get; private set; }
 
-
-        public string DurationMinutes { get; set; } = "";
-        public string Intensity { get; set; } = "Moderate";
+        public string DurationMinutes { get; set; } = string.Empty;
         public DateTime StartTime { get; set; } = DateTime.Now;
-        private string _notes;
+
+        private string _notes = string.Empty;
         public string Notes
         {
             get => _notes;
@@ -74,11 +68,11 @@ namespace DailyVitals.App.ViewModels
 
         public ExerciseEntryViewModel()
         {
-            foreach (var p in _personService.GetPeople())
-                Persons.Add(p);
+            foreach (var person in _personService.GetPeople())
+                Persons.Add(person);
 
-            foreach (var t in _service.GetExerciseTypes())
-                ExerciseTypes.Add(t);
+            foreach (var exerciseType in _service.GetExerciseTypes())
+                ExerciseTypes.Add(exerciseType);
         }
 
         public void LoadHistory()
@@ -88,8 +82,8 @@ namespace DailyVitals.App.ViewModels
             if (SelectedPerson == null)
                 return;
 
-            foreach (var h in _service.GetHistory(SelectedPerson.PersonId))
-                History.Add(h);
+            foreach (var session in _service.GetHistory(SelectedPerson.PersonId))
+                History.Add(session);
         }
 
         public void BeginEdit()
@@ -99,17 +93,18 @@ namespace DailyVitals.App.ViewModels
 
             DurationMinutes = SelectedSession.DurationMinutes.ToString();
             SelectedIntensity = SelectedSession.Intensity;
-            Notes = SelectedSession.Notes;
+            Notes = SelectedSession.Notes ?? string.Empty;
+            StartTime = SelectedSession.StartTime;
 
             OnPropertyChanged(nameof(DurationMinutes));
-            OnPropertyChanged(nameof(Intensity));
+            OnPropertyChanged(nameof(SelectedIntensity));
             OnPropertyChanged(nameof(Notes));
             OnPropertyChanged(nameof(StartTime));
         }
 
         public void DeleteSelected()
         {
-            if (SelectedExercise == null)
+            if (SelectedSession == null)
                 return;
 
             _service.DeleteExerciseSession(
@@ -120,9 +115,9 @@ namespace DailyVitals.App.ViewModels
         }
 
         public ObservableCollection<string> Intensities { get; } =
-                                   new() { "Low", "Moderate", "High" };
+            new() { "Low", "Moderate", "High" };
 
-        private string _selectedIntensity;
+        private string _selectedIntensity = "Moderate";
         public string SelectedIntensity
         {
             get => _selectedIntensity;
@@ -133,14 +128,10 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
-
         public void Save()
         {
             if (SelectedPerson == null || SelectedExercise == null)
                 throw new InvalidOperationException("Select person and exercise type.");
-
-            if (SelectedExercise == null)
-                throw new InvalidOperationException("Select exercise type.");
 
             if (!decimal.TryParse(DurationMinutes, out var durationMinutes))
                 throw new InvalidOperationException("Duration must be a valid number.");
@@ -148,13 +139,12 @@ namespace DailyVitals.App.ViewModels
             if (durationMinutes <= 0)
                 throw new InvalidOperationException("Duration must be greater than zero.");
 
-
             _service.InsertExerciseSession(
                 SelectedPerson.PersonId,
                 SelectedExercise.ExerciseTypeId,
                 StartTime,
                 durationMinutes,
-                Intensity,
+                SelectedIntensity,
                 Notes,
                 Environment.UserName
             );
@@ -165,14 +155,15 @@ namespace DailyVitals.App.ViewModels
 
         private void ClearEntry()
         {
-            DurationMinutes = "";
-            Notes = "";
+            DurationMinutes = string.Empty;
+            Notes = string.Empty;
+            SelectedIntensity = "Moderate";
             StartTime = DateTime.Now;
 
             OnPropertyChanged(nameof(DurationMinutes));
             OnPropertyChanged(nameof(Notes));
+            OnPropertyChanged(nameof(SelectedIntensity));
             OnPropertyChanged(nameof(StartTime));
         }
     }
-
 }

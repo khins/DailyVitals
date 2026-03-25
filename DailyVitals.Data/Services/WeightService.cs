@@ -30,7 +30,12 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_entered_by", enteredBy);
 
-            return (long)cmd.ExecuteScalar();
+            var result = cmd.ExecuteScalar();
+
+            if (result is null or DBNull)
+                throw new Exception("Weight insert failed. No ID returned.");
+
+            return Convert.ToInt64(result);
         }
 
         public List<WeightReading> GetHistory(long personId)

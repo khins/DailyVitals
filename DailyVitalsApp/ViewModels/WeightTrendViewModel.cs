@@ -18,7 +18,7 @@ namespace DailyVitals.App.ViewModels
         public decimal EndWeight { get; }
         public decimal NetChange => EndWeight - StartWeight;
 
-        public string DateRange { get; }
+        public string DateRange { get; } = string.Empty;
         public string TrendSummary =>
             NetChange > 0
                 ? $"↑ Gained {NetChange:F1} lb"

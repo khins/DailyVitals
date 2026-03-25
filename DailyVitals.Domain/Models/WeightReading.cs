@@ -8,9 +8,9 @@ namespace DailyVitals.Domain.Models
     {
         public long WeightId { get; set; }
         public decimal WeightValue { get; set; }
-        public string WeightUnit { get; set; }
+        public string WeightUnit { get; set; } = string.Empty;
         public DateTime ReadingTime { get; set; }
-        public string Notes { get; set; }
+        public string? Notes { get; set; }
         public decimal? HeightFt { get; set; }
 
     }
