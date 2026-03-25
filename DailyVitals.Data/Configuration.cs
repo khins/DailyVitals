@@ -14,7 +14,7 @@ namespace DailyVitals.Data.Configuration
 
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ConfigurationErrorsException(
-                    "Connection string 'DailyVitalsDb' not found."
+                    "Connection string 'DailyVitals' not found."
                 );
 
             return new NpgsqlConnection(connectionString);
@@ -28,7 +28,7 @@ namespace DailyVitals.Data.Configuration
             using var cmd = new NpgsqlCommand("SELECT 1", conn);
             var result = cmd.ExecuteScalar();
 
-            if ((int)result != 1)
+            if (result is not int scalar || scalar != 1)
                 throw new Exception("Unexpected test query result");
 
             using var cmd2 = new NpgsqlCommand(
@@ -36,7 +36,10 @@ namespace DailyVitals.Data.Configuration
                     conn
 );
 
-            var count = (long)cmd2.ExecuteScalar();
+            var count = cmd2.ExecuteScalar();
+
+            if (count is not long)
+                throw new Exception("Unexpected person count result.");
 
         }
 

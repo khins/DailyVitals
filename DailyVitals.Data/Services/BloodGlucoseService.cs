@@ -11,7 +11,7 @@ namespace DailyVitals.Data.Services
     {
         public long Insert(
             long personId,
-            int glucose_value,
+            int glucoseValue,
             DateTime readingTime,
             string notes,
             string enteredBy)
@@ -24,12 +24,17 @@ namespace DailyVitals.Data.Services
               conn);
 
             cmd.Parameters.AddWithValue("p_person_id", personId);
-            cmd.Parameters.AddWithValue("p_glucose_value", glucose_value);
+            cmd.Parameters.AddWithValue("p_glucose_value", glucoseValue);
             cmd.Parameters.AddWithValue("p_reading_time", readingTime);
             cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_entered_by", enteredBy);
 
-            return (long)cmd.ExecuteScalar();
+            var result = cmd.ExecuteScalar();
+
+            if (result is null or DBNull)
+                throw new Exception("Blood glucose insert failed. No ID returned.");
+
+            return Convert.ToInt64(result);
         }
 
         public List<BloodGlucoseReading> GetHistory(long personId)

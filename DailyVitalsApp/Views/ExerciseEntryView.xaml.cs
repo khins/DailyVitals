@@ -1,15 +1,8 @@
-﻿using DailyVitals.App.ViewModels;
+using DailyVitals.App.ViewModels;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace DailyVitals.App.Views
 {
@@ -55,7 +48,7 @@ namespace DailyVitals.App.Views
 
         private void Delete_Click(object sender, RoutedEventArgs e)
         {
-            if (_vm.SelectedExercise == null)
+            if (_vm.SelectedSession == null)
                 return;
 
             var result = MessageBox.Show(
@@ -72,9 +65,13 @@ namespace DailyVitals.App.Views
 
         private void Duration_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            var textBox = sender as TextBox;
-            string proposed = textBox.Text.Insert(textBox.CaretIndex, e.Text);
+            if (sender is not TextBox textBox)
+            {
+                e.Handled = true;
+                return;
+            }
 
+            string proposed = textBox.Text.Insert(textBox.CaretIndex, e.Text);
             e.Handled = !decimal.TryParse(proposed, out _);
         }
     }

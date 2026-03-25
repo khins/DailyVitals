@@ -11,7 +11,7 @@ namespace DailyVitals.Domain.Models
         public int Diastolic { get; set; }
         public int Pulse { get; set; }
         public DateTime ReadingTime { get; set; }
-        public string Notes { get; set; }
+        public string? Notes { get; set; }
         public string DisplayValue => $"{Systolic} / {Diastolic}";
     }
 }

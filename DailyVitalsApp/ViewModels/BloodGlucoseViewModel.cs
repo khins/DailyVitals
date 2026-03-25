@@ -1,10 +1,7 @@
-﻿using DailyVitals.Data.Services;
+using DailyVitals.Data.Services;
 using DailyVitals.Domain.Models;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
-
 
 namespace DailyVitals.App.ViewModels
 {
@@ -13,35 +10,22 @@ namespace DailyVitals.App.ViewModels
         private readonly BloodGlucoseService _service = new();
         private readonly PersonService _personService = new();
 
+        private string _glucose = string.Empty;
+        private Person? _selectedPerson;
+        private BloodGlucoseReading? _selectedHistory;
+
         public BloodGlucoseViewModel()
         {
             LoadPersons();
             BeginNew();
         }
 
-        private void LoadPersons()
-        {
-            Persons.Clear();
-            foreach (var p in _personService.GetAllPersons())
-                Persons.Add(p);
-        }
+        public ObservableCollection<BloodGlucoseReading> History { get; } = new();
+        public ObservableCollection<Person> Persons { get; } = new();
 
-        private void LoadHistoryForSelectedPerson()
-        {
-            History.Clear();
-
-            if (SelectedPerson == null)
-                return;
-
-            foreach (var r in _service.GetHistory(SelectedPerson.PersonId))
-                History.Add(r);
-        }
         public bool CanDelete => SelectedHistory != null;
+        public bool CanSave => !string.IsNullOrWhiteSpace(Glucose);
 
-        public ObservableCollection<BloodGlucoseReading> History { get; }
-            = new();
-
-        private string _glucose;
         public string Glucose
         {
             get => _glucose;
@@ -53,12 +37,7 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
-        public ObservableCollection<Person> Persons { get; }
-               = new ObservableCollection<Person>();
-
-
-        private Person _selectedPerson;
-        public Person SelectedPerson
+        public Person? SelectedPerson
         {
             get => _selectedPerson;
             set
@@ -71,38 +50,55 @@ namespace DailyVitals.App.ViewModels
 
         public bool Fasting { get; set; }
         public DateTime ReadingTime { get; set; } = DateTime.Now;
-        public string Notes { get; set; } = "Morning reading";
+        public string? Notes { get; set; } = "Morning reading";
 
-        private BloodGlucoseReading _selectedHistory;
-        public BloodGlucoseReading SelectedHistory
+        public BloodGlucoseReading? SelectedHistory
         {
             get => _selectedHistory;
             set
             {
                 _selectedHistory = value;
-                OnPropertyChanged(nameof(SelectedHistory));
+                OnPropertyChanged();
                 OnPropertyChanged(nameof(CanDelete));
                 LoadFromHistory();
             }
         }
 
+        private void LoadPersons()
+        {
+            Persons.Clear();
+            foreach (var person in _personService.GetAllPersons())
+                Persons.Add(person);
+        }
 
-        public bool CanSave => !string.IsNullOrWhiteSpace(Glucose);
+        private void LoadHistoryForSelectedPerson()
+        {
+            History.Clear();
+
+            if (SelectedPerson == null)
+                return;
+
+            foreach (var reading in _service.GetHistory(SelectedPerson.PersonId))
+                History.Add(reading);
+        }
 
         public void LoadHistory(long personId)
         {
             History.Clear();
-            foreach (var r in _service.GetHistory(personId))
-                History.Add(r);
+            foreach (var reading in _service.GetHistory(personId))
+                History.Add(reading);
         }
 
         private void LoadFromHistory()
         {
-            if (SelectedHistory == null) return;
+            if (SelectedHistory == null)
+                return;
 
             Glucose = SelectedHistory.GlucoseValue.ToString();
             ReadingTime = SelectedHistory.ReadingTime;
             Notes = SelectedHistory.Notes;
+            OnPropertyChanged(nameof(ReadingTime));
+            OnPropertyChanged(nameof(Notes));
         }
 
         public void BeginNew()
@@ -112,6 +108,8 @@ namespace DailyVitals.App.ViewModels
             Fasting = false;
             ReadingTime = DateTime.Now;
             Notes = "Morning reading";
+            OnPropertyChanged(nameof(ReadingTime));
+            OnPropertyChanged(nameof(Notes));
         }
 
         public void Save(long personId)
@@ -123,7 +121,7 @@ namespace DailyVitals.App.ViewModels
                 personId,
                 value,
                 ReadingTime,
-                Notes,
+                Notes ?? string.Empty,
                 Environment.UserName);
         }
 
@@ -139,7 +137,5 @@ namespace DailyVitals.App.ViewModels
             LoadHistoryForSelectedPerson();
             BeginNew();
         }
-
     }
-
 }

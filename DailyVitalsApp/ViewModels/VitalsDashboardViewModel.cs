@@ -1,11 +1,11 @@
-﻿using DailyVitals.Data.Services;
+using DailyVitals.Data.Services;
 using DailyVitals.Data.Services.DailyVitals.App.Services;
 using DailyVitals.Domain.Models;
 using DailyVitals.Domain.Models.Calculations;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 
@@ -22,8 +22,12 @@ namespace DailyVitals.App.ViewModels
         public ObservableCollection<Person> Persons { get; } = new();
         public ObservableCollection<Point> WeightTrendPoints { get; } = new();
 
-        private Person _selectedPerson;
-        public Person SelectedPerson
+        private decimal? _weightTrendDelta;
+        private Person? _selectedPerson;
+        private int _lastWeekExerciseMinutes;
+        private int _weeklyExerciseMinutes;
+
+        public Person? SelectedPerson
         {
             get => _selectedPerson;
             set
@@ -35,16 +39,15 @@ namespace DailyVitals.App.ViewModels
         }
 
         public string ExerciseTrendArrow =>
-                        WeeklyExerciseMinutes > LastWeekExerciseMinutes ? "▲" :
-                        WeeklyExerciseMinutes < LastWeekExerciseMinutes ? "▼" :
-                        "▶";
+            WeeklyExerciseMinutes > LastWeekExerciseMinutes ? "▲" :
+            WeeklyExerciseMinutes < LastWeekExerciseMinutes ? "▼" :
+            "▶";
 
         public Brush ExerciseTrendBrush =>
-                    WeeklyExerciseMinutes > LastWeekExerciseMinutes ? Brushes.Green :
-                    WeeklyExerciseMinutes < LastWeekExerciseMinutes ? Brushes.Red :
-                    Brushes.Gray;
+            WeeklyExerciseMinutes > LastWeekExerciseMinutes ? Brushes.Green :
+            WeeklyExerciseMinutes < LastWeekExerciseMinutes ? Brushes.Red :
+            Brushes.Gray;
 
-        private int _lastWeekExerciseMinutes;
         public int LastWeekExerciseMinutes
         {
             get => _lastWeekExerciseMinutes;
@@ -58,10 +61,9 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
-
-        public BloodPressureReading LatestBP { get; private set; }
-        public BloodGlucoseReading LatestGlucose { get; private set; }
-        public WeightReading LatestWeight { get; private set; }
+        public BloodPressureReading? LatestBP { get; private set; }
+        public BloodGlucoseReading? LatestGlucose { get; private set; }
+        public WeightReading? LatestWeight { get; private set; }
 
         public decimal? BMI =>
             LatestWeight?.HeightFt == null
@@ -75,41 +77,16 @@ namespace DailyVitals.App.ViewModels
             LoadPersons();
         }
 
-        private void LoadPersons()
+        public int WeeklyExerciseMinutes
         {
-            Persons.Clear();
-            foreach (var p in _personService.GetAllPersons())
-                Persons.Add(p);
+            get => _weeklyExerciseMinutes;
+            set
+            {
+                _weeklyExerciseMinutes = value;
+                OnPropertyChanged();
+            }
         }
 
-        private void LoadLatestVitals()
-        {
-            if (SelectedPerson == null) return;
-
-            LatestBP = _bpService.GetLatestForPerson(SelectedPerson.PersonId);
-            LatestGlucose = _bgService.GetLatestForPerson(SelectedPerson.PersonId);
-            LatestWeight = _weightService.GetLatestForPerson(SelectedPerson.PersonId);
-
-            WeeklyExerciseMinutes = _exerciseService
-                    .GetWeeklyTotalMinutes(SelectedPerson.PersonId);
-
-            WeeklyExerciseMinutes =
-                    _exerciseService.GetWeeklyTotalMinutes(SelectedPerson.PersonId);
-
-            LastWeekExerciseMinutes =
-                _exerciseService.GetLastWeekTotalMinutes(SelectedPerson.PersonId);
-
-            OnPropertyChanged(nameof(WeeklyExerciseMinutes));
-            OnPropertyChanged(nameof(LatestBP));
-            OnPropertyChanged(nameof(LatestGlucose));
-            OnPropertyChanged(nameof(LatestWeight));
-            OnPropertyChanged(nameof(BMI));
-            OnPropertyChanged(nameof(BMIBrush));
-            OnPropertyChanged(nameof(WeightTrendArrow));
-            OnPropertyChanged(nameof(WeightTrendBrush));
-            OnPropertyChanged(nameof(WeightTrendBrush));
-
-        }
         public Brush BMIBrush
         {
             get
@@ -128,29 +105,6 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
-        private void BuildWeightTrend(IEnumerable<TrendPoint> trend)
-        {
-            WeightTrendPoints.Clear();
-
-            var values = trend.Select(t => (double)t.Value).ToList();
-            if (values.Count < 2)
-                return;
-
-            double min = values.Min();
-            double max = values.Max();
-            double range = Math.Max(max - min, 1); // avoid divide-by-zero
-
-            double width = 120;
-            double height = 30;
-
-            for (int i = 0; i < values.Count; i++)
-            {
-                double x = i * (width / (values.Count - 1));
-                double y = height - ((values[i] - min) / range * height);
-                WeightTrendPoints.Add(new Point(x, y));
-            }
-        }
-
         public string WeightTrendArrow
         {
             get
@@ -158,14 +112,10 @@ namespace DailyVitals.App.ViewModels
                 if (LatestWeight == null)
                     return string.Empty;
 
-                var trend = _weightService.GetWeightTrend(
-                    SelectedPerson.PersonId, 2);
-
-                if (trend.Count < 2)
+                if (_weightTrendDelta == null)
                     return "→";
 
-                var delta = trend.Last().Value - trend.First().Value;
-
+                var delta = _weightTrendDelta.Value;
                 if (delta > 0) return "↑";
                 if (delta < 0) return "↓";
                 return "→";
@@ -176,35 +126,74 @@ namespace DailyVitals.App.ViewModels
         {
             get
             {
-                if (LatestWeight == null)
+                if (LatestWeight == null || _weightTrendDelta == null)
                     return Brushes.Gray;
 
-                var trend = _weightService.GetWeightTrend(
-                    SelectedPerson.PersonId, 2);
-
-                if (trend.Count < 2)
-                    return Brushes.Gray;
-
-                var delta = trend.Last().Value - trend.First().Value;
-
+                var delta = _weightTrendDelta.Value;
                 if (delta > 0) return Brushes.IndianRed;
                 if (delta < 0) return Brushes.ForestGreen;
                 return Brushes.Gray;
             }
         }
 
-        private int _weeklyExerciseMinutes;
-        public int WeeklyExerciseMinutes
+        private void LoadPersons()
         {
-            get => _weeklyExerciseMinutes;
-            set
-            {
-                _weeklyExerciseMinutes = value;
-                OnPropertyChanged();
-            }
+            Persons.Clear();
+            foreach (var person in _personService.GetAllPersons())
+                Persons.Add(person);
         }
 
+        private void LoadLatestVitals()
+        {
+            WeightTrendPoints.Clear();
+            _weightTrendDelta = null;
 
+            if (SelectedPerson == null)
+                return;
+
+            LatestBP = _bpService.GetLatestForPerson(SelectedPerson.PersonId);
+            LatestGlucose = _bgService.GetLatestForPerson(SelectedPerson.PersonId);
+            LatestWeight = _weightService.GetLatestForPerson(SelectedPerson.PersonId);
+            WeeklyExerciseMinutes = _exerciseService.GetWeeklyTotalMinutes(SelectedPerson.PersonId);
+            LastWeekExerciseMinutes = _exerciseService.GetLastWeekTotalMinutes(SelectedPerson.PersonId);
+
+            var weightTrend = _weightService.GetWeightTrend(SelectedPerson.PersonId, 2);
+            if (weightTrend.Count >= 2)
+                _weightTrendDelta = weightTrend[^1].Value - weightTrend[0].Value;
+
+            BuildWeightTrend(weightTrend);
+
+            OnPropertyChanged(nameof(LatestBP));
+            OnPropertyChanged(nameof(LatestGlucose));
+            OnPropertyChanged(nameof(LatestWeight));
+            OnPropertyChanged(nameof(BMI));
+            OnPropertyChanged(nameof(BMIBrush));
+            OnPropertyChanged(nameof(WeightTrendArrow));
+            OnPropertyChanged(nameof(WeightTrendBrush));
+            OnPropertyChanged(nameof(ExerciseTrendArrow));
+            OnPropertyChanged(nameof(ExerciseTrendBrush));
+        }
+
+        private void BuildWeightTrend(IEnumerable<TrendPoint> trend)
+        {
+            WeightTrendPoints.Clear();
+
+            var values = trend.Select(t => (double)t.Value).ToList();
+            if (values.Count < 2)
+                return;
+
+            double min = values.Min();
+            double max = values.Max();
+            double range = Math.Max(max - min, 1);
+            const double width = 120;
+            const double height = 30;
+
+            for (int i = 0; i < values.Count; i++)
+            {
+                double x = i * (width / (values.Count - 1));
+                double y = height - ((values[i] - min) / range * height);
+                WeightTrendPoints.Add(new Point(x, y));
+            }
+        }
     }
-
 }

@@ -40,7 +40,7 @@ namespace DailyVitals.Data.Services
             return Convert.ToInt64(result);
         }
 
-        public BloodPressureReading GetLatestForPerson(long personId)
+        public BloodPressureReading? GetLatestForPerson(long personId)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
