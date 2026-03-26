@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Vitals Dashboard"
         Height="520"
-        Width="760"
+        Width="980"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <Window.Resources>
@@ -90,7 +90,7 @@
 
         <!-- DASHBOARD CARDS -->
         <UniformGrid Grid.Row="1"
-                     Columns="3"
+                     Columns="4"
                      Margin="0,16,0,0">
 
             <!-- BLOOD PRESSURE CARD -->
@@ -181,7 +181,46 @@
                 </StackPanel>
             </Border>
 
-            
+            <!-- EXERCISE CARD -->
+            <Border Margin="8"
+                    Padding="12"
+                    CornerRadius="6"
+                    BorderBrush="Gray"
+                    BorderThickness="1"
+                    Background="#FFF3E0"
+                    Cursor="Hand"
+                    MouseLeftButtonUp="ExerciseCard_Click">
+
+                <StackPanel>
+                    <TextBlock Text="Exercise"
+                               FontWeight="Bold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Text="{Binding ExerciseCardSummary}"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock Text="{Binding ExerciseIntensityText}"
+                               FontSize="12"
+                               Margin="0,4,0,0"
+                               Foreground="DimGray"/>
+
+                    <TextBlock Text="{Binding ExerciseCardDate}"
+                               FontSize="12"
+                               Foreground="DimGray"/>
+
+                    <TextBlock Text="{Binding ExerciseCaloriesText}"
+                               FontSize="13"
+                               Margin="0,8,0,2"/>
+
+                    <TextBlock Text="{Binding ExerciseTrendArrow}"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="{Binding ExerciseTrendBrush}"
+                               Margin="6,0,0,0"/>
+                </StackPanel>
+            </Border>
 
 
         </UniformGrid>
