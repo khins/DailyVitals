@@ -64,6 +64,8 @@ namespace DailyVitals.App.ViewModels
         public BloodPressureReading? LatestBP { get; private set; }
         public BloodGlucoseReading? LatestGlucose { get; private set; }
         public WeightReading? LatestWeight { get; private set; }
+        public ExerciseSession? LatestExercise { get; private set; }
+        public decimal? EstimatedCaloriesBurned { get; private set; }
 
         public decimal? BMI =>
             LatestWeight?.HeightFt == null
@@ -104,6 +106,24 @@ namespace DailyVitals.App.ViewModels
                 return Brushes.IndianRed;
             }
         }
+
+        public string ExerciseCardSummary =>
+            LatestExercise == null
+                ? "No exercise logged yet"
+                : $"{LatestExercise.ExerciseName} · {LatestExercise.DurationMinutes:F0} min";
+
+        public string ExerciseCardDate =>
+            LatestExercise?.StartTime.ToString("d") ?? string.Empty;
+
+        public string ExerciseCaloriesText =>
+            EstimatedCaloriesBurned == null
+                ? "Calories estimate unavailable"
+                : $"Est. calories: {EstimatedCaloriesBurned.Value:F0}";
+
+        public string ExerciseIntensityText =>
+            LatestExercise == null
+                ? string.Empty
+                : $"Intensity: {LatestExercise.Intensity}";
 
         public string WeightTrendArrow
         {
@@ -156,6 +176,15 @@ namespace DailyVitals.App.ViewModels
             LatestWeight = _weightService.GetLatestForPerson(SelectedPerson.PersonId);
             WeeklyExerciseMinutes = _exerciseService.GetWeeklyTotalMinutes(SelectedPerson.PersonId);
             LastWeekExerciseMinutes = _exerciseService.GetLastWeekTotalMinutes(SelectedPerson.PersonId);
+            var exerciseHistory = _exerciseService.GetHistory(SelectedPerson.PersonId);
+            LatestExercise = exerciseHistory.FirstOrDefault();
+            EstimatedCaloriesBurned = LatestExercise == null || LatestWeight == null
+                ? null
+                : ExerciseMetrics.EstimateCaloriesBurned(
+                    LatestExercise.DurationMinutes,
+                    LatestExercise.Intensity,
+                    LatestWeight.WeightValue,
+                    LatestWeight.WeightUnit);
 
             var weightTrend = _weightService.GetWeightTrend(SelectedPerson.PersonId, 2);
             if (weightTrend.Count >= 2)
@@ -166,12 +195,17 @@ namespace DailyVitals.App.ViewModels
             OnPropertyChanged(nameof(LatestBP));
             OnPropertyChanged(nameof(LatestGlucose));
             OnPropertyChanged(nameof(LatestWeight));
+            OnPropertyChanged(nameof(LatestExercise));
             OnPropertyChanged(nameof(BMI));
             OnPropertyChanged(nameof(BMIBrush));
             OnPropertyChanged(nameof(WeightTrendArrow));
             OnPropertyChanged(nameof(WeightTrendBrush));
             OnPropertyChanged(nameof(ExerciseTrendArrow));
             OnPropertyChanged(nameof(ExerciseTrendBrush));
+            OnPropertyChanged(nameof(ExerciseCardSummary));
+            OnPropertyChanged(nameof(ExerciseCardDate));
+            OnPropertyChanged(nameof(ExerciseCaloriesText));
+            OnPropertyChanged(nameof(ExerciseIntensityText));
         }
 
         private void BuildWeightTrend(IEnumerable<TrendPoint> trend)

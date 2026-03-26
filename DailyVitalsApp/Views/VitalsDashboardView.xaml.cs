@@ -61,5 +61,21 @@ namespace DailyVitals.App.Views
 
             window.ShowDialog();
         }
+
+        private void ExerciseCard_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is not VitalsDashboardViewModel vm ||
+                vm.SelectedPerson == null)
+                return;
+
+            var window = new ExerciseTrendView(
+                vm.SelectedPerson.PersonId,
+                vm.SelectedPerson.FullName)
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+        }
     }
 }
