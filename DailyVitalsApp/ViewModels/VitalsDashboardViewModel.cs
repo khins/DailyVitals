@@ -18,6 +18,7 @@ namespace DailyVitals.App.ViewModels
         private readonly BloodGlucoseService _bgService = new();
         private readonly WeightService _weightService = new();
         private readonly ExerciseService _exerciseService = new();
+        private readonly RenalDietFoodService _renalDietFoodService = new();
 
         public ObservableCollection<Person> Persons { get; } = new();
         public ObservableCollection<Point> WeightTrendPoints { get; } = new();
@@ -66,6 +67,8 @@ namespace DailyVitals.App.ViewModels
         public WeightReading? LatestWeight { get; private set; }
         public ExerciseSession? LatestExercise { get; private set; }
         public decimal? EstimatedCaloriesBurned { get; private set; }
+        public IReadOnlyList<RenalMealCombo> ExerciseMealRecommendations { get; private set; } =
+            Array.Empty<RenalMealCombo>();
 
         public decimal? BMI =>
             LatestWeight?.HeightFt == null
@@ -125,6 +128,21 @@ namespace DailyVitals.App.ViewModels
                 ? string.Empty
                 : $"Intensity: {LatestExercise.Intensity}";
 
+        public string ExerciseRecommendationTitle =>
+            ExerciseMealRecommendations.Count == 0
+                ? "Recommendations unavailable"
+                : "Post-workout renal meal combos";
+
+        public string ExerciseRecommendationLine1 =>
+            ExerciseMealRecommendations.Count >= 1
+                ? FormatRecommendation(ExerciseMealRecommendations[0])
+                : "Add allowed foods to renal_diet_food";
+
+        public string ExerciseRecommendationLine2 =>
+            ExerciseMealRecommendations.Count >= 2
+                ? FormatRecommendation(ExerciseMealRecommendations[1])
+                : string.Empty;
+
         public string WeightTrendArrow
         {
             get
@@ -178,6 +196,8 @@ namespace DailyVitals.App.ViewModels
             LastWeekExerciseMinutes = _exerciseService.GetLastWeekTotalMinutes(SelectedPerson.PersonId);
             var exerciseHistory = _exerciseService.GetHistory(SelectedPerson.PersonId);
             LatestExercise = exerciseHistory.FirstOrDefault();
+            ExerciseMealRecommendations =
+                _renalDietFoodService.GetWeightLossMealCombos(SelectedPerson.PersonId);
             EstimatedCaloriesBurned = LatestExercise == null || LatestWeight == null
                 ? null
                 : ExerciseMetrics.EstimateCaloriesBurned(
@@ -206,6 +226,19 @@ namespace DailyVitals.App.ViewModels
             OnPropertyChanged(nameof(ExerciseCardDate));
             OnPropertyChanged(nameof(ExerciseCaloriesText));
             OnPropertyChanged(nameof(ExerciseIntensityText));
+            OnPropertyChanged(nameof(ExerciseRecommendationTitle));
+            OnPropertyChanged(nameof(ExerciseRecommendationLine1));
+            OnPropertyChanged(nameof(ExerciseRecommendationLine2));
+        }
+
+        private static string FormatRecommendation(RenalMealCombo combo)
+        {
+            var names = string.Join(" + ", combo.Foods.Select(food => food.FoodName));
+            var style = string.IsNullOrWhiteSpace(combo.MealStyle)
+                ? string.Empty
+                : $"{combo.MealStyle}: ";
+
+            return $"{style}{names} - {combo.TotalProteinG:F0}g protein, {combo.TotalCalories} cal";
         }
 
         private void BuildWeightTrend(IEnumerable<TrendPoint> trend)
