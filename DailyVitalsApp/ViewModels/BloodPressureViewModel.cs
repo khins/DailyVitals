@@ -32,7 +32,7 @@ namespace DailyVitals.App.ViewModels
                 return;
             }
 
-            Notes = "Morning reading, seated";
+            Notes = $"Morning reading, seated at {ReadingTime.ToString("h:mm tt")}";
             Pulse = string.Empty;
 
             LoadPersons();
@@ -181,8 +181,8 @@ namespace DailyVitals.App.ViewModels
             Systolic = string.Empty;
             Diastolic = string.Empty;
             Pulse = string.Empty;
-            Notes = "Morning reading, seated";
             ReadingTime = DateTime.Now;
+            Notes = $"Morning reading, seated at {ReadingTime.ToString("h:mm tt")}";
             OnPropertyChanged(nameof(Pulse));
             OnPropertyChanged(nameof(Notes));
             OnPropertyChanged(nameof(ReadingTime));
@@ -255,7 +255,7 @@ namespace DailyVitals.App.ViewModels
             Diastolic = string.Empty;
             Pulse = string.Empty;
             ReadingTime = DateTime.Now;
-            Notes = "Morning reading, seated";
+            Notes = $"Morning reading, seated at {ReadingTime.ToString("h:mm tt")}";
 
             OnPropertyChanged(nameof(SeverityText));
             OnPropertyChanged(nameof(SeverityBrush));
