@@ -1,0 +1,236 @@
+<Window x:Class="DailyVitals.App.Views.KidneyLabResultsView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Monthly Kidney Labs"
+        Height="790"
+        Width="900"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <Style x:Key="MainMenuButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="220"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Margin" Value="6"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#707070"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#D6D6D6"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#C8C8C8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#EEEEEE"/>
+                                <Setter Property="Foreground" Value="#888888"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="220"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="Person:"
+                       VerticalAlignment="Center"/>
+
+            <ComboBox Grid.Column="1"
+                      Width="260"
+                      Margin="0,5"
+                      ItemsSource="{Binding Persons}"
+                      SelectedItem="{Binding SelectedPerson}"
+                      DisplayMemberPath="FullName"/>
+        </Grid>
+
+        <DataGrid Grid.Row="1"
+                  Margin="0,10,0,0"
+                  ItemsSource="{Binding History}"
+                  SelectedItem="{Binding SelectedHistory}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  SelectionMode="Single">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Month"
+                                    Width="100"
+                                    Binding="{Binding DisplayMonth}"/>
+                <DataGridTextColumn Header="Albumin"
+                                    Width="75"
+                                    Binding="{Binding Albumin}"/>
+                <DataGridTextColumn Header="nPCR"
+                                    Width="75"
+                                    Binding="{Binding NPCR}"/>
+                <DataGridTextColumn Header="K"
+                                    Width="65"
+                                    Binding="{Binding Potassium}"/>
+                <DataGridTextColumn Header="wKt/V"
+                                    Width="75"
+                                    Binding="{Binding WKtV}"/>
+                <DataGridTextColumn Header="Ca"
+                                    Width="65"
+                                    Binding="{Binding Calcium}"/>
+                <DataGridTextColumn Header="Phos"
+                                    Width="75"
+                                    Binding="{Binding Phosphorus}"/>
+                <DataGridTextColumn Header="Hgb"
+                                    Width="75"
+                                    Binding="{Binding Hemoglobin}"/>
+                <DataGridTextColumn Header="Cr"
+                                    Width="65"
+                                    Binding="{Binding Creatinine}"/>
+                <DataGridTextColumn Header="Notes"
+                                    Width="*"
+                                    Binding="{Binding Notes}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <ScrollViewer Grid.Row="2"
+                      Margin="0,15,0,0"
+                      VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="160"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Result Month:" VerticalAlignment="Center"/>
+                <DatePicker Grid.Row="0" Grid.Column="1"
+                            Width="140"
+                            Margin="0,4,20,4"
+                            SelectedDate="{Binding ResultMonth}"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Albumin:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Width="120" Margin="0,4,20,4"
+                         Text="{Binding Albumin, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="nPCR:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="1" Grid.Column="3" Width="120" Margin="0,4"
+                         Text="{Binding NPCR, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Potassium:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="2" Grid.Column="1" Width="120" Margin="0,4,20,4"
+                         Text="{Binding Potassium, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="wKt/V:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="2" Grid.Column="3" Width="120" Margin="0,4"
+                         Text="{Binding WKtV, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Calcium:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Width="120" Margin="0,4,20,4"
+                         Text="{Binding Calcium, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="3" Grid.Column="2" Text="Phosphorus:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="3" Grid.Column="3" Width="120" Margin="0,4"
+                         Text="{Binding Phosphorus, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="iPTH:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="4" Grid.Column="1" Width="120" Margin="0,4,20,4"
+                         Text="{Binding IPTH, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="4" Grid.Column="2" Text="Hemoglobin:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="4" Grid.Column="3" Width="120" Margin="0,4"
+                         Text="{Binding Hemoglobin, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="Glucose:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="5" Grid.Column="1" Width="120" Margin="0,4,20,4"
+                         Text="{Binding Glucose, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="5" Grid.Column="2" Text="Cholesterol:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="5" Grid.Column="3" Width="120" Margin="0,4"
+                         Text="{Binding Cholesterol, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="Triglycerides:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="6" Grid.Column="1" Width="120" Margin="0,4,20,4"
+                         Text="{Binding Triglycerides, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="6" Grid.Column="2" Text="BUN:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="6" Grid.Column="3" Width="120" Margin="0,4"
+                         Text="{Binding BUN, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Row="7" Grid.Column="0" Text="Creatinine:" VerticalAlignment="Top" Margin="0,8,0,0"/>
+                <StackPanel Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Vertical">
+                    <WrapPanel>
+                        <TextBox Width="120" Margin="0,4,20,4"
+                                 Text="{Binding Creatinine, UpdateSourceTrigger=PropertyChanged}"/>
+                    </WrapPanel>
+                    <TextBlock Text="Notes:"
+                               Margin="0,10,0,4"/>
+                    <TextBox Height="84"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+
+        <Grid Grid.Row="3" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Width="100"
+                    Height="32"
+                    Content="New"
+                    Style="{StaticResource MainMenuButtonStyle}"
+                    Click="New_Click"/>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Width="100"
+                        Height="32"
+                        Margin="0,0,10,0"
+                        Content="Delete"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="Delete_Click"
+                        IsEnabled="{Binding CanDelete}"/>
+                <Button Width="100"
+                        Height="32"
+                        Margin="0,0,10,0"
+                        Content="Save"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="Save_Click"
+                        IsEnabled="{Binding CanSave}"/>
+                <Button Width="100"
+                        Height="32"
+                        Content="Cancel"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="Cancel_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
