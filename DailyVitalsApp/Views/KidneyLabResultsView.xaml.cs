@@ -1,4 +1,5 @@
 using DailyVitals.App.ViewModels;
+using DailyVitals.Domain.Models;
 using System;
 using System.Windows;
 
@@ -48,6 +49,22 @@ namespace DailyVitals.App.Views
                 _vm.DeleteSelected();
                 MessageBox.Show("Monthly kidney lab result deleted.", "Deleted");
             }
+        }
+
+        private void TrendView_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm.SelectedPerson is not Person person)
+            {
+                MessageBox.Show("Please select a person first.", "Trend View");
+                return;
+            }
+
+            var trendWindow = new KidneyLabTrendView(person.PersonId, person.FullName)
+            {
+                Owner = this
+            };
+
+            trendWindow.ShowDialog();
         }
     }
 }
