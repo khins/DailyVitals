@@ -393,10 +393,12 @@ CREATE TABLE public.exercise_session (
 	exercise_type_id int8 NOT NULL,
 	start_time timestamp NOT NULL,
 	duration_minutes numeric(6, 2) NOT NULL,
+	calories_expended numeric(8, 2) NULL,
 	intensity varchar(20) NOT NULL,
 	notes text NULL,
 	created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT exercise_session_calories_expended_check CHECK (((calories_expended IS NULL) OR (calories_expended >= (0)::numeric))),
 	CONSTRAINT exercise_session_duration_minutes_check CHECK ((duration_minutes > (0)::numeric)),
 	CONSTRAINT exercise_session_intensity_check CHECK (((intensity)::text = ANY ((ARRAY['Low'::character varying, 'Moderate'::character varying, 'High'::character varying])::text[]))),
 	CONSTRAINT exercise_session_pkey PRIMARY KEY (exercise_session_id),
@@ -814,7 +816,7 @@ $function$
 ;
 
 CREATE OR REPLACE FUNCTION public.sp_get_exercise_history(p_person_id bigint)
- RETURNS TABLE(exercise_session_id bigint, exercise_type_id bigint, exercise_name text, start_time timestamp without time zone, duration_minutes integer, intensity text, notes text)
+ RETURNS TABLE(exercise_session_id bigint, exercise_type_id bigint, exercise_name text, start_time timestamp without time zone, duration_minutes decimal, calories_expended decimal, intensity text, notes text)
  LANGUAGE sql
 AS $function$
     SELECT
@@ -823,6 +825,7 @@ AS $function$
         et.exercise_name,
         es.start_time,
         es.duration_minutes,
+        es.calories_expended,
         es.intensity,
         es.notes
     FROM exercise_session es
@@ -1003,7 +1006,7 @@ END;
 $function$
 ;
 
-CREATE OR REPLACE PROCEDURE public.sp_insert_exercise_session(IN p_person_id bigint, IN p_exercise_type_id bigint, IN p_start_time timestamp without time zone, IN p_duration_minutes integer, IN p_intensity character varying, IN p_notes text, IN p_entered_by text)
+CREATE OR REPLACE PROCEDURE public.sp_insert_exercise_session(IN p_person_id bigint, IN p_exercise_type_id bigint, IN p_start_time timestamp without time zone, IN p_duration_minutes decimal, IN p_calories_expended decimal, IN p_intensity character varying, IN p_notes text, IN p_entered_by text)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
@@ -1014,6 +1017,7 @@ BEGIN
         exercise_type_id,
         start_time,
         duration_minutes,
+        calories_expended,
         intensity,
         notes
     )
@@ -1022,6 +1026,7 @@ BEGIN
         p_exercise_type_id,
         p_start_time,
         p_duration_minutes,
+        p_calories_expended,
         p_intensity,
         p_notes
     )
@@ -1045,6 +1050,7 @@ BEGIN
             'exercise_type_id', p_exercise_type_id,
             'start_time', p_start_time,
             'duration_minutes', p_duration_minutes,
+            'calories_expended', p_calories_expended,
             'intensity', p_intensity,
             'notes', p_notes
         )

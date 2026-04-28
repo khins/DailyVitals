@@ -18,6 +18,8 @@ namespace DailyVitals.Domain.Models
 
         public decimal DurationMinutes { get; set; }
 
+        public decimal? CaloriesExpended { get; set; }
+
         public string Intensity { get; set; } = string.Empty;
 
         public string? Notes { get; set; }

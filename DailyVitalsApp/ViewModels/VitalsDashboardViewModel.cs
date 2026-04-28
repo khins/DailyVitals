@@ -198,13 +198,15 @@ namespace DailyVitals.App.ViewModels
             LatestExercise = exerciseHistory.FirstOrDefault();
             ExerciseMealRecommendations =
                 _renalDietFoodService.GetWeightLossMealCombos(SelectedPerson.PersonId);
-            EstimatedCaloriesBurned = LatestExercise == null || LatestWeight == null
-                ? null
-                : ExerciseMetrics.EstimateCaloriesBurned(
+            EstimatedCaloriesBurned = LatestExercise?.CaloriesExpended;
+            if (EstimatedCaloriesBurned == null && LatestExercise != null && LatestWeight != null)
+            {
+                EstimatedCaloriesBurned = ExerciseMetrics.EstimateCaloriesBurned(
                     LatestExercise.DurationMinutes,
                     LatestExercise.Intensity,
                     LatestWeight.WeightValue,
                     LatestWeight.WeightUnit);
+            }
 
             var weightTrend = _weightService.GetWeightTrend(SelectedPerson.PersonId, 2);
             if (weightTrend.Count >= 2)

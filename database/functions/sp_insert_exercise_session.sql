@@ -1,4 +1,6 @@
-CREATE OR REPLACE PROCEDURE public.sp_insert_exercise_session(IN p_person_id bigint, IN p_exercise_type_id bigint, IN p_start_time timestamp without time zone, IN p_duration_minutes decimal, IN p_intensity character varying, IN p_notes text, IN p_entered_by text)
+DROP PROCEDURE IF EXISTS public.sp_insert_exercise_session(bigint, bigint, timestamp without time zone, decimal, character varying, text, text);
+
+CREATE OR REPLACE PROCEDURE public.sp_insert_exercise_session(IN p_person_id bigint, IN p_exercise_type_id bigint, IN p_start_time timestamp without time zone, IN p_duration_minutes decimal, IN p_calories_expended decimal, IN p_intensity character varying, IN p_notes text, IN p_entered_by text)
  LANGUAGE plpgsql
 AS $procedure$
 DECLARE
@@ -9,6 +11,7 @@ BEGIN
         exercise_type_id,
         start_time,
         duration_minutes,
+        calories_expended,
         intensity,
         notes
     )
@@ -17,6 +20,7 @@ BEGIN
         p_exercise_type_id,
         p_start_time,
         p_duration_minutes,
+        p_calories_expended,
         p_intensity,
         p_notes
     )
@@ -40,6 +44,7 @@ BEGIN
             'exercise_type_id', p_exercise_type_id,
             'start_time', p_start_time,
             'duration_minutes', p_duration_minutes,
+            'calories_expended', p_calories_expended,
             'intensity', p_intensity,
             'notes', p_notes
         )

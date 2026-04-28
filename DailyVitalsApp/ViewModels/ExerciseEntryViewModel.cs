@@ -1,6 +1,7 @@
 using DailyVitals.Data.Services;
 using DailyVitals.Data.Services.DailyVitals.App.Services;
 using DailyVitals.Domain.Models;
+using DailyVitals.Domain.Models.Calculations;
 using System;
 using System.Collections.ObjectModel;
 
@@ -10,6 +11,7 @@ namespace DailyVitals.App.ViewModels
     {
         private readonly ExerciseService _service = new();
         private readonly PersonService _personService = new();
+        private readonly WeightService _weightService = new();
 
         public ObservableCollection<Person> Persons { get; } = new();
         public ObservableCollection<ExerciseType> ExerciseTypes { get; } = new();
@@ -53,6 +55,7 @@ namespace DailyVitals.App.ViewModels
         public long? EditingExerciseSessionId { get; private set; }
 
         public string DurationMinutes { get; set; } = string.Empty;
+        public string CaloriesExpended { get; set; } = string.Empty;
         public DateTime StartTime { get; set; } = DateTime.Now;
 
         private string _notes = string.Empty;
@@ -92,11 +95,13 @@ namespace DailyVitals.App.ViewModels
                 return;
 
             DurationMinutes = SelectedSession.DurationMinutes.ToString();
+            CaloriesExpended = SelectedSession.CaloriesExpended?.ToString() ?? string.Empty;
             SelectedIntensity = SelectedSession.Intensity;
             Notes = SelectedSession.Notes ?? string.Empty;
             StartTime = SelectedSession.StartTime;
 
             OnPropertyChanged(nameof(DurationMinutes));
+            OnPropertyChanged(nameof(CaloriesExpended));
             OnPropertyChanged(nameof(SelectedIntensity));
             OnPropertyChanged(nameof(Notes));
             OnPropertyChanged(nameof(StartTime));
@@ -139,11 +144,36 @@ namespace DailyVitals.App.ViewModels
             if (durationMinutes <= 0)
                 throw new InvalidOperationException("Duration must be greater than zero.");
 
+            decimal? caloriesExpended = null;
+            if (!string.IsNullOrWhiteSpace(CaloriesExpended))
+            {
+                if (!decimal.TryParse(CaloriesExpended, out var parsedCalories))
+                    throw new InvalidOperationException("Calories expended must be a valid number.");
+
+                if (parsedCalories < 0)
+                    throw new InvalidOperationException("Calories expended cannot be negative.");
+
+                caloriesExpended = parsedCalories;
+            }
+            else
+            {
+                var latestWeight = _weightService.GetLatestForPerson(SelectedPerson.PersonId);
+                if (latestWeight != null)
+                {
+                    caloriesExpended = ExerciseMetrics.EstimateCaloriesBurned(
+                        durationMinutes,
+                        SelectedIntensity,
+                        latestWeight.WeightValue,
+                        latestWeight.WeightUnit);
+                }
+            }
+
             _service.InsertExerciseSession(
                 SelectedPerson.PersonId,
                 SelectedExercise.ExerciseTypeId,
                 StartTime,
                 durationMinutes,
+                caloriesExpended,
                 SelectedIntensity,
                 Notes,
                 Environment.UserName
@@ -156,11 +186,13 @@ namespace DailyVitals.App.ViewModels
         private void ClearEntry()
         {
             DurationMinutes = string.Empty;
+            CaloriesExpended = string.Empty;
             Notes = string.Empty;
             SelectedIntensity = "Moderate";
             StartTime = DateTime.Now;
 
             OnPropertyChanged(nameof(DurationMinutes));
+            OnPropertyChanged(nameof(CaloriesExpended));
             OnPropertyChanged(nameof(Notes));
             OnPropertyChanged(nameof(SelectedIntensity));
             OnPropertyChanged(nameof(StartTime));

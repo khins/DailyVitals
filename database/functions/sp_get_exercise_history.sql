@@ -1,7 +1,7 @@
---drop function public.sp_get_exercise_history;
+DROP FUNCTION IF EXISTS public.sp_get_exercise_history(bigint);
 
 CREATE OR REPLACE FUNCTION public.sp_get_exercise_history(p_person_id bigint)
- RETURNS TABLE(exercise_session_id bigint, exercise_type_id bigint, exercise_name text, start_time timestamp without time zone, duration_minutes decimal, intensity text, notes text)
+ RETURNS TABLE(exercise_session_id bigint, exercise_type_id bigint, exercise_name text, start_time timestamp without time zone, duration_minutes decimal, calories_expended decimal, intensity text, notes text)
  LANGUAGE sql
 AS $function$
     SELECT
@@ -10,6 +10,7 @@ AS $function$
         et.exercise_name,
         es.start_time,
         es.duration_minutes,
+        es.calories_expended,
         es.intensity,
         es.notes
     FROM exercise_session es
