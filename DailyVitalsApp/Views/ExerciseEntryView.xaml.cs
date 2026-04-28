@@ -63,7 +63,7 @@ namespace DailyVitals.App.Views
             }
         }
 
-        private void Duration_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        private void Decimal_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             if (sender is not TextBox textBox)
             {

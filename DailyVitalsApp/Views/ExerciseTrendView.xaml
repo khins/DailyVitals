@@ -70,12 +70,18 @@
             <TextBlock Text="{Binding PersonName}"
                        FontSize="18"
                        FontWeight="Bold"/>
-            <TextBlock Text="Exercise Trend (minutes per session)"
+            <TextBlock Text="{Binding TrendTitle}"
                        FontSize="13"
                        Foreground="DimGray"/>
             <TextBlock Text="{Binding DateRange}"
                        FontSize="12"
                        Foreground="Gray"/>
+            <ComboBox Width="160"
+                      Margin="0,8,0,0"
+                      HorizontalAlignment="Left"
+                      ItemsSource="{Binding MetricOptions}"
+                      SelectedItem="{Binding SelectedMetric}"
+                      DisplayMemberPath="DisplayName"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -87,13 +93,13 @@
                           StrokeThickness="3"
                           Points="{Binding TrendPoints}"/>
 
-                <TextBlock Text="{Binding StartMinutes, StringFormat=Start: {0:F0} min}"
+                <TextBlock Text="{Binding StartText}"
                            Canvas.Left="5"
                            Canvas.Top="5"
                            FontSize="12"
                            Foreground="DimGray"/>
 
-                <TextBlock Text="{Binding EndMinutes, StringFormat=End: {0:F0} min}"
+                <TextBlock Text="{Binding EndText}"
                            Canvas.Right="5"
                            Canvas.Top="5"
                            FontSize="12"

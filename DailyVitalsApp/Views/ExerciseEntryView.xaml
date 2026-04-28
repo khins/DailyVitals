@@ -104,6 +104,9 @@
                 <DataGridTextColumn Header="Minutes"
                                     Binding="{Binding DurationMinutes}"
                                     Width="100"/>
+                <DataGridTextColumn Header="Calories"
+                                    Binding="{Binding CaloriesExpended, StringFormat={}{0:F0}}"
+                                    Width="100"/>
                 <DataGridTextColumn Header="Intensity"
                                     Binding="{Binding Intensity}"
                                     Width="120"/>
@@ -124,6 +127,7 @@
                 </Grid.ColumnDefinitions>
 
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -160,17 +164,31 @@
                          Width="240"
                          HorizontalAlignment="Left"
                          Text="{Binding DurationMinutes, UpdateSourceTrigger=PropertyChanged}"
-                         PreviewTextInput="Duration_PreviewTextInput"/>
+                         PreviewTextInput="Decimal_PreviewTextInput"/>
 
                 <!-- Intensity -->
-                <TextBlock Text="Intensity:"
+                <TextBlock Text="Calories expended:"
                            Grid.Row="2"
                            Grid.Column="0"
                            Margin="0,8,0,0"
-                           VerticalAlignment="Center"
-                           />
+                           VerticalAlignment="Center"/>
 
-                <ComboBox Grid.Row="2"
+                <TextBox Grid.Row="2"
+                         Grid.Column="1"
+                         Margin="0,8,0,0"
+                         Width="240"
+                         HorizontalAlignment="Left"
+                         Text="{Binding CaloriesExpended, UpdateSourceTrigger=PropertyChanged}"
+                         PreviewTextInput="Decimal_PreviewTextInput"/>
+
+                <!-- Intensity -->
+                <TextBlock Text="Intensity:"
+                           Grid.Row="3"
+                           Grid.Column="0"
+                           Margin="0,8,0,0"
+                           VerticalAlignment="Center"/>
+
+                <ComboBox Grid.Row="3"
                           Grid.Column="1"
                           Margin="0,8,0,0"
                           Width="240"
@@ -180,12 +198,12 @@
 
                 <!-- Notes -->
                 <TextBlock Text="Notes:"
-                           Grid.Row="3"
+                           Grid.Row="4"
                            Grid.Column="0"
                            Margin="0,8,0,0"
                            VerticalAlignment="Top"/>
 
-                <TextBox Grid.Row="3"
+                <TextBox Grid.Row="4"
                          Grid.Column="1"
                          Margin="0,8,0,0"
                          Width="420"
