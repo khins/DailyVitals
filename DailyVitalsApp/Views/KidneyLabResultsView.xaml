@@ -203,12 +203,19 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0"
-                    Width="100"
-                    Height="32"
-                    Content="New"
-                    Style="{StaticResource MainMenuButtonStyle}"
-                    Click="New_Click"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button Width="100"
+                        Height="32"
+                        Content="New"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="New_Click"/>
+                <Button Width="100"
+                        Height="32"
+                        Content="Trend View"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="TrendView_Click"
+                        IsEnabled="{Binding CanOpenTrendView}"/>
+            </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal">
                 <Button Width="100"

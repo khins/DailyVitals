@@ -38,6 +38,7 @@ namespace DailyVitals.App.ViewModels
         public ObservableCollection<KidneyLabResult> History { get; } = new();
 
         public bool CanDelete => SelectedHistory != null;
+        public bool CanOpenTrendView => SelectedPerson != null;
         public bool CanSave =>
             !string.IsNullOrWhiteSpace(Albumin) &&
             !string.IsNullOrWhiteSpace(NPCR) &&
@@ -60,6 +61,7 @@ namespace DailyVitals.App.ViewModels
             {
                 _selectedPerson = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(CanOpenTrendView));
                 LoadHistory();
             }
         }
