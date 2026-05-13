@@ -80,5 +80,10 @@ namespace DailyVitals.App
         {
             new ExerciseEntryView { Owner = this }.ShowDialog();
         }
+
+        private void OpenFoodPhosphorus_Click(object sender, RoutedEventArgs e)
+        {
+            new FoodPhosphorusIntakeView { Owner = this }.ShowDialog();
+        }
     }
 }

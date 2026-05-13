@@ -107,6 +107,10 @@ Style="{StaticResource MainMenuButtonStyle}"
 Style="{StaticResource MainMenuButtonStyle}"
                 Click="OpenExercise_Click"/>
 
+            <Button Content="Track Food Phosphorus"
+Style="{StaticResource MainMenuButtonStyle}"
+                Click="OpenFoodPhosphorus_Click"/>
+
             <Button Content="Vitals Dashboard"
 Style="{StaticResource MainMenuButtonStyle}"
         Click="OpenDashboard_Click"/>
