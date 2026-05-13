@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS public.food_phosphorus_intake (
+    food_phosphorus_intake_id bigserial NOT NULL,
+    person_id int8 NOT NULL,
+    food_name varchar(200) NOT NULL,
+    phosphorus_mg integer NOT NULL,
+    consumed_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    notes text NULL,
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT food_phosphorus_intake_pkey PRIMARY KEY (food_phosphorus_intake_id),
+    CONSTRAINT food_phosphorus_intake_food_name_check CHECK (length(trim(food_name)) > 0),
+    CONSTRAINT food_phosphorus_intake_phosphorus_check CHECK (phosphorus_mg >= 0),
+    CONSTRAINT fk_food_phosphorus_intake_person FOREIGN KEY (person_id) REFERENCES public.person(person_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_food_phosphorus_intake_person_date
+    ON public.food_phosphorus_intake USING btree (person_id, consumed_at DESC);
