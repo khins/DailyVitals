@@ -45,6 +45,28 @@ namespace DailyVitals.App.Views
             }
         }
 
+        private async void Estimate_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                await _vm.EstimatePhosphorusAsync();
+
+                MessageBox.Show(
+                    "Phosphorus estimate added to the form. Review the details before saving.",
+                    "Estimate Ready",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Estimate Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
         private void Delete_Click(object sender, RoutedEventArgs e)
         {
             if (!_vm.CanDelete)

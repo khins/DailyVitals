@@ -1,21 +1,57 @@
 -- Food items with a running phosphorus total for each day.
+WITH binder_dose AS (
+    SELECT
+        3 AS renvela_binder_count,
+        800 AS renvela_binder_mg,
+        3 * 800 AS renvela_total_binder_mg
+),
+running_food_phosphorus AS (
+    SELECT
+        food_phosphorus_intake_id,
+        consumed_at::date AS intake_date,
+        consumed_at,
+        food_name,
+        phosphorus_mg,
+        SUM(phosphorus_mg) OVER (
+            PARTITION BY person_id, consumed_at::date
+            ORDER BY consumed_at, food_phosphorus_intake_id
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS running_daily_phosphorus_mg
+    FROM food_phosphorus_intake
+)
 SELECT
-    consumed_at::date AS intake_date,
-    consumed_at,
-    food_name,
-    phosphorus_mg,
-    SUM(phosphorus_mg) OVER (
-        PARTITION BY person_id, consumed_at::date
-        ORDER BY consumed_at, food_phosphorus_intake_id
-        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    ) AS running_daily_phosphorus_mg
-FROM food_phosphorus_intake
-ORDER BY consumed_at::date DESC, consumed_at, food_phosphorus_intake_id;
+    rfp.intake_date,
+    rfp.consumed_at,
+    rfp.food_name,
+    rfp.phosphorus_mg,
+    rfp.running_daily_phosphorus_mg,
+    bd.renvela_binder_count,
+    bd.renvela_binder_mg,
+    bd.renvela_total_binder_mg,
+    rfp.running_daily_phosphorus_mg - bd.renvela_total_binder_mg AS grand_running_total_mg
+FROM running_food_phosphorus rfp
+CROSS JOIN binder_dose bd
+ORDER BY rfp.intake_date DESC, rfp.consumed_at, rfp.food_phosphorus_intake_id;
 
 -- Daily phosphorus totals.
+WITH binder_dose AS (
+    SELECT
+        3 AS renvela_binder_count,
+        800 AS renvela_binder_mg,
+        3 * 800 AS renvela_total_binder_mg
+)
 SELECT
-    consumed_at::date AS intake_date,
-    SUM(phosphorus_mg) AS total_phosphorus_mg
-FROM food_phosphorus_intake
-GROUP BY consumed_at::date
+    fpi.consumed_at::date AS intake_date,
+    SUM(fpi.phosphorus_mg) AS total_phosphorus_mg,
+    bd.renvela_binder_count,
+    bd.renvela_binder_mg,
+    bd.renvela_total_binder_mg,
+    SUM(fpi.phosphorus_mg) - bd.renvela_total_binder_mg AS grand_total_mg
+FROM food_phosphorus_intake fpi
+CROSS JOIN binder_dose bd
+GROUP BY
+    fpi.consumed_at::date,
+    bd.renvela_binder_count,
+    bd.renvela_binder_mg,
+    bd.renvela_total_binder_mg
 ORDER BY intake_date DESC;

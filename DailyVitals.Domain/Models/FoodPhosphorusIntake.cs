@@ -10,5 +10,10 @@ namespace DailyVitals.Domain.Models
         public int PhosphorusMg { get; set; }
         public DateTime ConsumedAt { get; set; }
         public string? Notes { get; set; }
+        public string? ServingDescription { get; set; }
+        public bool EstimatedByAi { get; set; }
+        public string? AiProvider { get; set; }
+        public string? AiConfidence { get; set; }
+        public string? SourceNotes { get; set; }
     }
 }
