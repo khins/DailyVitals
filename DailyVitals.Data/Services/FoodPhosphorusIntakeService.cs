@@ -14,13 +14,75 @@ namespace DailyVitals.Data.Services
             int phosphorusMg,
             DateTime consumedAt,
             string? notes,
+            string? servingDescription,
+            bool estimatedByAi,
+            string? aiProvider,
+            string? aiConfidence,
+            string? sourceNotes,
             string enteredBy)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureAiEstimateColumns(conn);
 
             using var cmd = new NpgsqlCommand(
-                "SELECT sp_insert_food_phosphorus_intake(@p_person_id, @p_food_name, @p_phosphorus_mg, @p_consumed_at, @p_notes, @p_entered_by)",
+                @"
+                WITH inserted AS (
+                    INSERT INTO food_phosphorus_intake (
+                        person_id,
+                        food_name,
+                        phosphorus_mg,
+                        consumed_at,
+                        notes,
+                        serving_description,
+                        estimated_by_ai,
+                        ai_provider,
+                        ai_confidence,
+                        source_notes
+                    )
+                    VALUES (
+                        @p_person_id,
+                        TRIM(@p_food_name),
+                        @p_phosphorus_mg,
+                        COALESCE(@p_consumed_at, CURRENT_TIMESTAMP),
+                        @p_notes,
+                        @p_serving_description,
+                        COALESCE(@p_estimated_by_ai, false),
+                        @p_ai_provider,
+                        @p_ai_confidence,
+                        @p_source_notes
+                    )
+                    RETURNING food_phosphorus_intake_id
+                ),
+                logged AS (
+                    INSERT INTO data_entry_log (
+                        table_name,
+                        record_id,
+                        action_type,
+                        entered_by,
+                        change_details
+                    )
+                    SELECT
+                        'food_phosphorus_intake',
+                        food_phosphorus_intake_id,
+                        'INSERT',
+                        @p_entered_by,
+                        jsonb_build_object(
+                            'food_name', @p_food_name,
+                            'phosphorus_mg', @p_phosphorus_mg,
+                            'consumed_at', @p_consumed_at,
+                            'notes', @p_notes,
+                            'serving_description', @p_serving_description,
+                            'estimated_by_ai', @p_estimated_by_ai,
+                            'ai_provider', @p_ai_provider,
+                            'ai_confidence', @p_ai_confidence,
+                            'source_notes', @p_source_notes
+                        )
+                    FROM inserted
+                    RETURNING 1
+                )
+                SELECT food_phosphorus_intake_id
+                FROM inserted;",
                 conn);
 
             cmd.Parameters.AddWithValue("p_person_id", personId);
@@ -28,6 +90,11 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("p_phosphorus_mg", phosphorusMg);
             cmd.Parameters.AddWithValue("p_consumed_at", consumedAt);
             cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_serving_description", (object?)servingDescription ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_estimated_by_ai", estimatedByAi);
+            cmd.Parameters.AddWithValue("p_ai_provider", (object?)aiProvider ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_ai_confidence", (object?)aiConfidence ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_source_notes", (object?)sourceNotes ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_entered_by", enteredBy);
 
             var result = cmd.ExecuteScalar();
@@ -44,6 +111,7 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureAiEstimateColumns(conn);
 
             const string sql = @"
                 SELECT
@@ -52,7 +120,12 @@ namespace DailyVitals.Data.Services
                     food_name,
                     phosphorus_mg,
                     consumed_at::timestamp,
-                    notes
+                    notes,
+                    serving_description,
+                    estimated_by_ai,
+                    ai_provider,
+                    ai_confidence,
+                    source_notes
                 FROM food_phosphorus_intake
                 WHERE person_id = @person_id
                 ORDER BY consumed_at DESC, food_phosphorus_intake_id DESC;
@@ -71,11 +144,30 @@ namespace DailyVitals.Data.Services
                     FoodName = reader.GetString(2),
                     PhosphorusMg = reader.GetInt32(3),
                     ConsumedAt = reader.GetDateTime(4),
-                    Notes = reader.IsDBNull(5) ? null : reader.GetString(5)
+                    Notes = reader.IsDBNull(5) ? null : reader.GetString(5),
+                    ServingDescription = reader.IsDBNull(6) ? null : reader.GetString(6),
+                    EstimatedByAi = reader.GetBoolean(7),
+                    AiProvider = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    AiConfidence = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    SourceNotes = reader.IsDBNull(10) ? null : reader.GetString(10)
                 });
             }
 
             return list;
+        }
+
+        private static void EnsureAiEstimateColumns(NpgsqlConnection conn)
+        {
+            const string sql = @"
+                ALTER TABLE public.food_phosphorus_intake
+                    ADD COLUMN IF NOT EXISTS serving_description varchar(200) NULL,
+                    ADD COLUMN IF NOT EXISTS estimated_by_ai boolean NOT NULL DEFAULT false,
+                    ADD COLUMN IF NOT EXISTS ai_provider varchar(50) NULL,
+                    ADD COLUMN IF NOT EXISTS ai_confidence varchar(20) NULL,
+                    ADD COLUMN IF NOT EXISTS source_notes text NULL;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.ExecuteNonQuery();
         }
 
         public int GetDailyTotal(long personId, DateTime intakeDate)

@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Food Phosphorus Tracker"
-        Height="560"
-        Width="720"
+        Height="640"
+        Width="760"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <Style x:Key="MainMenuButtonStyle" TargetType="Button">
@@ -93,6 +93,9 @@
                 <DataGridTextColumn Header="Phosphorus (mg)"
                                     Width="140"
                                     Binding="{Binding PhosphorusMg}"/>
+                <DataGridTextColumn Header="AI"
+                                    Width="60"
+                                    Binding="{Binding EstimatedByAi}"/>
                 <DataGridTextColumn Header="Notes"
                                     Width="180"
                                     Binding="{Binding Notes}"/>
@@ -106,6 +109,8 @@
             </Grid.ColumnDefinitions>
 
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -132,6 +137,17 @@
                      Margin="0,4"
                      Text="{Binding FoodName, UpdateSourceTrigger=PropertyChanged}"/>
 
+            <Button Grid.Row="1"
+                    Grid.Column="1"
+                    Width="120"
+                    Height="32"
+                    Margin="310,4,0,4"
+                    HorizontalAlignment="Left"
+                    Content="Estimate"
+                    Style="{StaticResource MainMenuButtonStyle}"
+                    Click="Estimate_Click"
+                    IsEnabled="{Binding CanEstimate}"/>
+
             <TextBlock Grid.Row="2"
                        Text="Phosphorus (mg):"
                        VerticalAlignment="Center"/>
@@ -143,9 +159,32 @@
                      Text="{Binding PhosphorusMg, UpdateSourceTrigger=PropertyChanged}"/>
 
             <TextBlock Grid.Row="3"
+                       Text="Serving:"
+                       VerticalAlignment="Center"/>
+            <TextBox Grid.Row="3"
+                     Grid.Column="1"
+                     Width="300"
+                     HorizontalAlignment="Left"
+                     Margin="0,4"
+                     Text="{Binding ServingDescription, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <TextBlock Grid.Row="4"
+                       Text="AI Lookup:"
+                       VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="4"
+                        Grid.Column="1"
+                        Orientation="Vertical"
+                        Margin="0,4">
+                <TextBlock Text="{Binding EstimateStatus}"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding SourceNotes}"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="5"
                        Text="Notes:"
                        VerticalAlignment="Top"/>
-            <TextBox Grid.Row="3"
+            <TextBox Grid.Row="5"
                      Grid.Column="1"
                      Height="70"
                      Margin="0,4"

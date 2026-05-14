@@ -4,6 +4,11 @@ CREATE OR REPLACE FUNCTION public.sp_insert_food_phosphorus_intake(
     p_phosphorus_mg integer,
     p_consumed_at timestamp,
     p_notes text,
+    p_serving_description character varying,
+    p_estimated_by_ai boolean,
+    p_ai_provider character varying,
+    p_ai_confidence character varying,
+    p_source_notes text,
     p_entered_by character varying
 )
 RETURNS bigint
@@ -25,14 +30,24 @@ BEGIN
         food_name,
         phosphorus_mg,
         consumed_at,
-        notes
+        notes,
+        serving_description,
+        estimated_by_ai,
+        ai_provider,
+        ai_confidence,
+        source_notes
     )
     VALUES (
         p_person_id,
         TRIM(p_food_name),
         p_phosphorus_mg,
         COALESCE(p_consumed_at, CURRENT_TIMESTAMP),
-        p_notes
+        p_notes,
+        p_serving_description,
+        COALESCE(p_estimated_by_ai, false),
+        p_ai_provider,
+        p_ai_confidence,
+        p_source_notes
     )
     RETURNING food_phosphorus_intake_id INTO v_food_phosphorus_intake_id;
 
@@ -52,7 +67,12 @@ BEGIN
             'food_name', p_food_name,
             'phosphorus_mg', p_phosphorus_mg,
             'consumed_at', p_consumed_at,
-            'notes', p_notes
+            'notes', p_notes,
+            'serving_description', p_serving_description,
+            'estimated_by_ai', p_estimated_by_ai,
+            'ai_provider', p_ai_provider,
+            'ai_confidence', p_ai_confidence,
+            'source_notes', p_source_notes
         )
     );
 
