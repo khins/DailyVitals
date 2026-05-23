@@ -2,8 +2,10 @@ using DailyVitals.Domain.Models;
 using System;
 using System.Configuration;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace DailyVitals.Data.Services
@@ -17,42 +19,54 @@ namespace DailyVitals.Data.Services
             if (string.IsNullOrWhiteSpace(foodDescription))
                 throw new InvalidOperationException("Enter a food item before estimating phosphorus.");
 
-            var apiKey = GetSetting("GeminiApiKey", "GEMINI_API_KEY");
+            var apiKey = GetSetting("OpenAiApiKey", "OPENAI_API_KEY");
             if (string.IsNullOrWhiteSpace(apiKey))
-                throw new InvalidOperationException("Gemini API key is missing. Set GEMINI_API_KEY or add GeminiApiKey to App.config.");
+                throw new InvalidOperationException("OpenAI API key is missing. Set OPENAI_API_KEY or add OpenAiApiKey to App.config.");
 
-            var model = GetSetting("GeminiModel", "GEMINI_MODEL");
+            var model = GetSetting("OpenAiModel", "OPENAI_MODEL");
             if (string.IsNullOrWhiteSpace(model))
-                model = "gemini-2.0-flash";
+                model = "gpt-5-nano";
 
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent?key={Uri.EscapeDataString(apiKey)}";
-            var prompt = BuildPrompt(foodDescription);
             var requestBody = new
             {
-                contents = new[]
+                model,
+                instructions = "You estimate phosphorus content for a dialysis food tracking app. Use cautious, practical nutrition estimates and return only the requested structured data.",
+                input = BuildPrompt(foodDescription),
+                text = new
                 {
-                    new
+                    format = new
                     {
-                        parts = new[]
+                        type = "json_schema",
+                        name = "food_phosphorus_estimate",
+                        strict = true,
+                        schema = new
                         {
-                            new { text = prompt }
+                            type = "object",
+                            additionalProperties = false,
+                            required = new[] { "foodName", "servingDescription", "estimatedPhosphorusMg", "confidence", "sourceNotes" },
+                            properties = new
+                            {
+                                foodName = new { type = "string" },
+                                servingDescription = new { type = "string" },
+                                estimatedPhosphorusMg = new { type = "integer" },
+                                confidence = new { type = "string", @enum = new[] { "low", "medium", "high" } },
+                                sourceNotes = new { type = "string" }
+                            }
                         }
                     }
-                },
-                generationConfig = new
-                {
-                    temperature = 0.1,
-                    responseMimeType = "application/json"
                 }
             };
 
             var json = JsonSerializer.Serialize(requestBody);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var response = await HttpClient.PostAsync(url, content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/responses");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            using var response = await HttpClient.SendAsync(request);
             var responseText = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-                throw new InvalidOperationException($"Gemini estimate failed: {(int)response.StatusCode} {response.ReasonPhrase}. {responseText}");
+                throw new InvalidOperationException($"OpenAI estimate failed: {(int)response.StatusCode} {response.ReasonPhrase}. {responseText}");
 
             var estimateJson = ExtractResponseText(responseText);
             var estimate = JsonSerializer.Deserialize<FoodPhosphorusEstimate>(
@@ -60,10 +74,10 @@ namespace DailyVitals.Data.Services
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (estimate == null)
-                throw new InvalidOperationException("Gemini did not return a phosphorus estimate.");
+                throw new InvalidOperationException("OpenAI did not return a phosphorus estimate.");
 
             if (estimate.EstimatedPhosphorusMg < 0)
-                throw new InvalidOperationException("Gemini returned an invalid phosphorus amount.");
+                throw new InvalidOperationException("OpenAI returned an invalid phosphorus amount.");
 
             if (string.IsNullOrWhiteSpace(estimate.FoodName))
                 estimate.FoodName = foodDescription.Trim();
@@ -76,45 +90,71 @@ namespace DailyVitals.Data.Services
             return
                 "Estimate the phosphorus content in milligrams for this food item and serving:" + Environment.NewLine +
                 foodDescription.Trim() + Environment.NewLine + Environment.NewLine +
-                "This is for a dialysis food tracking app. Return only valid JSON with these exact properties:" + Environment.NewLine +
-                "{" + Environment.NewLine +
-                "  \"foodName\": \"normalized food name\"," + Environment.NewLine +
-                "  \"servingDescription\": \"serving size or portion assumed\"," + Environment.NewLine +
-                "  \"estimatedPhosphorusMg\": 0," + Environment.NewLine +
-                "  \"confidence\": \"low, medium, or high\"," + Environment.NewLine +
-                "  \"sourceNotes\": \"short note about assumptions, brand variation, additives, or uncertainty\"" + Environment.NewLine +
-                "}" + Environment.NewLine + Environment.NewLine +
                 "Use a cautious estimate. If the serving size is unclear, make a reasonable serving-size assumption and say so in sourceNotes.";
         }
 
         private static string ExtractResponseText(string responseText)
         {
-            using var document = JsonDocument.Parse(responseText);
-            var root = document.RootElement;
+            var response = JsonSerializer.Deserialize<OpenAiResponse>(
+                responseText,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            if (!root.TryGetProperty("candidates", out var candidates) ||
-                candidates.GetArrayLength() == 0)
-                throw new InvalidOperationException("Gemini returned no estimate candidates.");
+            var outputText = response?.OutputText;
+            if (!string.IsNullOrWhiteSpace(outputText))
+                return outputText;
 
-            var firstCandidate = candidates[0];
-            var parts = firstCandidate
-                .GetProperty("content")
-                .GetProperty("parts");
+            if (response?.Output != null)
+            {
+                foreach (var item in response.Output)
+                {
+                    if (item.Content == null)
+                        continue;
 
-            if (parts.GetArrayLength() == 0 ||
-                !parts[0].TryGetProperty("text", out var textElement))
-                throw new InvalidOperationException("Gemini response did not include estimate text.");
+                    foreach (var content in item.Content)
+                    {
+                        if (!string.IsNullOrWhiteSpace(content.Text))
+                            return content.Text;
 
-            return textElement.GetString() ?? throw new InvalidOperationException("Gemini estimate text was empty.");
+                        if (!string.IsNullOrWhiteSpace(content.Refusal))
+                            throw new InvalidOperationException($"OpenAI refused the estimate request: {content.Refusal}");
+                    }
+                }
+            }
+
+            throw new InvalidOperationException("OpenAI response did not include estimate text.");
         }
 
         private static string? GetSetting(string appSettingKey, string environmentVariableKey)
         {
-            var value = ConfigurationManager.AppSettings[appSettingKey];
+            var value = Environment.GetEnvironmentVariable(environmentVariableKey);
             if (!string.IsNullOrWhiteSpace(value))
                 return value;
 
-            return Environment.GetEnvironmentVariable(environmentVariableKey);
+            return ConfigurationManager.AppSettings[appSettingKey];
+        }
+
+        private sealed class OpenAiResponse
+        {
+            [JsonPropertyName("output_text")]
+            public string? OutputText { get; set; }
+
+            [JsonPropertyName("output")]
+            public OpenAiOutputItem[]? Output { get; set; }
+        }
+
+        private sealed class OpenAiOutputItem
+        {
+            [JsonPropertyName("content")]
+            public OpenAiContentItem[]? Content { get; set; }
+        }
+
+        private sealed class OpenAiContentItem
+        {
+            [JsonPropertyName("text")]
+            public string? Text { get; set; }
+
+            [JsonPropertyName("refusal")]
+            public string? Refusal { get; set; }
         }
     }
 }
