@@ -14,6 +14,7 @@ namespace DailyVitals.App.ViewModels
 
         private string _foodName = string.Empty;
         private string _phosphorusMg = string.Empty;
+        private string _binders = "0";
         private string? _notes;
         private string? _servingDescription;
         private string? _aiConfidence;
@@ -39,7 +40,9 @@ namespace DailyVitals.App.ViewModels
             SelectedPerson != null &&
             !string.IsNullOrWhiteSpace(FoodName) &&
             int.TryParse(PhosphorusMg, out var phosphorus) &&
-            phosphorus >= 0;
+            phosphorus >= 0 &&
+            int.TryParse(Binders, out var binders) &&
+            binders >= 0;
 
         public bool CanDelete => SelectedHistory != null;
         public bool CanEstimate => !IsEstimating && !string.IsNullOrWhiteSpace(FoodName);
@@ -62,6 +65,17 @@ namespace DailyVitals.App.ViewModels
             set
             {
                 _phosphorusMg = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanSave));
+            }
+        }
+
+        public string Binders
+        {
+            get => _binders;
+            set
+            {
+                _binders = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanSave));
             }
@@ -209,6 +223,7 @@ namespace DailyVitals.App.ViewModels
 
             FoodName = SelectedHistory.FoodName;
             PhosphorusMg = SelectedHistory.PhosphorusMg.ToString();
+            Binders = SelectedHistory.Binders.ToString();
             ConsumedAt = SelectedHistory.ConsumedAt;
             Notes = SelectedHistory.Notes;
             ServingDescription = SelectedHistory.ServingDescription;
@@ -225,6 +240,7 @@ namespace DailyVitals.App.ViewModels
             SelectedHistory = null;
             FoodName = string.Empty;
             PhosphorusMg = string.Empty;
+            Binders = "0";
             ConsumedAt = DateTime.Today;
             Notes = string.Empty;
             ServingDescription = string.Empty;
@@ -269,10 +285,14 @@ namespace DailyVitals.App.ViewModels
             if (!int.TryParse(PhosphorusMg, out var phosphorus) || phosphorus < 0)
                 throw new InvalidOperationException("Phosphorus must be a non-negative whole number.");
 
+            if (!int.TryParse(Binders, out var binders) || binders < 0)
+                throw new InvalidOperationException("Binders must be a non-negative whole number.");
+
             _service.Insert(
                 SelectedPerson.PersonId,
                 FoodName.Trim(),
                 phosphorus,
+                binders,
                 ConsumedAt,
                 Notes,
                 ServingDescription,

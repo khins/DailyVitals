@@ -1,3 +1,18 @@
+ALTER TABLE public.food_phosphorus_intake
+    ADD COLUMN IF NOT EXISTS binders integer NOT NULL DEFAULT 0;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'food_phosphorus_intake_binders_check'
+    ) THEN
+        ALTER TABLE public.food_phosphorus_intake
+            ADD CONSTRAINT food_phosphorus_intake_binders_check CHECK (binders >= 0);
+    END IF;
+END $$;
+
 CREATE OR REPLACE FUNCTION public.sp_insert_food_phosphorus_intake(
     p_person_id bigint,
     p_food_name character varying,
