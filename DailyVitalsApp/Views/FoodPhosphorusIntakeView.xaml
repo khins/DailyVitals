@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Food Phosphorus Tracker"
-        Height="640"
+        Height="690"
         Width="760"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
@@ -93,6 +93,9 @@
                 <DataGridTextColumn Header="Phosphorus (mg)"
                                     Width="140"
                                     Binding="{Binding PhosphorusMg}"/>
+                <DataGridTextColumn Header="Binders"
+                                    Width="80"
+                                    Binding="{Binding Binders}"/>
                 <DataGridTextColumn Header="AI"
                                     Width="60"
                                     Binding="{Binding EstimatedByAi}"/>
@@ -109,6 +112,7 @@
             </Grid.ColumnDefinitions>
 
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -159,19 +163,29 @@
                      Text="{Binding PhosphorusMg, UpdateSourceTrigger=PropertyChanged}"/>
 
             <TextBlock Grid.Row="3"
-                       Text="Serving:"
+                       Text="Binders:"
                        VerticalAlignment="Center"/>
             <TextBox Grid.Row="3"
+                     Grid.Column="1"
+                     Width="120"
+                     HorizontalAlignment="Left"
+                     Margin="0,4"
+                     Text="{Binding Binders, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <TextBlock Grid.Row="4"
+                       Text="Serving:"
+                       VerticalAlignment="Center"/>
+            <TextBox Grid.Row="4"
                      Grid.Column="1"
                      Width="300"
                      HorizontalAlignment="Left"
                      Margin="0,4"
                      Text="{Binding ServingDescription, UpdateSourceTrigger=PropertyChanged}"/>
 
-            <TextBlock Grid.Row="4"
+            <TextBlock Grid.Row="5"
                        Text="AI Lookup:"
                        VerticalAlignment="Center"/>
-            <StackPanel Grid.Row="4"
+            <StackPanel Grid.Row="5"
                         Grid.Column="1"
                         Orientation="Vertical"
                         Margin="0,4">
@@ -181,10 +195,10 @@
                            TextWrapping="Wrap"/>
             </StackPanel>
 
-            <TextBlock Grid.Row="5"
+            <TextBlock Grid.Row="6"
                        Text="Notes:"
                        VerticalAlignment="Top"/>
-            <TextBox Grid.Row="5"
+            <TextBox Grid.Row="6"
                      Grid.Column="1"
                      Height="70"
                      Margin="0,4"

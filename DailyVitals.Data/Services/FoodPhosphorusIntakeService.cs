@@ -12,6 +12,7 @@ namespace DailyVitals.Data.Services
             long personId,
             string foodName,
             int phosphorusMg,
+            int binders,
             DateTime consumedAt,
             string? notes,
             string? servingDescription,
@@ -23,7 +24,7 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureAiEstimateColumns(conn);
+            EnsureFoodPhosphorusIntakeColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 @"
@@ -32,6 +33,7 @@ namespace DailyVitals.Data.Services
                         person_id,
                         food_name,
                         phosphorus_mg,
+                        binders,
                         consumed_at,
                         notes,
                         serving_description,
@@ -44,6 +46,7 @@ namespace DailyVitals.Data.Services
                         @p_person_id,
                         TRIM(@p_food_name),
                         @p_phosphorus_mg,
+                        @p_binders,
                         COALESCE(@p_consumed_at, CURRENT_TIMESTAMP),
                         @p_notes,
                         @p_serving_description,
@@ -70,6 +73,7 @@ namespace DailyVitals.Data.Services
                         jsonb_build_object(
                             'food_name', @p_food_name,
                             'phosphorus_mg', @p_phosphorus_mg,
+                            'binders', @p_binders,
                             'consumed_at', @p_consumed_at,
                             'notes', @p_notes,
                             'serving_description', @p_serving_description,
@@ -88,6 +92,7 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("p_person_id", personId);
             cmd.Parameters.AddWithValue("p_food_name", foodName);
             cmd.Parameters.AddWithValue("p_phosphorus_mg", phosphorusMg);
+            cmd.Parameters.AddWithValue("p_binders", binders);
             cmd.Parameters.AddWithValue("p_consumed_at", consumedAt);
             cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_serving_description", (object?)servingDescription ?? DBNull.Value);
@@ -111,7 +116,7 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureAiEstimateColumns(conn);
+            EnsureFoodPhosphorusIntakeColumns(conn);
 
             const string sql = @"
                 SELECT
@@ -119,6 +124,7 @@ namespace DailyVitals.Data.Services
                     person_id,
                     food_name,
                     phosphorus_mg,
+                    COALESCE(binders, 0) AS binders,
                     consumed_at::timestamp,
                     notes,
                     serving_description,
@@ -143,28 +149,42 @@ namespace DailyVitals.Data.Services
                     PersonId = reader.GetInt64(1),
                     FoodName = reader.GetString(2),
                     PhosphorusMg = reader.GetInt32(3),
-                    ConsumedAt = reader.GetDateTime(4),
-                    Notes = reader.IsDBNull(5) ? null : reader.GetString(5),
-                    ServingDescription = reader.IsDBNull(6) ? null : reader.GetString(6),
-                    EstimatedByAi = reader.GetBoolean(7),
-                    AiProvider = reader.IsDBNull(8) ? null : reader.GetString(8),
-                    AiConfidence = reader.IsDBNull(9) ? null : reader.GetString(9),
-                    SourceNotes = reader.IsDBNull(10) ? null : reader.GetString(10)
+                    Binders = reader.GetInt32(4),
+                    ConsumedAt = reader.GetDateTime(5),
+                    Notes = reader.IsDBNull(6) ? null : reader.GetString(6),
+                    ServingDescription = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    EstimatedByAi = reader.GetBoolean(8),
+                    AiProvider = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    AiConfidence = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    SourceNotes = reader.IsDBNull(11) ? null : reader.GetString(11)
                 });
             }
 
             return list;
         }
 
-        private static void EnsureAiEstimateColumns(NpgsqlConnection conn)
+        private static void EnsureFoodPhosphorusIntakeColumns(NpgsqlConnection conn)
         {
             const string sql = @"
                 ALTER TABLE public.food_phosphorus_intake
+                    ADD COLUMN IF NOT EXISTS binders integer NOT NULL DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS serving_description varchar(200) NULL,
                     ADD COLUMN IF NOT EXISTS estimated_by_ai boolean NOT NULL DEFAULT false,
                     ADD COLUMN IF NOT EXISTS ai_provider varchar(50) NULL,
                     ADD COLUMN IF NOT EXISTS ai_confidence varchar(20) NULL,
-                    ADD COLUMN IF NOT EXISTS source_notes text NULL;";
+                    ADD COLUMN IF NOT EXISTS source_notes text NULL;
+
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_intake_binders_check'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_intake
+                            ADD CONSTRAINT food_phosphorus_intake_binders_check CHECK (binders >= 0);
+                    END IF;
+                END $$;";
 
             using var cmd = new NpgsqlCommand(sql, conn);
             cmd.ExecuteNonQuery();
