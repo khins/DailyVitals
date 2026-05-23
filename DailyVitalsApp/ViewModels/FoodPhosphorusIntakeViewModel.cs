@@ -297,7 +297,7 @@ namespace DailyVitals.App.ViewModels
                 Notes,
                 ServingDescription,
                 EstimatedByAi,
-                EstimatedByAi ? "Gemini" : null,
+                EstimatedByAi ? "OpenAI" : null,
                 AiConfidence,
                 SourceNotes,
                 Environment.UserName);
