@@ -1,6 +1,7 @@
 using DailyVitals.Data.Configuration;
 using DailyVitals.Domain.Models;
 using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 
@@ -12,6 +13,7 @@ namespace DailyVitals.Data.Services
             long personId,
             string foodName,
             int phosphorusMg,
+            int? calories,
             int binders,
             DateTime consumedAt,
             string? notes,
@@ -33,6 +35,7 @@ namespace DailyVitals.Data.Services
                         person_id,
                         food_name,
                         phosphorus_mg,
+                        calories,
                         binders,
                         consumed_at,
                         notes,
@@ -46,6 +49,7 @@ namespace DailyVitals.Data.Services
                         @p_person_id,
                         TRIM(@p_food_name),
                         @p_phosphorus_mg,
+                        @p_calories,
                         @p_binders,
                         COALESCE(@p_consumed_at, CURRENT_TIMESTAMP),
                         @p_notes,
@@ -73,6 +77,7 @@ namespace DailyVitals.Data.Services
                         jsonb_build_object(
                             'food_name', @p_food_name,
                             'phosphorus_mg', @p_phosphorus_mg,
+                            'calories', @p_calories,
                             'binders', @p_binders,
                             'consumed_at', @p_consumed_at,
                             'notes', @p_notes,
@@ -92,6 +97,8 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("p_person_id", personId);
             cmd.Parameters.AddWithValue("p_food_name", foodName);
             cmd.Parameters.AddWithValue("p_phosphorus_mg", phosphorusMg);
+            cmd.Parameters.Add("p_calories", NpgsqlDbType.Integer).Value =
+                (object?)calories ?? DBNull.Value;
             cmd.Parameters.AddWithValue("p_binders", binders);
             cmd.Parameters.AddWithValue("p_consumed_at", consumedAt);
             cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
@@ -124,6 +131,7 @@ namespace DailyVitals.Data.Services
                     person_id,
                     food_name,
                     phosphorus_mg,
+                    calories,
                     COALESCE(binders, 0) AS binders,
                     consumed_at::timestamp,
                     notes,
@@ -149,14 +157,15 @@ namespace DailyVitals.Data.Services
                     PersonId = reader.GetInt64(1),
                     FoodName = reader.GetString(2),
                     PhosphorusMg = reader.GetInt32(3),
-                    Binders = reader.GetInt32(4),
-                    ConsumedAt = reader.GetDateTime(5),
-                    Notes = reader.IsDBNull(6) ? null : reader.GetString(6),
-                    ServingDescription = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    EstimatedByAi = reader.GetBoolean(8),
-                    AiProvider = reader.IsDBNull(9) ? null : reader.GetString(9),
-                    AiConfidence = reader.IsDBNull(10) ? null : reader.GetString(10),
-                    SourceNotes = reader.IsDBNull(11) ? null : reader.GetString(11)
+                    Calories = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                    Binders = reader.GetInt32(5),
+                    ConsumedAt = reader.GetDateTime(6),
+                    Notes = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    ServingDescription = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    EstimatedByAi = reader.GetBoolean(9),
+                    AiProvider = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    AiConfidence = reader.IsDBNull(11) ? null : reader.GetString(11),
+                    SourceNotes = reader.IsDBNull(12) ? null : reader.GetString(12)
                 });
             }
 
@@ -168,6 +177,7 @@ namespace DailyVitals.Data.Services
             const string sql = @"
                 ALTER TABLE public.food_phosphorus_intake
                     ADD COLUMN IF NOT EXISTS binders integer NOT NULL DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS calories integer NULL,
                     ADD COLUMN IF NOT EXISTS serving_description varchar(200) NULL,
                     ADD COLUMN IF NOT EXISTS estimated_by_ai boolean NOT NULL DEFAULT false,
                     ADD COLUMN IF NOT EXISTS ai_provider varchar(50) NULL,
@@ -176,6 +186,15 @@ namespace DailyVitals.Data.Services
 
                 DO $$
                 BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_intake_calories_check'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_intake
+                            ADD CONSTRAINT food_phosphorus_intake_calories_check CHECK (calories IS NULL OR calories >= 0);
+                    END IF;
+
                     IF NOT EXISTS (
                         SELECT 1
                         FROM pg_constraint

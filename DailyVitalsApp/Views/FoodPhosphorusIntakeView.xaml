@@ -3,7 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Food Phosphorus Tracker"
         Height="690"
-        Width="760"
+        MinHeight="620"
+        Width="900"
+        MinWidth="860"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <Style x:Key="MainMenuButtonStyle" TargetType="Button">
@@ -48,8 +50,8 @@
     <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="200"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="180"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -82,132 +84,152 @@
                   SelectedItem="{Binding SelectedHistory}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
+                  HorizontalScrollBarVisibility="Auto"
                   SelectionMode="Single">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Date"
-                                    Width="130"
+                                    Width="110"
                                     Binding="{Binding ConsumedAt, StringFormat=d}"/>
                 <DataGridTextColumn Header="Food Item"
-                                    Width="*"
+                                    Width="2*"
+                                    MinWidth="240"
                                     Binding="{Binding FoodName}"/>
                 <DataGridTextColumn Header="Phosphorus (mg)"
-                                    Width="140"
+                                    Width="125"
                                     Binding="{Binding PhosphorusMg}"/>
-                <DataGridTextColumn Header="Binders"
+                <DataGridTextColumn Header="Calories"
                                     Width="80"
+                                    Binding="{Binding Calories}"/>
+                <DataGridTextColumn Header="Binders"
+                                    Width="70"
                                     Binding="{Binding Binders}"/>
                 <DataGridTextColumn Header="AI"
-                                    Width="60"
+                                    Width="50"
                                     Binding="{Binding EstimatedByAi}"/>
                 <DataGridTextColumn Header="Notes"
-                                    Width="180"
+                                    Width="160"
                                     Binding="{Binding Notes}"/>
             </DataGrid.Columns>
         </DataGrid>
 
-        <Grid Grid.Row="2" Margin="0,15,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="170"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <ScrollViewer Grid.Row="2"
+                      Margin="0,12,0,0"
+                      VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="170"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0"
-                       Text="Date Eaten:"
-                       VerticalAlignment="Center"/>
-            <DatePicker Grid.Row="0"
+                <TextBlock Grid.Row="0"
+                           Text="Date Eaten:"
+                           VerticalAlignment="Center"/>
+                <DatePicker Grid.Row="0"
+                            Grid.Column="1"
+                            Width="160"
+                            HorizontalAlignment="Left"
+                            Margin="0,4"
+                            SelectedDate="{Binding ConsumedAt}"/>
+
+                <TextBlock Grid.Row="1"
+                           Text="Food Item:"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Row="1"
+                         Grid.Column="1"
+                         Width="300"
+                         HorizontalAlignment="Left"
+                         Margin="0,4"
+                         Text="{Binding FoodName, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <Button Grid.Row="1"
                         Grid.Column="1"
-                        Width="160"
+                        Width="120"
+                        Height="32"
+                        Margin="310,4,0,4"
                         HorizontalAlignment="Left"
-                        Margin="0,4"
-                        SelectedDate="{Binding ConsumedAt}"/>
+                        Content="Estimate"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="Estimate_Click"
+                        IsEnabled="{Binding CanEstimate}"/>
 
-            <TextBlock Grid.Row="1"
-                       Text="Food Item:"
-                       VerticalAlignment="Center"/>
-            <TextBox Grid.Row="1"
-                     Grid.Column="1"
-                     Width="300"
-                     HorizontalAlignment="Left"
-                     Margin="0,4"
-                     Text="{Binding FoodName, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="2"
+                           Text="Phosphorus (mg):"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Row="2"
+                         Grid.Column="1"
+                         Width="120"
+                         HorizontalAlignment="Left"
+                         Margin="0,4"
+                         Text="{Binding PhosphorusMg, UpdateSourceTrigger=PropertyChanged}"/>
 
-            <Button Grid.Row="1"
-                    Grid.Column="1"
-                    Width="120"
-                    Height="32"
-                    Margin="310,4,0,4"
-                    HorizontalAlignment="Left"
-                    Content="Estimate"
-                    Style="{StaticResource MainMenuButtonStyle}"
-                    Click="Estimate_Click"
-                    IsEnabled="{Binding CanEstimate}"/>
+                <TextBlock Grid.Row="3"
+                           Text="Calories:"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Row="3"
+                         Grid.Column="1"
+                         Width="120"
+                         HorizontalAlignment="Left"
+                         Margin="0,4"
+                         Text="{Binding Calories, UpdateSourceTrigger=PropertyChanged}"/>
 
-            <TextBlock Grid.Row="2"
-                       Text="Phosphorus (mg):"
-                       VerticalAlignment="Center"/>
-            <TextBox Grid.Row="2"
-                     Grid.Column="1"
-                     Width="120"
-                     HorizontalAlignment="Left"
-                     Margin="0,4"
-                     Text="{Binding PhosphorusMg, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="4"
+                           Text="Binders:"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Row="4"
+                         Grid.Column="1"
+                         Width="120"
+                         HorizontalAlignment="Left"
+                         Margin="0,4"
+                         Text="{Binding Binders, UpdateSourceTrigger=PropertyChanged}"/>
 
-            <TextBlock Grid.Row="3"
-                       Text="Binders:"
-                       VerticalAlignment="Center"/>
-            <TextBox Grid.Row="3"
-                     Grid.Column="1"
-                     Width="120"
-                     HorizontalAlignment="Left"
-                     Margin="0,4"
-                     Text="{Binding Binders, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="5"
+                           Text="Serving:"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Row="5"
+                         Grid.Column="1"
+                         Width="300"
+                         HorizontalAlignment="Left"
+                         Margin="0,4"
+                         Text="{Binding ServingDescription, UpdateSourceTrigger=PropertyChanged}"/>
 
-            <TextBlock Grid.Row="4"
-                       Text="Serving:"
-                       VerticalAlignment="Center"/>
-            <TextBox Grid.Row="4"
-                     Grid.Column="1"
-                     Width="300"
-                     HorizontalAlignment="Left"
-                     Margin="0,4"
-                     Text="{Binding ServingDescription, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Row="6"
+                           Text="AI Lookup:"
+                           VerticalAlignment="Center"/>
+                <StackPanel Grid.Row="6"
+                            Grid.Column="1"
+                            Orientation="Vertical"
+                            Margin="0,4">
+                    <TextBlock Text="{Binding EstimateStatus}"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding SourceNotes}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
 
-            <TextBlock Grid.Row="5"
-                       Text="AI Lookup:"
-                       VerticalAlignment="Center"/>
-            <StackPanel Grid.Row="5"
-                        Grid.Column="1"
-                        Orientation="Vertical"
-                        Margin="0,4">
-                <TextBlock Text="{Binding EstimateStatus}"
-                           FontWeight="SemiBold"/>
-                <TextBlock Text="{Binding SourceNotes}"
-                           TextWrapping="Wrap"/>
-            </StackPanel>
+                <TextBlock Grid.Row="7"
+                           Text="Notes:"
+                           VerticalAlignment="Top"/>
+                <TextBox Grid.Row="7"
+                         Grid.Column="1"
+                         Height="70"
+                         Margin="0,4"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"/>
+            </Grid>
+        </ScrollViewer>
 
-            <TextBlock Grid.Row="6"
-                       Text="Notes:"
-                       VerticalAlignment="Top"/>
-            <TextBox Grid.Row="6"
-                     Grid.Column="1"
-                     Height="70"
-                     Margin="0,4"
-                     AcceptsReturn="True"
-                     TextWrapping="Wrap"
-                     Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"/>
-        </Grid>
-
-        <Grid Grid.Row="3" Margin="0,20,0,0">
+        <Grid Grid.Row="3" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>

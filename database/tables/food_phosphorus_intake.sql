@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS public.food_phosphorus_intake (
     person_id int8 NOT NULL,
     food_name varchar(200) NOT NULL,
     phosphorus_mg integer NOT NULL,
+    calories integer NULL,
     binders integer NOT NULL DEFAULT 0,
     consumed_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     notes text NULL,
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public.food_phosphorus_intake (
     CONSTRAINT food_phosphorus_intake_pkey PRIMARY KEY (food_phosphorus_intake_id),
     CONSTRAINT food_phosphorus_intake_food_name_check CHECK (length(trim(food_name)) > 0),
     CONSTRAINT food_phosphorus_intake_phosphorus_check CHECK (phosphorus_mg >= 0),
+    CONSTRAINT food_phosphorus_intake_calories_check CHECK (calories IS NULL OR calories >= 0),
     CONSTRAINT food_phosphorus_intake_binders_check CHECK (binders >= 0),
     CONSTRAINT fk_food_phosphorus_intake_person FOREIGN KEY (person_id) REFERENCES public.person(person_id) ON DELETE CASCADE
 );
