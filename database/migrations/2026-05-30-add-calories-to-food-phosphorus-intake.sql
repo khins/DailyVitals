@@ -1,3 +1,18 @@
+ALTER TABLE public.food_phosphorus_intake
+    ADD COLUMN IF NOT EXISTS calories integer NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'food_phosphorus_intake_calories_check'
+    ) THEN
+        ALTER TABLE public.food_phosphorus_intake
+            ADD CONSTRAINT food_phosphorus_intake_calories_check CHECK (calories IS NULL OR calories >= 0);
+    END IF;
+END $$;
+
 CREATE OR REPLACE FUNCTION public.sp_insert_food_phosphorus_intake(
     p_person_id bigint,
     p_food_name character varying,

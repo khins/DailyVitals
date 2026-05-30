@@ -14,6 +14,7 @@ namespace DailyVitals.App.ViewModels
 
         private string _foodName = string.Empty;
         private string _phosphorusMg = string.Empty;
+        private string _calories = string.Empty;
         private string _binders = "0";
         private string? _notes;
         private string? _servingDescription;
@@ -41,6 +42,7 @@ namespace DailyVitals.App.ViewModels
             !string.IsNullOrWhiteSpace(FoodName) &&
             int.TryParse(PhosphorusMg, out var phosphorus) &&
             phosphorus >= 0 &&
+            IsOptionalNonNegativeWholeNumber(Calories) &&
             int.TryParse(Binders, out var binders) &&
             binders >= 0;
 
@@ -76,6 +78,17 @@ namespace DailyVitals.App.ViewModels
             set
             {
                 _binders = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanSave));
+            }
+        }
+
+        public string Calories
+        {
+            get => _calories;
+            set
+            {
+                _calories = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanSave));
             }
@@ -223,6 +236,7 @@ namespace DailyVitals.App.ViewModels
 
             FoodName = SelectedHistory.FoodName;
             PhosphorusMg = SelectedHistory.PhosphorusMg.ToString();
+            Calories = SelectedHistory.Calories?.ToString() ?? string.Empty;
             Binders = SelectedHistory.Binders.ToString();
             ConsumedAt = SelectedHistory.ConsumedAt;
             Notes = SelectedHistory.Notes;
@@ -240,6 +254,7 @@ namespace DailyVitals.App.ViewModels
             SelectedHistory = null;
             FoodName = string.Empty;
             PhosphorusMg = string.Empty;
+            Calories = string.Empty;
             Binders = "0";
             ConsumedAt = DateTime.Today;
             Notes = string.Empty;
@@ -285,6 +300,15 @@ namespace DailyVitals.App.ViewModels
             if (!int.TryParse(PhosphorusMg, out var phosphorus) || phosphorus < 0)
                 throw new InvalidOperationException("Phosphorus must be a non-negative whole number.");
 
+            int? calories = null;
+            if (!string.IsNullOrWhiteSpace(Calories))
+            {
+                if (!int.TryParse(Calories, out var parsedCalories) || parsedCalories < 0)
+                    throw new InvalidOperationException("Calories must be a non-negative whole number.");
+
+                calories = parsedCalories;
+            }
+
             if (!int.TryParse(Binders, out var binders) || binders < 0)
                 throw new InvalidOperationException("Binders must be a non-negative whole number.");
 
@@ -292,6 +316,7 @@ namespace DailyVitals.App.ViewModels
                 SelectedPerson.PersonId,
                 FoodName.Trim(),
                 phosphorus,
+                calories,
                 binders,
                 ConsumedAt,
                 Notes,
@@ -325,6 +350,12 @@ namespace DailyVitals.App.ViewModels
             SelectedDayTotalMg = SelectedPerson == null
                 ? 0
                 : _service.GetDailyTotal(SelectedPerson.PersonId, ConsumedAt);
+        }
+
+        private static bool IsOptionalNonNegativeWholeNumber(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ||
+                (int.TryParse(value, out var parsedValue) && parsedValue >= 0);
         }
 
         private static string BuildAiNotes(FoodPhosphorusEstimate estimate)
