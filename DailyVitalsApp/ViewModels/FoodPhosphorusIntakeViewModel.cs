@@ -48,6 +48,7 @@ namespace DailyVitals.App.ViewModels
 
         public bool CanDelete => SelectedHistory != null;
         public bool CanEstimate => !IsEstimating && !string.IsNullOrWhiteSpace(FoodName);
+        public bool CanViewRunningTotals => SelectedPerson != null;
 
         public string FoodName
         {
@@ -184,6 +185,7 @@ namespace DailyVitals.App.ViewModels
                 _selectedPerson = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanSave));
+                OnPropertyChanged(nameof(CanViewRunningTotals));
                 LoadHistoryForSelectedPerson();
                 RefreshSelectedDayTotal();
             }

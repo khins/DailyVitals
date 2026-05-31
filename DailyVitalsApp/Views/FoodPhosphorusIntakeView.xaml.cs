@@ -90,6 +90,28 @@ namespace DailyVitals.App.Views
                 MessageBoxImage.Information);
         }
 
+        private void RunningTotals_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm.SelectedPerson == null)
+            {
+                MessageBox.Show(
+                    "Please select a person before viewing running totals.",
+                    "Person Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var report = new FoodPhosphorusRunningTotalsView(
+                _vm.SelectedPerson.PersonId,
+                _vm.SelectedPerson.FullName)
+            {
+                Owner = this
+            };
+
+            report.ShowDialog();
+        }
+
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             Close();

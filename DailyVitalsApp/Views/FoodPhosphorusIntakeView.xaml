@@ -245,6 +245,14 @@
 
             <StackPanel Grid.Column="2"
                         Orientation="Horizontal">
+                <Button Width="125"
+                        Height="32"
+                        Margin="0,0,10,0"
+                        Content="Running Totals"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="RunningTotals_Click"
+                        IsEnabled="{Binding CanViewRunningTotals}"/>
+
                 <Button Width="100"
                         Height="32"
                         Margin="0,0,10,0"
