@@ -1,0 +1,118 @@
+<Window x:Class="DailyVitals.App.Views.FoodPhosphorusRunningTotalsView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Food Running Totals"
+        Height="560"
+        MinHeight="460"
+        Width="1040"
+        MinWidth="940"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <Style x:Key="MainMenuButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="220"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Margin" Value="6"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#707070"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#D6D6D6"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#C8C8C8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#EEEEEE"/>
+                                <Setter Property="Foreground" Value="#888888"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="{Binding PersonName}"
+                       FontSize="18"
+                       FontWeight="Bold"/>
+            <TextBlock Text="{Binding SummaryText}"
+                       FontSize="13"
+                       Foreground="DimGray"/>
+        </StackPanel>
+
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding Rows}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  HorizontalScrollBarVisibility="Auto"
+                  SelectionMode="Single">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Date"
+                                    Width="95"
+                                    Binding="{Binding IntakeDate, StringFormat=d}"/>
+                <DataGridTextColumn Header="Time"
+                                    Width="85"
+                                    Binding="{Binding ConsumedAt, StringFormat=t}"/>
+                <DataGridTextColumn Header="Food Item"
+                                    Width="2*"
+                                    MinWidth="240"
+                                    Binding="{Binding FoodName}"/>
+                <DataGridTextColumn Header="Raw Phos (mg)"
+                                    Width="110"
+                                    Binding="{Binding RawPhosphorusMg}"/>
+                <DataGridTextColumn Header="Calories"
+                                    Width="80"
+                                    Binding="{Binding Calories}"/>
+                <DataGridTextColumn Header="Pills"
+                                    Width="60"
+                                    Binding="{Binding PillsTaken}"/>
+                <DataGridTextColumn Header="Net Item (mg)"
+                                    Width="115"
+                                    Binding="{Binding NetItemPhosphorusMg, StringFormat={}{0:F0}}"/>
+                <DataGridTextColumn Header="Running Net (mg)"
+                                    Width="130"
+                                    Binding="{Binding RunningNetDailyMg, StringFormat={}{0:F0}}"/>
+                <DataGridTextColumn Header="Running Calories"
+                                    Width="130"
+                                    Binding="{Binding RunningDailyCalories}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Grid Grid.Row="2" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="1"
+                    Content="Close"
+                    Width="90"
+                    Height="32"
+                    Style="{StaticResource MainMenuButtonStyle}"
+                    Click="Close_Click"/>
+        </Grid>
+    </Grid>
+</Window>

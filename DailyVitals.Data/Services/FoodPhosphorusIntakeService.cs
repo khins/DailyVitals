@@ -228,6 +228,79 @@ namespace DailyVitals.Data.Services
             return Convert.ToInt32(cmd.ExecuteScalar());
         }
 
+        public List<FoodPhosphorusRunningTotal> GetRunningDailyTotals(long personId)
+        {
+            var list = new List<FoodPhosphorusRunningTotal>();
+
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureFoodPhosphorusIntakeColumns(conn);
+
+            const string sql = @"
+                WITH binder_constants AS (
+                    SELECT
+                        800 AS mg_per_pill,
+                        0.075 AS binding_efficiency
+                ),
+                calculated_intake AS (
+                    SELECT
+                        f.food_phosphorus_intake_id,
+                        f.consumed_at::date AS intake_date,
+                        f.consumed_at,
+                        f.food_name,
+                        f.phosphorus_mg,
+                        COALESCE(f.calories, 0) AS calories,
+                        COALESCE(f.binders, 0) AS binders,
+                        GREATEST(
+                            f.phosphorus_mg - (COALESCE(f.binders, 0) * bc.mg_per_pill * bc.binding_efficiency),
+                            0
+                        ) AS net_item_phos_mg
+                    FROM food_phosphorus_intake f
+                    CROSS JOIN binder_constants bc
+                    WHERE f.person_id = @person_id
+                )
+                SELECT
+                    intake_date,
+                    consumed_at::timestamp,
+                    food_name,
+                    phosphorus_mg AS raw_phos_mg,
+                    calories,
+                    binders AS pills_taken,
+                    net_item_phos_mg,
+                    SUM(net_item_phos_mg) OVER (
+                        PARTITION BY intake_date
+                        ORDER BY consumed_at, food_phosphorus_intake_id
+                    ) AS running_net_daily_mg,
+                    SUM(calories) OVER (
+                        PARTITION BY intake_date
+                        ORDER BY consumed_at, food_phosphorus_intake_id
+                    ) AS running_daily_calories
+                FROM calculated_intake
+                ORDER BY intake_date DESC, consumed_at ASC;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(new FoodPhosphorusRunningTotal
+                {
+                    IntakeDate = reader.GetDateTime(0),
+                    ConsumedAt = reader.GetDateTime(1),
+                    FoodName = reader.GetString(2),
+                    RawPhosphorusMg = reader.GetInt32(3),
+                    Calories = reader.GetInt32(4),
+                    PillsTaken = reader.GetInt32(5),
+                    NetItemPhosphorusMg = reader.GetDecimal(6),
+                    RunningNetDailyMg = reader.GetDecimal(7),
+                    RunningDailyCalories = reader.GetInt64(8)
+                });
+            }
+
+            return list;
+        }
+
         public void Delete(long foodPhosphorusIntakeId, string enteredBy)
         {
             using var conn = DbConnectionFactory.Create();
