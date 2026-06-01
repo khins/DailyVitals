@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Food Running Totals"
-        Height="560"
-        MinHeight="460"
+        Height="660"
+        MinHeight="560"
         Width="1040"
         MinWidth="940"
         WindowStartupLocation="CenterOwner">
@@ -50,7 +50,8 @@
     <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -73,12 +74,9 @@
                 <DataGridTextColumn Header="Date"
                                     Width="95"
                                     Binding="{Binding IntakeDate, StringFormat=d}"/>
-                <DataGridTextColumn Header="Time"
-                                    Width="85"
-                                    Binding="{Binding ConsumedAt, StringFormat=t}"/>
                 <DataGridTextColumn Header="Food Item"
                                     Width="2*"
-                                    MinWidth="240"
+                                    MinWidth="300"
                                     Binding="{Binding FoodName}"/>
                 <DataGridTextColumn Header="Raw Phos (mg)"
                                     Width="110"
@@ -101,7 +99,39 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <Grid Grid.Row="2" Margin="0,12,0,0">
+        <GroupBox Grid.Row="2"
+                  Header="Monthly Totals"
+                  Margin="0,12,0,0">
+            <DataGrid ItemsSource="{Binding MonthlyTotals}"
+                      Height="150"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      HorizontalScrollBarVisibility="Auto"
+                      SelectionMode="Single">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Month"
+                                        Width="120"
+                                        Binding="{Binding Month}"/>
+                    <DataGridTextColumn Header="Entries"
+                                        Width="80"
+                                        Binding="{Binding Entries}"/>
+                    <DataGridTextColumn Header="Raw Phos (mg)"
+                                        Width="120"
+                                        Binding="{Binding RawPhosphorusMg}"/>
+                    <DataGridTextColumn Header="Net Phos (mg)"
+                                        Width="120"
+                                        Binding="{Binding NetPhosphorusMg, StringFormat={}{0:F0}}"/>
+                    <DataGridTextColumn Header="Calories"
+                                        Width="100"
+                                        Binding="{Binding Calories}"/>
+                    <DataGridTextColumn Header="Pills"
+                                        Width="80"
+                                        Binding="{Binding PillsTaken}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
+
+        <Grid Grid.Row="3" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
                 <ColumnDefinition Width="Auto"/>
