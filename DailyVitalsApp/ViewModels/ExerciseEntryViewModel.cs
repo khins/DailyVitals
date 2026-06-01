@@ -4,6 +4,7 @@ using DailyVitals.Domain.Models;
 using DailyVitals.Domain.Models.Calculations;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace DailyVitals.App.ViewModels
 {
@@ -48,15 +49,45 @@ namespace DailyVitals.App.ViewModels
             {
                 _selectedSession = value;
                 OnPropertyChanged();
+                LoadSelectedSession();
             }
         }
 
         public bool IsEditMode { get; private set; }
         public long? EditingExerciseSessionId { get; private set; }
 
-        public string DurationMinutes { get; set; } = string.Empty;
-        public string CaloriesExpended { get; set; } = string.Empty;
-        public DateTime StartTime { get; set; } = DateTime.Now;
+        private string _durationMinutes = string.Empty;
+        public string DurationMinutes
+        {
+            get => _durationMinutes;
+            set
+            {
+                _durationMinutes = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _caloriesExpended = string.Empty;
+        public string CaloriesExpended
+        {
+            get => _caloriesExpended;
+            set
+            {
+                _caloriesExpended = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private DateTime _startTime = DateTime.Today;
+        public DateTime StartTime
+        {
+            get => _startTime;
+            set
+            {
+                _startTime = value.Date;
+                OnPropertyChanged();
+            }
+        }
 
         private string _notes = string.Empty;
         public string Notes
@@ -94,17 +125,21 @@ namespace DailyVitals.App.ViewModels
             if (SelectedSession == null)
                 return;
 
+            LoadSelectedSession();
+        }
+
+        private void LoadSelectedSession()
+        {
+            if (SelectedSession == null)
+                return;
+
+            SelectedExercise = ExerciseTypes.FirstOrDefault(exerciseType =>
+                exerciseType.ExerciseTypeId == SelectedSession.ExerciseTypeId);
             DurationMinutes = SelectedSession.DurationMinutes.ToString();
             CaloriesExpended = SelectedSession.CaloriesExpended?.ToString() ?? string.Empty;
             SelectedIntensity = SelectedSession.Intensity;
             Notes = SelectedSession.Notes ?? string.Empty;
             StartTime = SelectedSession.StartTime;
-
-            OnPropertyChanged(nameof(DurationMinutes));
-            OnPropertyChanged(nameof(CaloriesExpended));
-            OnPropertyChanged(nameof(SelectedIntensity));
-            OnPropertyChanged(nameof(Notes));
-            OnPropertyChanged(nameof(StartTime));
         }
 
         public void DeleteSelected()
@@ -189,13 +224,7 @@ namespace DailyVitals.App.ViewModels
             CaloriesExpended = string.Empty;
             Notes = string.Empty;
             SelectedIntensity = "Moderate";
-            StartTime = DateTime.Now;
-
-            OnPropertyChanged(nameof(DurationMinutes));
-            OnPropertyChanged(nameof(CaloriesExpended));
-            OnPropertyChanged(nameof(Notes));
-            OnPropertyChanged(nameof(SelectedIntensity));
-            OnPropertyChanged(nameof(StartTime));
+            StartTime = DateTime.Today;
         }
     }
 }
