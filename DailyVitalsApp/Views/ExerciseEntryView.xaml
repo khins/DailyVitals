@@ -132,19 +132,34 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- SHARED WIDTH CONSTANT -->
                 <!-- All controls use Width=240 and Left alignment -->
 
-                <!-- Exercise -->
-                <TextBlock Text="Exercise:"
+                <!-- Date -->
+                <TextBlock Text="Date:"
                            Grid.Row="0"
                            Grid.Column="0"
                            VerticalAlignment="Center"/>
 
-                <ComboBox Grid.Row="0"
+                <DatePicker Grid.Row="0"
+                            Grid.Column="1"
+                            Width="240"
+                            HorizontalAlignment="Left"
+                            SelectedDate="{Binding StartTime, Mode=TwoWay}"/>
+
+                <!-- Exercise -->
+                <TextBlock Text="Exercise:"
+                           Grid.Row="1"
+                           Grid.Column="0"
+                           Margin="0,8,0,0"
+                           VerticalAlignment="Center"/>
+
+                <ComboBox Grid.Row="1"
                           Grid.Column="1"
+                          Margin="0,8,0,0"
                           Width="240"
                           HorizontalAlignment="Left"
                           ItemsSource="{Binding ExerciseTypes}"
@@ -153,21 +168,6 @@
 
                 <!-- Duration -->
                 <TextBlock Text="Duration (min):"
-                           Grid.Row="1"
-                           Grid.Column="0"
-                           Margin="0,8,0,0"
-                           VerticalAlignment="Center"/>
-
-                <TextBox Grid.Row="1"
-                         Grid.Column="1"
-                         Margin="0,8,0,0"
-                         Width="240"
-                         HorizontalAlignment="Left"
-                         Text="{Binding DurationMinutes, UpdateSourceTrigger=PropertyChanged}"
-                         PreviewTextInput="Decimal_PreviewTextInput"/>
-
-                <!-- Intensity -->
-                <TextBlock Text="Calories expended:"
                            Grid.Row="2"
                            Grid.Column="0"
                            Margin="0,8,0,0"
@@ -178,17 +178,32 @@
                          Margin="0,8,0,0"
                          Width="240"
                          HorizontalAlignment="Left"
-                         Text="{Binding CaloriesExpended, UpdateSourceTrigger=PropertyChanged}"
+                         Text="{Binding DurationMinutes, UpdateSourceTrigger=PropertyChanged}"
                          PreviewTextInput="Decimal_PreviewTextInput"/>
 
                 <!-- Intensity -->
-                <TextBlock Text="Intensity:"
+                <TextBlock Text="Calories expended:"
                            Grid.Row="3"
                            Grid.Column="0"
                            Margin="0,8,0,0"
                            VerticalAlignment="Center"/>
 
-                <ComboBox Grid.Row="3"
+                <TextBox Grid.Row="3"
+                         Grid.Column="1"
+                         Margin="0,8,0,0"
+                         Width="240"
+                         HorizontalAlignment="Left"
+                         Text="{Binding CaloriesExpended, UpdateSourceTrigger=PropertyChanged}"
+                         PreviewTextInput="Decimal_PreviewTextInput"/>
+
+                <!-- Intensity -->
+                <TextBlock Text="Intensity:"
+                           Grid.Row="4"
+                           Grid.Column="0"
+                           Margin="0,8,0,0"
+                           VerticalAlignment="Center"/>
+
+                <ComboBox Grid.Row="4"
                           Grid.Column="1"
                           Margin="0,8,0,0"
                           Width="240"
@@ -198,12 +213,12 @@
 
                 <!-- Notes -->
                 <TextBlock Text="Notes:"
-                           Grid.Row="4"
+                           Grid.Row="5"
                            Grid.Column="0"
                            Margin="0,8,0,0"
                            VerticalAlignment="Top"/>
 
-                <TextBox Grid.Row="4"
+                <TextBox Grid.Row="5"
                          Grid.Column="1"
                          Margin="0,8,0,0"
                          Width="420"
