@@ -12,6 +12,7 @@ namespace DailyVitals.Data.Services
             long personId,
             decimal weightValue,
             string weightUnit,
+            decimal heightFt,
             DateTime readingTime,
             string notes,
             string enteredBy)
@@ -35,7 +36,9 @@ namespace DailyVitals.Data.Services
             if (result is null or DBNull)
                 throw new Exception("Weight insert failed. No ID returned.");
 
-            return Convert.ToInt64(result);
+            var weightId = Convert.ToInt64(result);
+            SetHeightFt(conn, weightId, heightFt);
+            return weightId;
         }
 
         public List<WeightReading> GetHistory(long personId)
@@ -46,7 +49,7 @@ namespace DailyVitals.Data.Services
             conn.Open();
 
             const string sql = @"
-            SELECT weight_id, weight_value, weight_unit, reading_time, notes, height_ft
+            SELECT weight_id, weight_value, weight_unit, reading_time, notes, COALESCE(height_ft, 6.08) AS height_ft
             FROM weight
             WHERE person_id = @person_id
             ORDER BY reading_time DESC;
@@ -92,6 +95,7 @@ namespace DailyVitals.Data.Services
                 long weightId,
                 decimal weightValue,
                 string weightUnit,
+                decimal heightFt,
                 DateTime readingTime,
                 string notes,
                 string enteredBy)
@@ -110,6 +114,19 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("by", enteredBy);
 
             cmd.ExecuteNonQuery();
+            SetHeightFt(conn, weightId, heightFt);
+        }
+
+        private static void SetHeightFt(NpgsqlConnection conn, long weightId, decimal heightFt)
+        {
+            using var cmd = new NpgsqlCommand(
+                "UPDATE weight SET height_ft = @height_ft WHERE weight_id = @weight_id",
+                conn);
+
+            cmd.Parameters.AddWithValue("height_ft", heightFt);
+            cmd.Parameters.AddWithValue("weight_id", weightId);
+
+            cmd.ExecuteNonQuery();
         }
 
         public WeightReading? GetLatestForPerson(long personId)
@@ -122,7 +139,7 @@ namespace DailyVitals.Data.Services
                         weight_id,
                         weight_value,
                         weight_unit,
-                        height_ft,
+                        COALESCE(height_ft, 6.08) AS height_ft,
                         reading_time,
                         notes
                     FROM weight

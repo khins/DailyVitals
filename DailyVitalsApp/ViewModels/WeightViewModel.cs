@@ -15,7 +15,8 @@ namespace DailyVitals.App.ViewModels
         private Person? _selectedPerson;
         private WeightReading? _selectedHistory;
         private string _weightValue = string.Empty;
-        private string _heightFt = string.Empty;
+        private const decimal FixedHeightFt = 6.08m;
+        private const string FixedHeightDisplay = "6 ft 1 in";
 
         public bool IsEditMode => SelectedHistory != null;
         public bool CanUpdate => IsEditMode && CanSave;
@@ -64,18 +65,8 @@ namespace DailyVitals.App.ViewModels
         public DateTime ReadingTime { get; set; } = DateTime.Now;
         public string? Notes { get; set; } = "Morning weigh-in";
 
-        public string HeightFt
-        {
-            get => _heightFt;
-            set
-            {
-                _heightFt = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(BMI));
-                OnPropertyChanged(nameof(BMICategory));
-                OnPropertyChanged(nameof(BMIBrush));
-            }
-        }
+        public string HeightFt => FixedHeightFt.ToString("0.00");
+        public string HeightDisplay => $"{FixedHeightDisplay} ({HeightFt} ft)";
 
         public WeightViewModel()
         {
@@ -116,8 +107,7 @@ namespace DailyVitals.App.ViewModels
             get
             {
                 if (!decimal.TryParse(WeightValue, out var weight)) return null;
-                if (!decimal.TryParse(HeightFt, out var height)) return null;
-                return HealthMetrics.CalculateBMI(weight, height);
+                return HealthMetrics.CalculateBMI(weight, FixedHeightFt);
             }
         }
 
@@ -147,7 +137,6 @@ namespace DailyVitals.App.ViewModels
             WeightUnit = SelectedHistory.WeightUnit;
             ReadingTime = SelectedHistory.ReadingTime;
             Notes = SelectedHistory.Notes;
-            HeightFt = SelectedHistory.HeightFt?.ToString("0.##") ?? string.Empty;
 
             OnPropertyChanged(nameof(WeightUnit));
             OnPropertyChanged(nameof(ReadingTime));
@@ -161,7 +150,6 @@ namespace DailyVitals.App.ViewModels
             WeightUnit = "lb";
             ReadingTime = DateTime.Now;
             Notes = "Morning weigh-in";
-            HeightFt = string.Empty;
 
             OnPropertyChanged(nameof(WeightUnit));
             OnPropertyChanged(nameof(ReadingTime));
@@ -185,6 +173,7 @@ namespace DailyVitals.App.ViewModels
                     selectedHistory.WeightId,
                     weight,
                     WeightUnit,
+                    FixedHeightFt,
                     ReadingTime,
                     Notes ?? string.Empty,
                     Environment.UserName);
@@ -195,6 +184,7 @@ namespace DailyVitals.App.ViewModels
                     SelectedPerson.PersonId,
                     weight,
                     WeightUnit,
+                    FixedHeightFt,
                     ReadingTime,
                     Notes ?? string.Empty,
                     Environment.UserName);
