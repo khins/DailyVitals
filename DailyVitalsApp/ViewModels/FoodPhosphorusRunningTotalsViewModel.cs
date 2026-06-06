@@ -92,7 +92,11 @@ namespace DailyVitals.App.ViewModels
                     .Where(row => row.FoodName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
-            foreach (var row in filteredRows)
+            foreach (var row in filteredRows
+                .OrderByDescending(row => row.IntakeDate)
+                .ThenByDescending(row => row.RunningNetDailyMg)
+                .ThenByDescending(row => row.RunningDailyCalories)
+                .ThenByDescending(row => row.ConsumedAt))
                 Rows.Add(row);
 
             SearchResultsText = string.IsNullOrWhiteSpace(searchText)
