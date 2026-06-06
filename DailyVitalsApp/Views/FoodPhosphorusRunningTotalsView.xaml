@@ -94,6 +94,16 @@
                   IsReadOnly="True"
                   HorizontalScrollBarVisibility="Auto"
                   SelectionMode="Single">
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsToday}" Value="True">
+                            <Setter Property="Background" Value="#0078D7"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Date"
                                     Width="95"

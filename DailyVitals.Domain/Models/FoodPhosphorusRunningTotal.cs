@@ -13,5 +13,6 @@ namespace DailyVitals.Domain.Models
         public decimal NetItemPhosphorusMg { get; set; }
         public decimal RunningNetDailyMg { get; set; }
         public long RunningDailyCalories { get; set; }
+        public bool IsToday => IntakeDate.Date == DateTime.Today;
     }
 }
