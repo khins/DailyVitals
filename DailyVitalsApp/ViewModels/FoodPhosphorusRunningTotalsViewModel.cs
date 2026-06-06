@@ -1,6 +1,7 @@
 using DailyVitals.Data.Services;
 using DailyVitals.Domain.Models;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
@@ -9,6 +10,8 @@ namespace DailyVitals.App.ViewModels
     public class FoodPhosphorusRunningTotalsViewModel : ViewModelBase
     {
         private readonly FoodPhosphorusIntakeService _service = new();
+        private readonly List<FoodPhosphorusRunningTotal> _allRows = new();
+        private string _searchText = string.Empty;
 
         public FoodPhosphorusRunningTotalsViewModel(long personId, string personName)
         {
@@ -21,15 +24,33 @@ namespace DailyVitals.App.ViewModels
         public ObservableCollection<FoodPhosphorusMonthlyTotal> MonthlyTotals { get; } = new();
 
         public string SummaryText { get; private set; } = "No food phosphorus entries available";
+        public string SearchResultsText { get; private set; } = string.Empty;
+
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (_searchText == value)
+                    return;
+
+                _searchText = value;
+                OnPropertyChanged();
+                ApplySearch();
+            }
+        }
 
         private void Load(long personId)
         {
             Rows.Clear();
             MonthlyTotals.Clear();
+            _allRows.Clear();
 
             var rows = _service.GetRunningDailyTotals(personId);
             foreach (var row in rows)
-                Rows.Add(row);
+                _allRows.Add(row);
+
+            ApplySearch();
 
             if (rows.Count == 0)
                 return;
@@ -58,6 +79,26 @@ namespace DailyVitals.App.ViewModels
                     PillsTaken = month.Sum(row => row.PillsTaken)
                 });
             }
+        }
+
+        private void ApplySearch()
+        {
+            Rows.Clear();
+
+            var searchText = SearchText.Trim();
+            var filteredRows = string.IsNullOrWhiteSpace(searchText)
+                ? _allRows
+                : _allRows
+                    .Where(row => row.FoodName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+            foreach (var row in filteredRows)
+                Rows.Add(row);
+
+            SearchResultsText = string.IsNullOrWhiteSpace(searchText)
+                ? $"{_allRows.Count} entries"
+                : $"{filteredRows.Count} of {_allRows.Count} entries";
+            OnPropertyChanged(nameof(SearchResultsText));
         }
 
         public class FoodPhosphorusMonthlyTotal
