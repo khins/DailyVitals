@@ -118,6 +118,9 @@
                 <DataGridTextColumn Header="Calories"
                                     Width="80"
                                     Binding="{Binding Calories}"/>
+                <DataGridTextColumn Header="Sodium (mg)"
+                                    Width="100"
+                                    Binding="{Binding SodiumMg}"/>
                 <DataGridTextColumn Header="Pills"
                                     Width="60"
                                     Binding="{Binding PillsTaken}"/>
@@ -130,6 +133,9 @@
                 <DataGridTextColumn Header="Running Calories"
                                     Width="130"
                                     Binding="{Binding RunningDailyCalories}"/>
+                <DataGridTextColumn Header="Running Sodium (mg)"
+                                    Width="145"
+                                    Binding="{Binding RunningDailySodiumMg}"/>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -158,6 +164,9 @@
                     <DataGridTextColumn Header="Calories"
                                         Width="100"
                                         Binding="{Binding Calories}"/>
+                    <DataGridTextColumn Header="Sodium (mg)"
+                                        Width="110"
+                                        Binding="{Binding SodiumMg}"/>
                     <DataGridTextColumn Header="Pills"
                                         Width="80"
                                         Binding="{Binding PillsTaken}"/>

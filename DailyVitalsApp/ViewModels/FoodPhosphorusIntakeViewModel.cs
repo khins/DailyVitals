@@ -15,6 +15,7 @@ namespace DailyVitals.App.ViewModels
         private string _foodName = string.Empty;
         private string _phosphorusMg = string.Empty;
         private string _calories = string.Empty;
+        private string _sodiumMg = string.Empty;
         private string _binders = "0";
         private string? _notes;
         private string? _servingDescription;
@@ -43,6 +44,7 @@ namespace DailyVitals.App.ViewModels
             int.TryParse(PhosphorusMg, out var phosphorus) &&
             phosphorus >= 0 &&
             IsOptionalNonNegativeWholeNumber(Calories) &&
+            IsOptionalNonNegativeWholeNumber(SodiumMg) &&
             int.TryParse(Binders, out var binders) &&
             binders >= 0;
 
@@ -90,6 +92,17 @@ namespace DailyVitals.App.ViewModels
             set
             {
                 _calories = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanSave));
+            }
+        }
+
+        public string SodiumMg
+        {
+            get => _sodiumMg;
+            set
+            {
+                _sodiumMg = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanSave));
             }
@@ -239,6 +252,7 @@ namespace DailyVitals.App.ViewModels
             FoodName = SelectedHistory.FoodName;
             PhosphorusMg = SelectedHistory.PhosphorusMg.ToString();
             Calories = SelectedHistory.Calories?.ToString() ?? string.Empty;
+            SodiumMg = SelectedHistory.SodiumMg?.ToString() ?? string.Empty;
             Binders = SelectedHistory.Binders.ToString();
             ConsumedAt = SelectedHistory.ConsumedAt;
             Notes = SelectedHistory.Notes;
@@ -257,6 +271,7 @@ namespace DailyVitals.App.ViewModels
             FoodName = string.Empty;
             PhosphorusMg = string.Empty;
             Calories = string.Empty;
+            SodiumMg = string.Empty;
             Binders = "0";
             ConsumedAt = DateTime.Today;
             Notes = string.Empty;
@@ -311,6 +326,15 @@ namespace DailyVitals.App.ViewModels
                 calories = parsedCalories;
             }
 
+            int? sodiumMg = null;
+            if (!string.IsNullOrWhiteSpace(SodiumMg))
+            {
+                if (!int.TryParse(SodiumMg, out var parsedSodiumMg) || parsedSodiumMg < 0)
+                    throw new InvalidOperationException("Sodium must be a non-negative whole number in mg.");
+
+                sodiumMg = parsedSodiumMg;
+            }
+
             if (!int.TryParse(Binders, out var binders) || binders < 0)
                 throw new InvalidOperationException("Binders must be a non-negative whole number.");
 
@@ -319,6 +343,7 @@ namespace DailyVitals.App.ViewModels
                 FoodName.Trim(),
                 phosphorus,
                 calories,
+                sodiumMg,
                 binders,
                 ConsumedAt,
                 Notes,

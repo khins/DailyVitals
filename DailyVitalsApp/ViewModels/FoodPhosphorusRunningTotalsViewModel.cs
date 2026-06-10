@@ -63,7 +63,7 @@ namespace DailyVitals.App.ViewModels
                 .OrderBy(row => row.ConsumedAt)
                 .Last();
 
-            SummaryText = $"{latestDay.Key:d}: {latestRow.RunningNetDailyMg:F0} net mg phosphorus, {latestRow.RunningDailyCalories} calories";
+            SummaryText = $"{latestDay.Key:d}: {latestRow.RunningNetDailyMg:F0} net mg phosphorus, {latestRow.RunningDailyCalories} calories, {latestRow.RunningDailySodiumMg} mg sodium";
 
             foreach (var month in rows
                 .GroupBy(row => new DateTime(row.IntakeDate.Year, row.IntakeDate.Month, 1))
@@ -76,6 +76,7 @@ namespace DailyVitals.App.ViewModels
                     RawPhosphorusMg = month.Sum(row => row.RawPhosphorusMg),
                     NetPhosphorusMg = month.Sum(row => row.NetItemPhosphorusMg),
                     Calories = month.Sum(row => row.Calories),
+                    SodiumMg = month.Sum(row => row.SodiumMg),
                     PillsTaken = month.Sum(row => row.PillsTaken)
                 });
             }
@@ -112,6 +113,7 @@ namespace DailyVitals.App.ViewModels
             public int RawPhosphorusMg { get; set; }
             public decimal NetPhosphorusMg { get; set; }
             public int Calories { get; set; }
+            public int SodiumMg { get; set; }
             public int PillsTaken { get; set; }
         }
     }
