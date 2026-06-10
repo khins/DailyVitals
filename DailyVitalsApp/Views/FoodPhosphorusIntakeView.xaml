@@ -100,6 +100,9 @@
                 <DataGridTextColumn Header="Calories"
                                     Width="80"
                                     Binding="{Binding Calories}"/>
+                <DataGridTextColumn Header="Sodium (mg)"
+                                    Width="95"
+                                    Binding="{Binding SodiumMg}"/>
                 <DataGridTextColumn Header="Binders"
                                     Width="70"
                                     Binding="{Binding Binders}"/>
@@ -122,6 +125,7 @@
                 </Grid.ColumnDefinitions>
 
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -184,29 +188,39 @@
                          Text="{Binding Calories, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <TextBlock Grid.Row="4"
-                           Text="Binders:"
+                           Text="Sodium (mg):"
                            VerticalAlignment="Center"/>
                 <TextBox Grid.Row="4"
                          Grid.Column="1"
                          Width="120"
                          HorizontalAlignment="Left"
                          Margin="0,4"
-                         Text="{Binding Binders, UpdateSourceTrigger=PropertyChanged}"/>
+                         Text="{Binding SodiumMg, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <TextBlock Grid.Row="5"
-                           Text="Serving:"
+                           Text="Binders:"
                            VerticalAlignment="Center"/>
                 <TextBox Grid.Row="5"
+                         Grid.Column="1"
+                         Width="120"
+                         HorizontalAlignment="Left"
+                         Margin="0,4"
+                         Text="{Binding Binders, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Row="6"
+                           Text="Serving:"
+                           VerticalAlignment="Center"/>
+                <TextBox Grid.Row="6"
                          Grid.Column="1"
                          Width="300"
                          HorizontalAlignment="Left"
                          Margin="0,4"
                          Text="{Binding ServingDescription, UpdateSourceTrigger=PropertyChanged}"/>
 
-                <TextBlock Grid.Row="6"
+                <TextBlock Grid.Row="7"
                            Text="AI Lookup:"
                            VerticalAlignment="Center"/>
-                <StackPanel Grid.Row="6"
+                <StackPanel Grid.Row="7"
                             Grid.Column="1"
                             Orientation="Vertical"
                             Margin="0,4">
@@ -216,10 +230,10 @@
                                TextWrapping="Wrap"/>
                 </StackPanel>
 
-                <TextBlock Grid.Row="7"
+                <TextBlock Grid.Row="8"
                            Text="Notes:"
                            VerticalAlignment="Top"/>
-                <TextBox Grid.Row="7"
+                <TextBox Grid.Row="8"
                          Grid.Column="1"
                          Height="70"
                          Margin="0,4"

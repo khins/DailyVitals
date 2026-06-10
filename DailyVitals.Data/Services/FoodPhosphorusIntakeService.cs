@@ -14,6 +14,7 @@ namespace DailyVitals.Data.Services
             string foodName,
             int phosphorusMg,
             int? calories,
+            int? sodiumMg,
             int binders,
             DateTime consumedAt,
             string? notes,
@@ -36,6 +37,7 @@ namespace DailyVitals.Data.Services
                         food_name,
                         phosphorus_mg,
                         calories,
+                        sodium_mg,
                         binders,
                         consumed_at,
                         notes,
@@ -50,6 +52,7 @@ namespace DailyVitals.Data.Services
                         TRIM(@p_food_name),
                         @p_phosphorus_mg,
                         @p_calories,
+                        @p_sodium_mg,
                         @p_binders,
                         COALESCE(@p_consumed_at, CURRENT_TIMESTAMP),
                         @p_notes,
@@ -78,6 +81,7 @@ namespace DailyVitals.Data.Services
                             'food_name', @p_food_name,
                             'phosphorus_mg', @p_phosphorus_mg,
                             'calories', @p_calories,
+                            'sodium_mg', @p_sodium_mg,
                             'binders', @p_binders,
                             'consumed_at', @p_consumed_at,
                             'notes', @p_notes,
@@ -99,6 +103,8 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("p_phosphorus_mg", phosphorusMg);
             cmd.Parameters.Add("p_calories", NpgsqlDbType.Integer).Value =
                 (object?)calories ?? DBNull.Value;
+            cmd.Parameters.Add("p_sodium_mg", NpgsqlDbType.Integer).Value =
+                (object?)sodiumMg ?? DBNull.Value;
             cmd.Parameters.AddWithValue("p_binders", binders);
             cmd.Parameters.AddWithValue("p_consumed_at", consumedAt);
             cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
@@ -132,6 +138,7 @@ namespace DailyVitals.Data.Services
                     food_name,
                     phosphorus_mg,
                     calories,
+                    sodium_mg,
                     COALESCE(binders, 0) AS binders,
                     consumed_at::timestamp,
                     notes,
@@ -158,14 +165,15 @@ namespace DailyVitals.Data.Services
                     FoodName = reader.GetString(2),
                     PhosphorusMg = reader.GetInt32(3),
                     Calories = reader.IsDBNull(4) ? null : reader.GetInt32(4),
-                    Binders = reader.GetInt32(5),
-                    ConsumedAt = reader.GetDateTime(6),
-                    Notes = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    ServingDescription = reader.IsDBNull(8) ? null : reader.GetString(8),
-                    EstimatedByAi = reader.GetBoolean(9),
-                    AiProvider = reader.IsDBNull(10) ? null : reader.GetString(10),
-                    AiConfidence = reader.IsDBNull(11) ? null : reader.GetString(11),
-                    SourceNotes = reader.IsDBNull(12) ? null : reader.GetString(12)
+                    SodiumMg = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                    Binders = reader.GetInt32(6),
+                    ConsumedAt = reader.GetDateTime(7),
+                    Notes = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    ServingDescription = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    EstimatedByAi = reader.GetBoolean(10),
+                    AiProvider = reader.IsDBNull(11) ? null : reader.GetString(11),
+                    AiConfidence = reader.IsDBNull(12) ? null : reader.GetString(12),
+                    SourceNotes = reader.IsDBNull(13) ? null : reader.GetString(13)
                 });
             }
 
@@ -178,6 +186,7 @@ namespace DailyVitals.Data.Services
                 ALTER TABLE public.food_phosphorus_intake
                     ADD COLUMN IF NOT EXISTS binders integer NOT NULL DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS calories integer NULL,
+                    ADD COLUMN IF NOT EXISTS sodium_mg integer NULL,
                     ADD COLUMN IF NOT EXISTS serving_description varchar(200) NULL,
                     ADD COLUMN IF NOT EXISTS estimated_by_ai boolean NOT NULL DEFAULT false,
                     ADD COLUMN IF NOT EXISTS ai_provider varchar(50) NULL,
@@ -193,6 +202,15 @@ namespace DailyVitals.Data.Services
                     ) THEN
                         ALTER TABLE public.food_phosphorus_intake
                             ADD CONSTRAINT food_phosphorus_intake_calories_check CHECK (calories IS NULL OR calories >= 0);
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_intake_sodium_check'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_intake
+                            ADD CONSTRAINT food_phosphorus_intake_sodium_check CHECK (sodium_mg IS NULL OR sodium_mg >= 0);
                     END IF;
 
                     IF NOT EXISTS (
@@ -250,6 +268,7 @@ namespace DailyVitals.Data.Services
                         f.food_name,
                         f.phosphorus_mg,
                         COALESCE(f.calories, 0) AS calories,
+                        COALESCE(f.sodium_mg, 0) AS sodium_mg,
                         COALESCE(f.binders, 0) AS binders,
                         GREATEST(
                             f.phosphorus_mg - (COALESCE(f.binders, 0) * bc.mg_per_pill * bc.binding_efficiency),
@@ -265,6 +284,7 @@ namespace DailyVitals.Data.Services
                     food_name,
                     phosphorus_mg AS raw_phos_mg,
                     calories,
+                    sodium_mg,
                     binders AS pills_taken,
                     net_item_phos_mg,
                     SUM(net_item_phos_mg) OVER (
@@ -274,7 +294,11 @@ namespace DailyVitals.Data.Services
                     SUM(calories) OVER (
                         PARTITION BY intake_date
                         ORDER BY consumed_at, food_phosphorus_intake_id
-                    ) AS running_daily_calories
+                    ) AS running_daily_calories,
+                    SUM(sodium_mg) OVER (
+                        PARTITION BY intake_date
+                        ORDER BY consumed_at, food_phosphorus_intake_id
+                    ) AS running_daily_sodium_mg
                 FROM calculated_intake
                 ORDER BY intake_date DESC, consumed_at ASC;";
 
@@ -291,10 +315,12 @@ namespace DailyVitals.Data.Services
                     FoodName = reader.GetString(2),
                     RawPhosphorusMg = reader.GetInt32(3),
                     Calories = reader.GetInt32(4),
-                    PillsTaken = reader.GetInt32(5),
-                    NetItemPhosphorusMg = reader.GetDecimal(6),
-                    RunningNetDailyMg = reader.GetDecimal(7),
-                    RunningDailyCalories = reader.GetInt64(8)
+                    SodiumMg = reader.GetInt32(5),
+                    PillsTaken = reader.GetInt32(6),
+                    NetItemPhosphorusMg = reader.GetDecimal(7),
+                    RunningNetDailyMg = reader.GetDecimal(8),
+                    RunningDailyCalories = reader.GetInt64(9),
+                    RunningDailySodiumMg = reader.GetInt64(10)
                 });
             }
 

@@ -9,10 +9,12 @@ namespace DailyVitals.Domain.Models
         public string FoodName { get; set; } = string.Empty;
         public int RawPhosphorusMg { get; set; }
         public int Calories { get; set; }
+        public int SodiumMg { get; set; }
         public int PillsTaken { get; set; }
         public decimal NetItemPhosphorusMg { get; set; }
         public decimal RunningNetDailyMg { get; set; }
         public long RunningDailyCalories { get; set; }
+        public long RunningDailySodiumMg { get; set; }
         public bool IsToday => IntakeDate.Date == DateTime.Today;
     }
 }

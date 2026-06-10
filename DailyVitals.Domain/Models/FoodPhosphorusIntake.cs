@@ -9,6 +9,7 @@ namespace DailyVitals.Domain.Models
         public string FoodName { get; set; } = string.Empty;
         public int PhosphorusMg { get; set; }
         public int? Calories { get; set; }
+        public int? SodiumMg { get; set; }
         public int Binders { get; set; }
         public DateTime ConsumedAt { get; set; }
         public string? Notes { get; set; }
