@@ -166,6 +166,8 @@
                 <DataGrid Grid.Row="1"
                           ItemsSource="{Binding DailyNutritionTargets}"
                           Height="115"
+                          Width="580"
+                          HorizontalAlignment="Left"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
                           HeadersVisibility="Column"
@@ -183,7 +185,18 @@
                                             Binding="{Binding Target}"/>
                         <DataGridTextColumn Header="Remaining"
                                             Width="140"
-                                            Binding="{Binding Remaining}"/>
+                                            Binding="{Binding Remaining}">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="Green"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOverTarget}" Value="True">
+                                            <Setter Property="Foreground" Value="Red"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
