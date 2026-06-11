@@ -1,6 +1,7 @@
 using DailyVitals.Data.Services;
 using DailyVitals.Domain.Models;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
@@ -18,8 +19,8 @@ namespace DailyVitals.App.ViewModels
         private string _sodiumMg = string.Empty;
         private string _proteinG = string.Empty;
         private string _potassiumMg = string.Empty;
-        private string _fluidMl = string.Empty;
         private string _binders = "0";
+        private string _searchText = string.Empty;
         private string? _notes;
         private string? _servingDescription;
         private string? _aiConfidence;
@@ -31,6 +32,7 @@ namespace DailyVitals.App.ViewModels
         private Person? _selectedPerson;
         private FoodPhosphorusIntake? _selectedHistory;
         private int _selectedDayTotalMg;
+        private readonly List<FoodPhosphorusIntake> _allHistory = new();
 
         public FoodPhosphorusIntakeViewModel()
         {
@@ -50,7 +52,6 @@ namespace DailyVitals.App.ViewModels
             IsOptionalNonNegativeWholeNumber(SodiumMg) &&
             IsOptionalNonNegativeDecimal(ProteinG) &&
             IsOptionalNonNegativeWholeNumber(PotassiumMg) &&
-            IsOptionalNonNegativeWholeNumber(FluidMl) &&
             int.TryParse(Binders, out var binders) &&
             binders >= 0;
 
@@ -136,14 +137,17 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
-        public string FluidMl
+        public string SearchText
         {
-            get => _fluidMl;
+            get => _searchText;
             set
             {
-                _fluidMl = value;
+                if (_searchText == value)
+                    return;
+
+                _searchText = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(CanSave));
+                ApplyHistorySearch();
             }
         }
 
@@ -275,11 +279,34 @@ namespace DailyVitals.App.ViewModels
         private void LoadHistoryForSelectedPerson()
         {
             History.Clear();
+            _allHistory.Clear();
 
             if (SelectedPerson == null)
                 return;
 
             foreach (var item in _service.GetHistory(SelectedPerson.PersonId))
+                _allHistory.Add(item);
+
+            ApplyHistorySearch();
+        }
+
+        private void ApplyHistorySearch()
+        {
+            History.Clear();
+
+            var searchText = SearchText.Trim();
+            var filteredHistory = string.IsNullOrWhiteSpace(searchText)
+                ? _allHistory
+                : _allHistory
+                    .Where(item =>
+                        item.FoodName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                        (!string.IsNullOrWhiteSpace(item.ServingDescription) &&
+                            item.ServingDescription.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(item.Notes) &&
+                            item.Notes.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+
+            foreach (var item in filteredHistory)
                 History.Add(item);
         }
 
@@ -294,7 +321,6 @@ namespace DailyVitals.App.ViewModels
             SodiumMg = SelectedHistory.SodiumMg?.ToString() ?? string.Empty;
             ProteinG = SelectedHistory.ProteinG?.ToString("0.##") ?? string.Empty;
             PotassiumMg = SelectedHistory.PotassiumMg?.ToString() ?? string.Empty;
-            FluidMl = SelectedHistory.FluidMl?.ToString() ?? string.Empty;
             Binders = SelectedHistory.Binders.ToString();
             ConsumedAt = SelectedHistory.ConsumedAt;
             Notes = SelectedHistory.Notes;
@@ -316,7 +342,6 @@ namespace DailyVitals.App.ViewModels
             SodiumMg = string.Empty;
             ProteinG = string.Empty;
             PotassiumMg = string.Empty;
-            FluidMl = string.Empty;
             Binders = "0";
             ConsumedAt = DateTime.Today;
             Notes = string.Empty;
@@ -398,15 +423,6 @@ namespace DailyVitals.App.ViewModels
                 potassiumMg = parsedPotassiumMg;
             }
 
-            int? fluidMl = null;
-            if (!string.IsNullOrWhiteSpace(FluidMl))
-            {
-                if (!int.TryParse(FluidMl, out var parsedFluidMl) || parsedFluidMl < 0)
-                    throw new InvalidOperationException("Fluid must be a non-negative whole number in ml.");
-
-                fluidMl = parsedFluidMl;
-            }
-
             if (!int.TryParse(Binders, out var binders) || binders < 0)
                 throw new InvalidOperationException("Binders must be a non-negative whole number.");
 
@@ -418,7 +434,7 @@ namespace DailyVitals.App.ViewModels
                 sodiumMg,
                 proteinG,
                 potassiumMg,
-                fluidMl,
+                null,
                 binders,
                 ConsumedAt,
                 Notes,

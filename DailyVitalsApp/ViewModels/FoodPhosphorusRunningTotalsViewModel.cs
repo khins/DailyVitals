@@ -197,7 +197,8 @@ namespace DailyVitals.App.ViewModels
                 Nutrient = nutrient,
                 Consumed = consumed == null ? "-" : $"{consumed.Value:N0} {unit}",
                 Target = $"{target:N0} {unit}",
-                Remaining = $"{remaining:N0} {unit}"
+                Remaining = $"{remaining:N0} {unit}",
+                IsOverTarget = remaining < 0
             };
         }
 

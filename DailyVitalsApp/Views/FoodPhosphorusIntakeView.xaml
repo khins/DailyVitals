@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Food Phosphorus Tracker"
-        Height="860"
-        MinHeight="800"
+        Height="780"
+        MinHeight="720"
         Width="980"
         MinWidth="940"
         WindowStartupLocation="CenterOwner">
@@ -57,8 +57,10 @@
 
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="170"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="95"/>
+                <ColumnDefinition Width="275"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="270"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
@@ -73,6 +75,17 @@
                       DisplayMemberPath="FullName"/>
 
             <TextBlock Grid.Column="2"
+                       Text="Search"
+                       Margin="8,0,8,0"
+                       VerticalAlignment="Center"/>
+
+            <TextBox Grid.Column="3"
+                     Height="30"
+                     VerticalContentAlignment="Center"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <TextBlock Grid.Column="4"
+                       Margin="10,0,0,0"
                        VerticalAlignment="Center"
                        FontWeight="SemiBold"
                        Text="{Binding SelectedDayTotalMg, StringFormat=Selected day total: {0} mg}"/>
@@ -109,18 +122,9 @@
                 <DataGridTextColumn Header="Potassium (mg)"
                                     Width="105"
                                     Binding="{Binding PotassiumMg}"/>
-                <DataGridTextColumn Header="Fluid (ml)"
-                                    Width="80"
-                                    Binding="{Binding FluidMl}"/>
                 <DataGridTextColumn Header="Binders"
                                     Width="70"
                                     Binding="{Binding Binders}"/>
-                <DataGridTextColumn Header="AI"
-                                    Width="50"
-                                    Binding="{Binding EstimatedByAi}"/>
-                <DataGridTextColumn Header="Notes"
-                                    Width="160"
-                                    Binding="{Binding Notes}"/>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -134,7 +138,6 @@
                 </Grid.ColumnDefinitions>
 
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -230,39 +233,29 @@
                          Text="{Binding PotassiumMg, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <TextBlock Grid.Row="7"
-                           Text="Fluid (ml):"
+                           Text="Binders:"
                            VerticalAlignment="Center"/>
                 <TextBox Grid.Row="7"
                          Grid.Column="1"
                          Width="120"
                          HorizontalAlignment="Left"
                          Margin="0,4"
-                         Text="{Binding FluidMl, UpdateSourceTrigger=PropertyChanged}"/>
-
-                <TextBlock Grid.Row="8"
-                           Text="Binders:"
-                           VerticalAlignment="Center"/>
-                <TextBox Grid.Row="8"
-                         Grid.Column="1"
-                         Width="120"
-                         HorizontalAlignment="Left"
-                         Margin="0,4"
                          Text="{Binding Binders, UpdateSourceTrigger=PropertyChanged}"/>
 
-                <TextBlock Grid.Row="9"
+                <TextBlock Grid.Row="8"
                            Text="Serving:"
                            VerticalAlignment="Center"/>
-                <TextBox Grid.Row="9"
+                <TextBox Grid.Row="8"
                          Grid.Column="1"
                          Width="300"
                          HorizontalAlignment="Left"
                          Margin="0,4"
                          Text="{Binding ServingDescription, UpdateSourceTrigger=PropertyChanged}"/>
 
-                <TextBlock Grid.Row="10"
+                <TextBlock Grid.Row="9"
                            Text="AI Lookup:"
                            VerticalAlignment="Center"/>
-                <StackPanel Grid.Row="10"
+                <StackPanel Grid.Row="9"
                             Grid.Column="1"
                             Orientation="Vertical"
                             Margin="0,4">
@@ -272,10 +265,10 @@
                                TextWrapping="Wrap"/>
                 </StackPanel>
 
-                <TextBlock Grid.Row="11"
+                <TextBlock Grid.Row="10"
                            Text="Notes:"
                            VerticalAlignment="Top"/>
-                <TextBox Grid.Row="11"
+                <TextBox Grid.Row="10"
                          Grid.Column="1"
                          Height="70"
                          Margin="0,4"
@@ -285,7 +278,7 @@
             </Grid>
         </ScrollViewer>
 
-        <Grid Grid.Row="3" Margin="0,16,0,6">
+        <Grid Grid.Row="3" Margin="0,8,0,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
