@@ -10,6 +10,9 @@ namespace DailyVitals.Domain.Models
         public int PhosphorusMg { get; set; }
         public int? Calories { get; set; }
         public int? SodiumMg { get; set; }
+        public decimal? ProteinG { get; set; }
+        public int? PotassiumMg { get; set; }
+        public int? FluidMl { get; set; }
         public int Binders { get; set; }
         public DateTime ConsumedAt { get; set; }
         public string? Notes { get; set; }

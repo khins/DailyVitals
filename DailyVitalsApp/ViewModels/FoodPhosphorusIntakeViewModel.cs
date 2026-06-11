@@ -16,6 +16,9 @@ namespace DailyVitals.App.ViewModels
         private string _phosphorusMg = string.Empty;
         private string _calories = string.Empty;
         private string _sodiumMg = string.Empty;
+        private string _proteinG = string.Empty;
+        private string _potassiumMg = string.Empty;
+        private string _fluidMl = string.Empty;
         private string _binders = "0";
         private string? _notes;
         private string? _servingDescription;
@@ -45,6 +48,9 @@ namespace DailyVitals.App.ViewModels
             phosphorus >= 0 &&
             IsOptionalNonNegativeWholeNumber(Calories) &&
             IsOptionalNonNegativeWholeNumber(SodiumMg) &&
+            IsOptionalNonNegativeDecimal(ProteinG) &&
+            IsOptionalNonNegativeWholeNumber(PotassiumMg) &&
+            IsOptionalNonNegativeWholeNumber(FluidMl) &&
             int.TryParse(Binders, out var binders) &&
             binders >= 0;
 
@@ -103,6 +109,39 @@ namespace DailyVitals.App.ViewModels
             set
             {
                 _sodiumMg = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanSave));
+            }
+        }
+
+        public string ProteinG
+        {
+            get => _proteinG;
+            set
+            {
+                _proteinG = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanSave));
+            }
+        }
+
+        public string PotassiumMg
+        {
+            get => _potassiumMg;
+            set
+            {
+                _potassiumMg = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanSave));
+            }
+        }
+
+        public string FluidMl
+        {
+            get => _fluidMl;
+            set
+            {
+                _fluidMl = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanSave));
             }
@@ -253,6 +292,9 @@ namespace DailyVitals.App.ViewModels
             PhosphorusMg = SelectedHistory.PhosphorusMg.ToString();
             Calories = SelectedHistory.Calories?.ToString() ?? string.Empty;
             SodiumMg = SelectedHistory.SodiumMg?.ToString() ?? string.Empty;
+            ProteinG = SelectedHistory.ProteinG?.ToString("0.##") ?? string.Empty;
+            PotassiumMg = SelectedHistory.PotassiumMg?.ToString() ?? string.Empty;
+            FluidMl = SelectedHistory.FluidMl?.ToString() ?? string.Empty;
             Binders = SelectedHistory.Binders.ToString();
             ConsumedAt = SelectedHistory.ConsumedAt;
             Notes = SelectedHistory.Notes;
@@ -272,6 +314,9 @@ namespace DailyVitals.App.ViewModels
             PhosphorusMg = string.Empty;
             Calories = string.Empty;
             SodiumMg = string.Empty;
+            ProteinG = string.Empty;
+            PotassiumMg = string.Empty;
+            FluidMl = string.Empty;
             Binders = "0";
             ConsumedAt = DateTime.Today;
             Notes = string.Empty;
@@ -335,6 +380,33 @@ namespace DailyVitals.App.ViewModels
                 sodiumMg = parsedSodiumMg;
             }
 
+            decimal? proteinG = null;
+            if (!string.IsNullOrWhiteSpace(ProteinG))
+            {
+                if (!decimal.TryParse(ProteinG, out var parsedProteinG) || parsedProteinG < 0)
+                    throw new InvalidOperationException("Protein must be a non-negative number in grams.");
+
+                proteinG = parsedProteinG;
+            }
+
+            int? potassiumMg = null;
+            if (!string.IsNullOrWhiteSpace(PotassiumMg))
+            {
+                if (!int.TryParse(PotassiumMg, out var parsedPotassiumMg) || parsedPotassiumMg < 0)
+                    throw new InvalidOperationException("Potassium must be a non-negative whole number in mg.");
+
+                potassiumMg = parsedPotassiumMg;
+            }
+
+            int? fluidMl = null;
+            if (!string.IsNullOrWhiteSpace(FluidMl))
+            {
+                if (!int.TryParse(FluidMl, out var parsedFluidMl) || parsedFluidMl < 0)
+                    throw new InvalidOperationException("Fluid must be a non-negative whole number in ml.");
+
+                fluidMl = parsedFluidMl;
+            }
+
             if (!int.TryParse(Binders, out var binders) || binders < 0)
                 throw new InvalidOperationException("Binders must be a non-negative whole number.");
 
@@ -344,6 +416,9 @@ namespace DailyVitals.App.ViewModels
                 phosphorus,
                 calories,
                 sodiumMg,
+                proteinG,
+                potassiumMg,
+                fluidMl,
                 binders,
                 ConsumedAt,
                 Notes,
@@ -383,6 +458,12 @@ namespace DailyVitals.App.ViewModels
         {
             return string.IsNullOrWhiteSpace(value) ||
                 (int.TryParse(value, out var parsedValue) && parsedValue >= 0);
+        }
+
+        private static bool IsOptionalNonNegativeDecimal(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ||
+                (decimal.TryParse(value, out var parsedValue) && parsedValue >= 0);
         }
 
         private static string BuildAiNotes(FoodPhosphorusEstimate estimate)

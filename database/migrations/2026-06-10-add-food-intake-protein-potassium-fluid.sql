@@ -1,3 +1,38 @@
+ALTER TABLE public.food_phosphorus_intake
+    ADD COLUMN IF NOT EXISTS protein_g numeric(8, 2) NULL,
+    ADD COLUMN IF NOT EXISTS potassium_mg integer NULL,
+    ADD COLUMN IF NOT EXISTS fluid_ml integer NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'food_phosphorus_intake_protein_check'
+    ) THEN
+        ALTER TABLE public.food_phosphorus_intake
+            ADD CONSTRAINT food_phosphorus_intake_protein_check CHECK (protein_g IS NULL OR protein_g >= 0);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'food_phosphorus_intake_potassium_check'
+    ) THEN
+        ALTER TABLE public.food_phosphorus_intake
+            ADD CONSTRAINT food_phosphorus_intake_potassium_check CHECK (potassium_mg IS NULL OR potassium_mg >= 0);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'food_phosphorus_intake_fluid_check'
+    ) THEN
+        ALTER TABLE public.food_phosphorus_intake
+            ADD CONSTRAINT food_phosphorus_intake_fluid_check CHECK (fluid_ml IS NULL OR fluid_ml >= 0);
+    END IF;
+END $$;
+
 CREATE OR REPLACE FUNCTION public.sp_insert_food_phosphorus_intake(
     p_person_id bigint,
     p_food_name character varying,
