@@ -15,6 +15,9 @@ namespace DailyVitals.Data.Services
             int phosphorusMg,
             int? calories,
             int? sodiumMg,
+            decimal? proteinG,
+            int? potassiumMg,
+            int? fluidMl,
             int binders,
             DateTime consumedAt,
             string? notes,
@@ -38,6 +41,9 @@ namespace DailyVitals.Data.Services
                         phosphorus_mg,
                         calories,
                         sodium_mg,
+                        protein_g,
+                        potassium_mg,
+                        fluid_ml,
                         binders,
                         consumed_at,
                         notes,
@@ -53,6 +59,9 @@ namespace DailyVitals.Data.Services
                         @p_phosphorus_mg,
                         @p_calories,
                         @p_sodium_mg,
+                        @p_protein_g,
+                        @p_potassium_mg,
+                        @p_fluid_ml,
                         @p_binders,
                         COALESCE(@p_consumed_at, CURRENT_TIMESTAMP),
                         @p_notes,
@@ -82,6 +91,9 @@ namespace DailyVitals.Data.Services
                             'phosphorus_mg', @p_phosphorus_mg,
                             'calories', @p_calories,
                             'sodium_mg', @p_sodium_mg,
+                            'protein_g', @p_protein_g,
+                            'potassium_mg', @p_potassium_mg,
+                            'fluid_ml', @p_fluid_ml,
                             'binders', @p_binders,
                             'consumed_at', @p_consumed_at,
                             'notes', @p_notes,
@@ -105,6 +117,12 @@ namespace DailyVitals.Data.Services
                 (object?)calories ?? DBNull.Value;
             cmd.Parameters.Add("p_sodium_mg", NpgsqlDbType.Integer).Value =
                 (object?)sodiumMg ?? DBNull.Value;
+            cmd.Parameters.Add("p_protein_g", NpgsqlDbType.Numeric).Value =
+                (object?)proteinG ?? DBNull.Value;
+            cmd.Parameters.Add("p_potassium_mg", NpgsqlDbType.Integer).Value =
+                (object?)potassiumMg ?? DBNull.Value;
+            cmd.Parameters.Add("p_fluid_ml", NpgsqlDbType.Integer).Value =
+                (object?)fluidMl ?? DBNull.Value;
             cmd.Parameters.AddWithValue("p_binders", binders);
             cmd.Parameters.AddWithValue("p_consumed_at", consumedAt);
             cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
@@ -139,6 +157,9 @@ namespace DailyVitals.Data.Services
                     phosphorus_mg,
                     calories,
                     sodium_mg,
+                    protein_g,
+                    potassium_mg,
+                    fluid_ml,
                     COALESCE(binders, 0) AS binders,
                     consumed_at::timestamp,
                     notes,
@@ -166,14 +187,17 @@ namespace DailyVitals.Data.Services
                     PhosphorusMg = reader.GetInt32(3),
                     Calories = reader.IsDBNull(4) ? null : reader.GetInt32(4),
                     SodiumMg = reader.IsDBNull(5) ? null : reader.GetInt32(5),
-                    Binders = reader.GetInt32(6),
-                    ConsumedAt = reader.GetDateTime(7),
-                    Notes = reader.IsDBNull(8) ? null : reader.GetString(8),
-                    ServingDescription = reader.IsDBNull(9) ? null : reader.GetString(9),
-                    EstimatedByAi = reader.GetBoolean(10),
-                    AiProvider = reader.IsDBNull(11) ? null : reader.GetString(11),
-                    AiConfidence = reader.IsDBNull(12) ? null : reader.GetString(12),
-                    SourceNotes = reader.IsDBNull(13) ? null : reader.GetString(13)
+                    ProteinG = reader.IsDBNull(6) ? null : reader.GetDecimal(6),
+                    PotassiumMg = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                    FluidMl = reader.IsDBNull(8) ? null : reader.GetInt32(8),
+                    Binders = reader.GetInt32(9),
+                    ConsumedAt = reader.GetDateTime(10),
+                    Notes = reader.IsDBNull(11) ? null : reader.GetString(11),
+                    ServingDescription = reader.IsDBNull(12) ? null : reader.GetString(12),
+                    EstimatedByAi = reader.GetBoolean(13),
+                    AiProvider = reader.IsDBNull(14) ? null : reader.GetString(14),
+                    AiConfidence = reader.IsDBNull(15) ? null : reader.GetString(15),
+                    SourceNotes = reader.IsDBNull(16) ? null : reader.GetString(16)
                 });
             }
 
@@ -187,6 +211,9 @@ namespace DailyVitals.Data.Services
                     ADD COLUMN IF NOT EXISTS binders integer NOT NULL DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS calories integer NULL,
                     ADD COLUMN IF NOT EXISTS sodium_mg integer NULL,
+                    ADD COLUMN IF NOT EXISTS protein_g numeric(8, 2) NULL,
+                    ADD COLUMN IF NOT EXISTS potassium_mg integer NULL,
+                    ADD COLUMN IF NOT EXISTS fluid_ml integer NULL,
                     ADD COLUMN IF NOT EXISTS serving_description varchar(200) NULL,
                     ADD COLUMN IF NOT EXISTS estimated_by_ai boolean NOT NULL DEFAULT false,
                     ADD COLUMN IF NOT EXISTS ai_provider varchar(50) NULL,
@@ -211,6 +238,33 @@ namespace DailyVitals.Data.Services
                     ) THEN
                         ALTER TABLE public.food_phosphorus_intake
                             ADD CONSTRAINT food_phosphorus_intake_sodium_check CHECK (sodium_mg IS NULL OR sodium_mg >= 0);
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_intake_protein_check'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_intake
+                            ADD CONSTRAINT food_phosphorus_intake_protein_check CHECK (protein_g IS NULL OR protein_g >= 0);
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_intake_potassium_check'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_intake
+                            ADD CONSTRAINT food_phosphorus_intake_potassium_check CHECK (potassium_mg IS NULL OR potassium_mg >= 0);
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_intake_fluid_check'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_intake
+                            ADD CONSTRAINT food_phosphorus_intake_fluid_check CHECK (fluid_ml IS NULL OR fluid_ml >= 0);
                     END IF;
 
                     IF NOT EXISTS (
@@ -269,6 +323,9 @@ namespace DailyVitals.Data.Services
                         f.phosphorus_mg,
                         COALESCE(f.calories, 0) AS calories,
                         COALESCE(f.sodium_mg, 0) AS sodium_mg,
+                        COALESCE(f.protein_g, 0) AS protein_g,
+                        COALESCE(f.potassium_mg, 0) AS potassium_mg,
+                        COALESCE(f.fluid_ml, 0) AS fluid_ml,
                         COALESCE(f.binders, 0) AS binders,
                         GREATEST(
                             f.phosphorus_mg - (COALESCE(f.binders, 0) * bc.mg_per_pill * bc.binding_efficiency),
@@ -285,6 +342,9 @@ namespace DailyVitals.Data.Services
                     phosphorus_mg AS raw_phos_mg,
                     calories,
                     sodium_mg,
+                    protein_g,
+                    potassium_mg,
+                    fluid_ml,
                     binders AS pills_taken,
                     net_item_phos_mg,
                     SUM(net_item_phos_mg) OVER (
@@ -298,7 +358,19 @@ namespace DailyVitals.Data.Services
                     SUM(sodium_mg) OVER (
                         PARTITION BY intake_date
                         ORDER BY consumed_at, food_phosphorus_intake_id
-                    ) AS running_daily_sodium_mg
+                    ) AS running_daily_sodium_mg,
+                    SUM(protein_g) OVER (
+                        PARTITION BY intake_date
+                        ORDER BY consumed_at, food_phosphorus_intake_id
+                    ) AS running_daily_protein_g,
+                    SUM(potassium_mg) OVER (
+                        PARTITION BY intake_date
+                        ORDER BY consumed_at, food_phosphorus_intake_id
+                    ) AS running_daily_potassium_mg,
+                    SUM(fluid_ml) OVER (
+                        PARTITION BY intake_date
+                        ORDER BY consumed_at, food_phosphorus_intake_id
+                    ) AS running_daily_fluid_ml
                 FROM calculated_intake
                 ORDER BY intake_date DESC, consumed_at ASC;";
 
@@ -316,11 +388,17 @@ namespace DailyVitals.Data.Services
                     RawPhosphorusMg = reader.GetInt32(3),
                     Calories = reader.GetInt32(4),
                     SodiumMg = reader.GetInt32(5),
-                    PillsTaken = reader.GetInt32(6),
-                    NetItemPhosphorusMg = reader.GetDecimal(7),
-                    RunningNetDailyMg = reader.GetDecimal(8),
-                    RunningDailyCalories = reader.GetInt64(9),
-                    RunningDailySodiumMg = reader.GetInt64(10)
+                    ProteinG = reader.GetDecimal(6),
+                    PotassiumMg = reader.GetInt32(7),
+                    FluidMl = reader.GetInt32(8),
+                    PillsTaken = reader.GetInt32(9),
+                    NetItemPhosphorusMg = reader.GetDecimal(10),
+                    RunningNetDailyMg = reader.GetDecimal(11),
+                    RunningDailyCalories = reader.GetInt64(12),
+                    RunningDailySodiumMg = reader.GetInt64(13),
+                    RunningDailyProteinG = reader.GetDecimal(14),
+                    RunningDailyPotassiumMg = reader.GetInt64(15),
+                    RunningDailyFluidMl = reader.GetInt64(16)
                 });
             }
 
