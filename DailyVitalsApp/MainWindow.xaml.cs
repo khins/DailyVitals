@@ -60,6 +60,12 @@ namespace DailyVitals.App
             window.ShowDialog();
         }
 
+        private void OpenNutritionAnalytics_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new NutritionAnalyticsView { Owner = this };
+            window.ShowDialog();
+        }
+
         private void OpenMedicationEntry_Click(object sender, RoutedEventArgs e)
         {
             var window = new MedicationEntryView { Owner = this };
