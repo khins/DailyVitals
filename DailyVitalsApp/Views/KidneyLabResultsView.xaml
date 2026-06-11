@@ -105,9 +105,6 @@
                 <DataGridTextColumn Header="Cr"
                                     Width="65"
                                     Binding="{Binding Creatinine}"/>
-                <DataGridTextColumn Header="Notes"
-                                    Width="*"
-                                    Binding="{Binding Notes}"/>
             </DataGrid.Columns>
         </DataGrid>
 
