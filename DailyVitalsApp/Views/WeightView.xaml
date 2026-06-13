@@ -127,52 +127,54 @@
 
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <!-- Time -->
+                <RowDefinition Height="Auto"/>
                 <!-- Weight -->
                 <RowDefinition Height="Auto"/>
                 <!-- Height -->
-                <RowDefinition Height="Auto"/>
-                <!-- Time -->
                 <RowDefinition Height="Auto"/>
                 <!-- BMI -->
                 <RowDefinition Height="Auto"/>
                 <!-- Notes -->
             </Grid.RowDefinitions>
 
-            <!-- WEIGHT -->
+            <!-- READING TIME -->
             <TextBlock Grid.Row="0"
-                       Text="Weight:"
+                       Text="Reading Time:"
                        VerticalAlignment="Center"/>
 
-            <TextBox Grid.Row="0"
+            <DatePicker Grid.Row="0"
+                        Grid.Column="1"
+                        Width="160"
+                        HorizontalAlignment="Left"
+                        SelectedDate="{Binding ReadingTime}"/>
+
+            <!-- WEIGHT -->
+            <TextBlock Grid.Row="1"
+                       Text="Weight:"
+                       VerticalAlignment="Center"
+                       Margin="0,10,0,0"/>
+
+            <TextBox Grid.Row="1"
                      Grid.Column="1"
                      Width="120"
+                     HorizontalAlignment="Left"
                      VerticalAlignment="Center"
+                     Margin="0,10,0,0"
                      Text="{Binding WeightValue, UpdateSourceTrigger=PropertyChanged}"/>
 
             <!-- HEIGHT -->
-            <TextBlock Grid.Row="1"
+            <TextBlock Grid.Row="2"
                        Text="Height:"
                        VerticalAlignment="Center"
                        Margin="0,10,0,0"/>
 
-            <TextBlock Grid.Row="1"
+            <TextBlock Grid.Row="2"
                        Grid.Column="1"
                        Margin="0,10,0,0"
                        VerticalAlignment="Center"
                        FontWeight="SemiBold"
                        Text="{Binding HeightDisplay}"/>
-
-            <!-- READING TIME -->
-            <TextBlock Grid.Row="2"
-                       Text="Reading Time:"
-                       VerticalAlignment="Center"
-                       Margin="0,10,0,0"/>
-
-            <DatePicker Grid.Row="2"
-                        Grid.Column="1"
-                        Width="160"
-                        Margin="0,10,0,0"
-                        SelectedDate="{Binding ReadingTime}"/>
 
             <!-- BMI -->
             <!-- BMI COLOR BAND -->
