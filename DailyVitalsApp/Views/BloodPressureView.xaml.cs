@@ -21,16 +21,7 @@ namespace DailyVitals.App.Views
         {
             try
             {
-                var bpId = _vm.Save();
-
-                MessageBox.Show(
-                    $"Blood pressure saved successfully (ID {bpId}).",
-                    "Success",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information
-                );
-
-                Close();
+                _vm.Save();
             }
             catch (Exception ex)
             {

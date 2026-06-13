@@ -141,6 +141,122 @@ namespace DailyVitals.Data.Services
             return Convert.ToInt64(result);
         }
 
+        public void Update(
+            long foodPhosphorusIntakeId,
+            long personId,
+            string foodName,
+            int phosphorusMg,
+            int? calories,
+            int? sodiumMg,
+            decimal? proteinG,
+            int? potassiumMg,
+            int? fluidMl,
+            int binders,
+            DateTime consumedAt,
+            string? notes,
+            string? servingDescription,
+            bool estimatedByAi,
+            string? aiProvider,
+            string? aiConfidence,
+            string? sourceNotes,
+            string enteredBy)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureFoodPhosphorusIntakeColumns(conn);
+
+            using var cmd = new NpgsqlCommand(
+                @"
+                WITH updated AS (
+                    UPDATE food_phosphorus_intake
+                    SET
+                        food_name = TRIM(@p_food_name),
+                        phosphorus_mg = @p_phosphorus_mg,
+                        calories = @p_calories,
+                        sodium_mg = @p_sodium_mg,
+                        protein_g = @p_protein_g,
+                        potassium_mg = @p_potassium_mg,
+                        fluid_ml = @p_fluid_ml,
+                        binders = @p_binders,
+                        consumed_at = COALESCE(@p_consumed_at, CURRENT_TIMESTAMP),
+                        notes = @p_notes,
+                        serving_description = @p_serving_description,
+                        estimated_by_ai = COALESCE(@p_estimated_by_ai, false),
+                        ai_provider = @p_ai_provider,
+                        ai_confidence = @p_ai_confidence,
+                        source_notes = @p_source_notes,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE food_phosphorus_intake_id = @p_food_phosphorus_intake_id
+                      AND person_id = @p_person_id
+                    RETURNING food_phosphorus_intake_id
+                ),
+                logged AS (
+                    INSERT INTO data_entry_log (
+                        table_name,
+                        record_id,
+                        action_type,
+                        entered_by,
+                        change_details
+                    )
+                    SELECT
+                        'food_phosphorus_intake',
+                        food_phosphorus_intake_id,
+                        'UPDATE',
+                        @p_entered_by,
+                        jsonb_build_object(
+                            'food_name', @p_food_name,
+                            'phosphorus_mg', @p_phosphorus_mg,
+                            'calories', @p_calories,
+                            'sodium_mg', @p_sodium_mg,
+                            'protein_g', @p_protein_g,
+                            'potassium_mg', @p_potassium_mg,
+                            'fluid_ml', @p_fluid_ml,
+                            'binders', @p_binders,
+                            'consumed_at', @p_consumed_at,
+                            'notes', @p_notes,
+                            'serving_description', @p_serving_description,
+                            'estimated_by_ai', @p_estimated_by_ai,
+                            'ai_provider', @p_ai_provider,
+                            'ai_confidence', @p_ai_confidence,
+                            'source_notes', @p_source_notes
+                        )
+                    FROM updated
+                    RETURNING 1
+                )
+                SELECT food_phosphorus_intake_id
+                FROM updated;",
+                conn);
+
+            cmd.Parameters.AddWithValue("p_food_phosphorus_intake_id", foodPhosphorusIntakeId);
+            cmd.Parameters.AddWithValue("p_person_id", personId);
+            cmd.Parameters.AddWithValue("p_food_name", foodName);
+            cmd.Parameters.AddWithValue("p_phosphorus_mg", phosphorusMg);
+            cmd.Parameters.Add("p_calories", NpgsqlDbType.Integer).Value =
+                (object?)calories ?? DBNull.Value;
+            cmd.Parameters.Add("p_sodium_mg", NpgsqlDbType.Integer).Value =
+                (object?)sodiumMg ?? DBNull.Value;
+            cmd.Parameters.Add("p_protein_g", NpgsqlDbType.Numeric).Value =
+                (object?)proteinG ?? DBNull.Value;
+            cmd.Parameters.Add("p_potassium_mg", NpgsqlDbType.Integer).Value =
+                (object?)potassiumMg ?? DBNull.Value;
+            cmd.Parameters.Add("p_fluid_ml", NpgsqlDbType.Integer).Value =
+                (object?)fluidMl ?? DBNull.Value;
+            cmd.Parameters.AddWithValue("p_binders", binders);
+            cmd.Parameters.AddWithValue("p_consumed_at", consumedAt);
+            cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_serving_description", (object?)servingDescription ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_estimated_by_ai", estimatedByAi);
+            cmd.Parameters.AddWithValue("p_ai_provider", (object?)aiProvider ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_ai_confidence", (object?)aiConfidence ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_source_notes", (object?)sourceNotes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("p_entered_by", enteredBy);
+
+            var result = cmd.ExecuteScalar();
+
+            if (result is null or DBNull)
+                throw new Exception("Food phosphorus intake update failed. No matching record was updated.");
+        }
+
         public List<FoodPhosphorusIntake> GetHistory(long personId)
         {
             var list = new List<FoodPhosphorusIntake>();
@@ -167,7 +283,9 @@ namespace DailyVitals.Data.Services
                     estimated_by_ai,
                     ai_provider,
                     ai_confidence,
-                    source_notes
+                    source_notes,
+                    created_at,
+                    updated_at
                 FROM food_phosphorus_intake
                 WHERE person_id = @person_id
                 ORDER BY consumed_at DESC, food_phosphorus_intake_id DESC;
@@ -197,7 +315,9 @@ namespace DailyVitals.Data.Services
                     EstimatedByAi = reader.GetBoolean(13),
                     AiProvider = reader.IsDBNull(14) ? null : reader.GetString(14),
                     AiConfidence = reader.IsDBNull(15) ? null : reader.GetString(15),
-                    SourceNotes = reader.IsDBNull(16) ? null : reader.GetString(16)
+                    SourceNotes = reader.IsDBNull(16) ? null : reader.GetString(16),
+                    CreatedAt = reader.GetDateTime(17),
+                    UpdatedAt = reader.IsDBNull(18) ? null : reader.GetDateTime(18)
                 });
             }
 
@@ -218,7 +338,23 @@ namespace DailyVitals.Data.Services
                     ADD COLUMN IF NOT EXISTS estimated_by_ai boolean NOT NULL DEFAULT false,
                     ADD COLUMN IF NOT EXISTS ai_provider varchar(50) NULL,
                     ADD COLUMN IF NOT EXISTS ai_confidence varchar(20) NULL,
-                    ADD COLUMN IF NOT EXISTS source_notes text NULL;
+                    ADD COLUMN IF NOT EXISTS source_notes text NULL,
+                    ADD COLUMN IF NOT EXISTS created_at timestamp NULL,
+                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
+
+                UPDATE public.food_phosphorus_intake
+                SET created_at = COALESCE(created_at, consumed_at, CURRENT_TIMESTAMP)
+                WHERE created_at IS NULL;
+
+                UPDATE public.food_phosphorus_intake
+                SET updated_at = COALESCE(updated_at, created_at, consumed_at, CURRENT_TIMESTAMP)
+                WHERE updated_at IS NULL;
+
+                ALTER TABLE public.food_phosphorus_intake
+                    ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP,
+                    ALTER COLUMN created_at SET NOT NULL,
+                    ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP,
+                    ALTER COLUMN updated_at SET NOT NULL;
 
                 DO $$
                 BEGIN

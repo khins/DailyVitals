@@ -68,7 +68,7 @@ namespace DailyVitals.App.ViewModels
                 .First();
             var latestTotals = BuildDailyTotals(latestDay);
 
-            SummaryText = $"{latestDay.Key:d}: {latestTotals.NetPhosphorusMg:F0} net mg phosphorus, {latestTotals.Calories} calories, {latestTotals.SodiumMg} mg sodium";
+            SummaryText = $"{latestDay.Key:d}: {latestTotals.RawPhosphorusMg} mg phosphorus, {latestTotals.NetPhosphorusMg:F0} net mg phosphorus, {latestTotals.Calories} calories, {latestTotals.SodiumMg} mg sodium";
             LoadNutritionGoal(personId, latestDay.Key, latestTotals);
 
             foreach (var month in rows
@@ -125,12 +125,12 @@ namespace DailyVitals.App.ViewModels
                 return;
             }
 
-            NutritionGoalSummary = $"Effective {goal.EffectiveDate:d}";
+            NutritionGoalSummary = $"Targets for {intakeDate:d} (effective {goal.EffectiveDate:d})";
             OnPropertyChanged(nameof(NutritionGoalSummary));
 
             DailyNutritionTargets.Add(BuildTargetRow(
-                "Net Phosphorus",
-                latestTotals?.NetPhosphorusMg,
+                "Phosphorus",
+                latestTotals?.RawPhosphorusMg,
                 goal.PhosphorusLimitMg,
                 "mg"));
             DailyNutritionTargets.Add(BuildTargetRow(
@@ -176,6 +176,7 @@ namespace DailyVitals.App.ViewModels
         {
             return new DailyNutritionTotals
             {
+                RawPhosphorusMg = rows.Sum(row => row.RawPhosphorusMg),
                 NetPhosphorusMg = rows.Sum(row => row.NetItemPhosphorusMg),
                 Calories = rows.Sum(row => row.Calories),
                 SodiumMg = rows.Sum(row => row.SodiumMg),
@@ -218,6 +219,7 @@ namespace DailyVitals.App.ViewModels
 
         private class DailyNutritionTotals
         {
+            public int RawPhosphorusMg { get; set; }
             public decimal NetPhosphorusMg { get; set; }
             public int Calories { get; set; }
             public int SodiumMg { get; set; }

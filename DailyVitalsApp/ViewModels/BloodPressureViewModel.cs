@@ -17,6 +17,8 @@ namespace DailyVitals.App.ViewModels
         private Person? _selectedPerson;
         private string _systolic = string.Empty;
         private string _diastolic = string.Empty;
+        private DateTime? _createdAt;
+        private DateTime? _updatedAt;
         private BloodPressureReading? _selectedHistory;
 
         public BloodPressureViewModel()
@@ -92,6 +94,19 @@ namespace DailyVitals.App.ViewModels
         public string Pulse { get; set; } = string.Empty;
         public DateTime ReadingTime { get; set; } = DateTime.Now;
         public string? Notes { get; set; } = "Morning reading, seated";
+        public string AuditTimestampText
+        {
+            get
+            {
+                if (_updatedAt.HasValue)
+                    return $"Updated at: {_updatedAt.Value:g}";
+
+                if (_createdAt.HasValue)
+                    return $"Created at: {_createdAt.Value:g}";
+
+                return string.Empty;
+            }
+        }
 
         public BloodPressureReading? SelectedHistory
         {
@@ -134,10 +149,15 @@ namespace DailyVitals.App.ViewModels
                     Notes ?? string.Empty,
                     Environment.UserName);
 
+                LoadHistory();
+                var updatedReading = FindReading(currentBpId);
+                if (updatedReading != null)
+                    SelectedHistory = updatedReading;
+
                 return currentBpId;
             }
 
-            return _bpService.InsertBloodPressure(
+            var insertedBpId = _bpService.InsertBloodPressure(
                 SelectedPerson.PersonId,
                 systolic,
                 diastolic,
@@ -145,6 +165,13 @@ namespace DailyVitals.App.ViewModels
                 ReadingTime,
                 Notes ?? string.Empty,
                 Environment.UserName);
+
+            LoadHistory();
+            var insertedReading = FindReading(insertedBpId);
+            if (insertedReading != null)
+                SelectedHistory = insertedReading;
+
+            return insertedBpId;
         }
 
         private void LoadPersons()
@@ -170,9 +197,12 @@ namespace DailyVitals.App.ViewModels
             Pulse = bp.Pulse.ToString();
             ReadingTime = bp.ReadingTime;
             Notes = bp.Notes;
+            _createdAt = bp.CreatedAt;
+            _updatedAt = bp.UpdatedAt;
             OnPropertyChanged(nameof(Pulse));
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Notes));
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public void ClearFields()
@@ -183,9 +213,12 @@ namespace DailyVitals.App.ViewModels
             Pulse = string.Empty;
             ReadingTime = DateTime.Now;
             Notes = $"Morning reading, seated at {ReadingTime.ToString("h:mm tt")}";
+            _createdAt = null;
+            _updatedAt = null;
             OnPropertyChanged(nameof(Pulse));
             OnPropertyChanged(nameof(Notes));
             OnPropertyChanged(nameof(ReadingTime));
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         private void LoadHistory()
@@ -214,10 +247,13 @@ namespace DailyVitals.App.ViewModels
             Pulse = SelectedHistory.Pulse.ToString();
             ReadingTime = SelectedHistory.ReadingTime;
             Notes = SelectedHistory.Notes;
+            _createdAt = SelectedHistory.CreatedAt;
+            _updatedAt = SelectedHistory.UpdatedAt;
 
             OnPropertyChanged(nameof(Notes));
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Pulse));
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public string SeverityText
@@ -256,12 +292,15 @@ namespace DailyVitals.App.ViewModels
             Pulse = string.Empty;
             ReadingTime = DateTime.Now;
             Notes = $"Morning reading, seated at {ReadingTime.ToString("h:mm tt")}";
+            _createdAt = null;
+            _updatedAt = null;
 
             OnPropertyChanged(nameof(SeverityText));
             OnPropertyChanged(nameof(SeverityBrush));
             OnPropertyChanged(nameof(Pulse));
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Notes));
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public void DeleteSelected()
@@ -272,6 +311,17 @@ namespace DailyVitals.App.ViewModels
             _bpService.DeleteBloodPressure(SelectedHistory.BloodPressureId);
             LoadHistory();
             BeginNewReading();
+        }
+
+        private BloodPressureReading? FindReading(long bloodPressureId)
+        {
+            foreach (var reading in History)
+            {
+                if (reading.BloodPressureId == bloodPressureId)
+                    return reading;
+            }
+
+            return null;
         }
 
         private void OnPropertyChanged(string name) =>

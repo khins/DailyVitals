@@ -157,6 +157,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- SYSTOLIC -->
@@ -200,6 +201,12 @@
                      TextWrapping="Wrap"
                      Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
                      Margin="0,4"/>
+
+            <TextBlock Grid.Row="5" Grid.Column="1"
+                       Text="{Binding AuditTimestampText}"
+                       Foreground="DimGray"
+                       FontSize="12"
+                       Margin="0,2,0,0"/>
         </Grid>
 
         <!-- BUTTON BAR -->

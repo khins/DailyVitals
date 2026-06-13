@@ -2,6 +2,7 @@ using DailyVitals.Data.Services;
 using DailyVitals.Domain.Models;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace DailyVitals.App.ViewModels
 {
@@ -13,6 +14,8 @@ namespace DailyVitals.App.ViewModels
         private string _glucose = string.Empty;
         private Person? _selectedPerson;
         private BloodGlucoseReading? _selectedHistory;
+        private DateTime? _createdAt;
+        private DateTime? _updatedAt;
 
         public BloodGlucoseViewModel()
         {
@@ -51,6 +54,19 @@ namespace DailyVitals.App.ViewModels
         public bool Fasting { get; set; }
         public DateTime ReadingTime { get; set; } = DateTime.Now;
         public string? Notes { get; set; } = "Morning reading";
+        public string AuditTimestampText
+        {
+            get
+            {
+                if (_updatedAt.HasValue)
+                    return $"Updated at: {_updatedAt.Value:g}";
+
+                if (_createdAt.HasValue)
+                    return $"Created at: {_createdAt.Value:g}";
+
+                return string.Empty;
+            }
+        }
 
         public BloodGlucoseReading? SelectedHistory
         {
@@ -97,8 +113,11 @@ namespace DailyVitals.App.ViewModels
             Glucose = SelectedHistory.GlucoseValue.ToString();
             ReadingTime = SelectedHistory.ReadingTime;
             Notes = SelectedHistory.Notes;
+            _createdAt = SelectedHistory.CreatedAt;
+            _updatedAt = SelectedHistory.UpdatedAt;
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Notes));
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public void BeginNew()
@@ -108,8 +127,11 @@ namespace DailyVitals.App.ViewModels
             Fasting = false;
             ReadingTime = DateTime.Now;
             Notes = "Morning reading";
+            _createdAt = null;
+            _updatedAt = null;
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Notes));
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public void Save(long personId)
@@ -117,12 +139,30 @@ namespace DailyVitals.App.ViewModels
             if (!int.TryParse(Glucose, out var value))
                 throw new InvalidOperationException("Invalid glucose value.");
 
-            _service.Insert(
-                personId,
-                value,
-                ReadingTime,
-                Notes ?? string.Empty,
-                Environment.UserName);
+            var savedGlucoseId = SelectedHistory?.GlucoseId;
+
+            if (savedGlucoseId.HasValue)
+            {
+                _service.Update(
+                    savedGlucoseId.Value,
+                    personId,
+                    value,
+                    ReadingTime,
+                    Notes ?? string.Empty,
+                    Environment.UserName);
+            }
+            else
+            {
+                savedGlucoseId = _service.Insert(
+                    personId,
+                    value,
+                    ReadingTime,
+                    Notes ?? string.Empty,
+                    Environment.UserName);
+            }
+
+            LoadHistoryForSelectedPerson();
+            SelectedHistory = History.FirstOrDefault(reading => reading.GlucoseId == savedGlucoseId.Value);
         }
 
         public void DeleteSelected()

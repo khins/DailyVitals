@@ -18,6 +18,7 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureBloodGlucoseColumns(conn);
 
             using var cmd = new NpgsqlCommand(
               "SELECT sp_insert_blood_glucose(@p_person_id, @p_glucose_value, @p_reading_time, @p_notes, @p_entered_by)",
@@ -37,19 +38,83 @@ namespace DailyVitals.Data.Services
             return Convert.ToInt64(result);
         }
 
+        public void Update(
+            long glucoseId,
+            long personId,
+            int glucoseValue,
+            DateTime readingTime,
+            string notes,
+            string updatedBy)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureBloodGlucoseColumns(conn);
+
+            const string sql = @"
+                WITH updated AS (
+                    UPDATE blood_glucose
+                    SET
+                        glucose_value = @glucose_value,
+                        reading_time = @reading_time,
+                        notes = @notes,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE glucose_id = @glucose_id
+                      AND person_id = @person_id
+                    RETURNING glucose_id
+                ),
+                logged AS (
+                    INSERT INTO data_entry_log (
+                        table_name,
+                        record_id,
+                        action_type,
+                        entered_by,
+                        change_details
+                    )
+                    SELECT
+                        'blood_glucose',
+                        glucose_id,
+                        'UPDATE',
+                        @updated_by,
+                        jsonb_build_object(
+                            'glucose_value', @glucose_value,
+                            'reading_time', @reading_time,
+                            'notes', @notes
+                        )
+                    FROM updated
+                    RETURNING 1
+                )
+                SELECT glucose_id
+                FROM updated;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("glucose_id", glucoseId);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("glucose_value", glucoseValue);
+            cmd.Parameters.AddWithValue("reading_time", readingTime);
+            cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("updated_by", updatedBy);
+
+            var result = cmd.ExecuteScalar();
+            if (result is null or DBNull)
+                throw new Exception("Blood glucose update failed. No matching record was updated.");
+        }
+
         public List<BloodGlucoseReading> GetHistory(long personId)
         {
             var list = new List<BloodGlucoseReading>();
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureBloodGlucoseColumns(conn);
 
             const string sql = @"
                 SELECT
                     glucose_id,
                     glucose_value,
                     reading_time::timestamp,
-                    notes
+                    notes,
+                    created_at,
+                    updated_at
                 FROM blood_glucose
                 WHERE person_id = @person_id
                 ORDER BY reading_time DESC;
@@ -68,7 +133,9 @@ namespace DailyVitals.Data.Services
                     ReadingTime = reader.GetDateTime(2),
                     Notes = reader.IsDBNull(3)
                         ? null
-                        : reader.GetString(3)
+                        : reader.GetString(3),
+                    CreatedAt = reader.GetDateTime(4),
+                    UpdatedAt = reader.IsDBNull(5) ? null : reader.GetDateTime(5)
                 });
             }
 
@@ -80,6 +147,7 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureBloodGlucoseColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_delete_blood_glucose(@p_glucose_id, @p_entered_by)",
@@ -95,12 +163,15 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureBloodGlucoseColumns(conn);
 
             const string sql = @"
                     SELECT glucose_id,
                            glucose_value,
                            reading_time,
-                           notes
+                           notes,
+                           created_at,
+                           updated_at
                     FROM blood_glucose
                     WHERE person_id = @person_id
                     ORDER BY reading_time DESC
@@ -120,8 +191,28 @@ namespace DailyVitals.Data.Services
                 GlucoseId = reader.GetInt64(0),
                 GlucoseValue = reader.GetInt32(1),
                 ReadingTime = reader.GetDateTime(2),
-                Notes = reader.IsDBNull(3) ? null : reader.GetString(3)
+                Notes = reader.IsDBNull(3) ? null : reader.GetString(3),
+                CreatedAt = reader.GetDateTime(4),
+                UpdatedAt = reader.IsDBNull(5) ? null : reader.GetDateTime(5)
             };
+        }
+
+        private static void EnsureBloodGlucoseColumns(NpgsqlConnection conn)
+        {
+            const string sql = @"
+                ALTER TABLE public.blood_glucose
+                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
+
+                UPDATE public.blood_glucose
+                SET updated_at = created_at
+                WHERE updated_at IS NULL;
+
+                ALTER TABLE public.blood_glucose
+                    ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP,
+                    ALTER COLUMN updated_at SET NOT NULL;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.ExecuteNonQuery();
         }
 
 

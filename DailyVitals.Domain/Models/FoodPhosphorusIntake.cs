@@ -15,6 +15,8 @@ namespace DailyVitals.Domain.Models
         public int? FluidMl { get; set; }
         public int Binders { get; set; }
         public DateTime ConsumedAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
         public string? Notes { get; set; }
         public string? ServingDescription { get; set; }
         public bool EstimatedByAi { get; set; }

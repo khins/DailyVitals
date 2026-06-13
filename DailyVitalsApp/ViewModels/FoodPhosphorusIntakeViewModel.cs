@@ -29,6 +29,8 @@ namespace DailyVitals.App.ViewModels
         private bool _isEstimating;
         private string _estimateStatus = string.Empty;
         private DateTime _consumedAt = DateTime.Today;
+        private DateTime? _createdAt;
+        private DateTime? _updatedAt;
         private Person? _selectedPerson;
         private FoodPhosphorusIntake? _selectedHistory;
         private int _selectedDayTotalMg;
@@ -58,6 +60,19 @@ namespace DailyVitals.App.ViewModels
         public bool CanDelete => SelectedHistory != null;
         public bool CanEstimate => !IsEstimating && !string.IsNullOrWhiteSpace(FoodName);
         public bool CanViewRunningTotals => SelectedPerson != null;
+        public string AuditTimestampText
+        {
+            get
+            {
+                if (_updatedAt.HasValue)
+                    return $"Updated at: {_updatedAt.Value:g}";
+
+                if (_createdAt.HasValue)
+                    return $"Created at: {_createdAt.Value:g}";
+
+                return string.Empty;
+            }
+        }
 
         public string FoodName
         {
@@ -328,9 +343,12 @@ namespace DailyVitals.App.ViewModels
             EstimatedByAi = SelectedHistory.EstimatedByAi;
             AiConfidence = SelectedHistory.AiConfidence;
             SourceNotes = SelectedHistory.SourceNotes;
+            _createdAt = SelectedHistory.CreatedAt;
+            _updatedAt = SelectedHistory.UpdatedAt;
             EstimateStatus = EstimatedByAi
                 ? $"AI estimate: {AiConfidence ?? "unknown confidence"}"
                 : string.Empty;
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public void BeginNew()
@@ -350,6 +368,9 @@ namespace DailyVitals.App.ViewModels
             AiConfidence = null;
             SourceNotes = null;
             EstimateStatus = string.Empty;
+            _createdAt = null;
+            _updatedAt = null;
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public async System.Threading.Tasks.Task EstimatePhosphorusAsync()
@@ -426,26 +447,59 @@ namespace DailyVitals.App.ViewModels
             if (!int.TryParse(Binders, out var binders) || binders < 0)
                 throw new InvalidOperationException("Binders must be a non-negative whole number.");
 
-            _service.Insert(
-                SelectedPerson.PersonId,
-                FoodName.Trim(),
-                phosphorus,
-                calories,
-                sodiumMg,
-                proteinG,
-                potassiumMg,
-                null,
-                binders,
-                ConsumedAt,
-                Notes,
-                ServingDescription,
-                EstimatedByAi,
-                EstimatedByAi ? "OpenAI" : null,
-                AiConfidence,
-                SourceNotes,
-                Environment.UserName);
+            var savedFoodPhosphorusIntakeId = SelectedHistory?.FoodPhosphorusIntakeId;
+
+            if (SelectedHistory == null)
+            {
+                savedFoodPhosphorusIntakeId = _service.Insert(
+                    SelectedPerson.PersonId,
+                    FoodName.Trim(),
+                    phosphorus,
+                    calories,
+                    sodiumMg,
+                    proteinG,
+                    potassiumMg,
+                    null,
+                    binders,
+                    ConsumedAt,
+                    Notes,
+                    ServingDescription,
+                    EstimatedByAi,
+                    EstimatedByAi ? "OpenAI" : null,
+                    AiConfidence,
+                    SourceNotes,
+                    Environment.UserName);
+            }
+            else
+            {
+                _service.Update(
+                    SelectedHistory.FoodPhosphorusIntakeId,
+                    SelectedPerson.PersonId,
+                    FoodName.Trim(),
+                    phosphorus,
+                    calories,
+                    sodiumMg,
+                    proteinG,
+                    potassiumMg,
+                    SelectedHistory.FluidMl,
+                    binders,
+                    ConsumedAt,
+                    Notes,
+                    ServingDescription,
+                    EstimatedByAi,
+                    EstimatedByAi ? "OpenAI" : null,
+                    AiConfidence,
+                    SourceNotes,
+                    Environment.UserName);
+            }
 
             LoadHistoryForSelectedPerson();
+            if (savedFoodPhosphorusIntakeId.HasValue)
+            {
+                SelectedHistory = History
+                    .FirstOrDefault(item => item.FoodPhosphorusIntakeId == savedFoodPhosphorusIntakeId.Value);
+            }
+
             RefreshSelectedDayTotal();
         }
 

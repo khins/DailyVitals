@@ -26,14 +26,6 @@ namespace DailyVitals.App.Views
             try
             {
                 _vm.Save();
-
-                MessageBox.Show(
-                    "Food phosphorus entry saved successfully.",
-                    "Saved",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-
-                _vm.BeginNew();
             }
             catch (Exception ex)
             {
