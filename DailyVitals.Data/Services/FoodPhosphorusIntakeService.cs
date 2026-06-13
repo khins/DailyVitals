@@ -31,11 +31,23 @@ namespace DailyVitals.Data.Services
             using var conn = DbConnectionFactory.Create();
             conn.Open();
             EnsureFoodPhosphorusIntakeColumns(conn);
+            var foodProfileId = UpsertFoodProfile(
+                conn,
+                personId,
+                foodName,
+                phosphorusMg,
+                calories,
+                sodiumMg,
+                proteinG,
+                potassiumMg,
+                binders,
+                servingDescription);
 
             using var cmd = new NpgsqlCommand(
                 @"
                 WITH inserted AS (
                     INSERT INTO food_phosphorus_intake (
+                        food_phosphorus_food_id,
                         person_id,
                         food_name,
                         phosphorus_mg,
@@ -54,6 +66,7 @@ namespace DailyVitals.Data.Services
                         source_notes
                     )
                     VALUES (
+                        @p_food_phosphorus_food_id,
                         @p_person_id,
                         TRIM(@p_food_name),
                         @p_phosphorus_mg,
@@ -111,6 +124,7 @@ namespace DailyVitals.Data.Services
                 conn);
 
             cmd.Parameters.AddWithValue("p_person_id", personId);
+            cmd.Parameters.AddWithValue("p_food_phosphorus_food_id", foodProfileId);
             cmd.Parameters.AddWithValue("p_food_name", foodName);
             cmd.Parameters.AddWithValue("p_phosphorus_mg", phosphorusMg);
             cmd.Parameters.Add("p_calories", NpgsqlDbType.Integer).Value =
@@ -164,12 +178,24 @@ namespace DailyVitals.Data.Services
             using var conn = DbConnectionFactory.Create();
             conn.Open();
             EnsureFoodPhosphorusIntakeColumns(conn);
+            var foodProfileId = UpsertFoodProfile(
+                conn,
+                personId,
+                foodName,
+                phosphorusMg,
+                calories,
+                sodiumMg,
+                proteinG,
+                potassiumMg,
+                binders,
+                servingDescription);
 
             using var cmd = new NpgsqlCommand(
                 @"
                 WITH updated AS (
                     UPDATE food_phosphorus_intake
                     SET
+                        food_phosphorus_food_id = @p_food_phosphorus_food_id,
                         food_name = TRIM(@p_food_name),
                         phosphorus_mg = @p_phosphorus_mg,
                         calories = @p_calories,
@@ -229,6 +255,7 @@ namespace DailyVitals.Data.Services
 
             cmd.Parameters.AddWithValue("p_food_phosphorus_intake_id", foodPhosphorusIntakeId);
             cmd.Parameters.AddWithValue("p_person_id", personId);
+            cmd.Parameters.AddWithValue("p_food_phosphorus_food_id", foodProfileId);
             cmd.Parameters.AddWithValue("p_food_name", foodName);
             cmd.Parameters.AddWithValue("p_phosphorus_mg", phosphorusMg);
             cmd.Parameters.Add("p_calories", NpgsqlDbType.Integer).Value =
@@ -267,28 +294,34 @@ namespace DailyVitals.Data.Services
 
             const string sql = @"
                 SELECT
-                    food_phosphorus_intake_id,
-                    person_id,
-                    food_name,
-                    phosphorus_mg,
-                    calories,
-                    sodium_mg,
-                    protein_g,
-                    potassium_mg,
-                    fluid_ml,
-                    COALESCE(binders, 0) AS binders,
-                    consumed_at::timestamp,
-                    notes,
-                    serving_description,
-                    estimated_by_ai,
-                    ai_provider,
-                    ai_confidence,
-                    source_notes,
-                    created_at,
-                    updated_at
-                FROM food_phosphorus_intake
-                WHERE person_id = @person_id
-                ORDER BY consumed_at DESC, food_phosphorus_intake_id DESC;
+                    i.food_phosphorus_intake_id,
+                    i.person_id,
+                    i.food_name,
+                    i.phosphorus_mg,
+                    i.calories,
+                    i.sodium_mg,
+                    i.protein_g,
+                    i.potassium_mg,
+                    i.fluid_ml,
+                    COALESCE(i.binders, 0) AS binders,
+                    i.consumed_at::timestamp,
+                    i.notes,
+                    i.serving_description,
+                    i.estimated_by_ai,
+                    i.ai_provider,
+                    i.ai_confidence,
+                    i.source_notes,
+                    i.created_at,
+                    i.updated_at,
+                    i.food_phosphorus_food_id,
+                    n.note_text
+                FROM food_phosphorus_intake i
+                LEFT JOIN food_phosphorus_food f
+                    ON f.food_phosphorus_food_id = i.food_phosphorus_food_id
+                LEFT JOIN food_phosphorus_food_note n
+                    ON n.food_phosphorus_food_id = f.food_phosphorus_food_id
+                WHERE i.person_id = @person_id
+                ORDER BY i.consumed_at DESC, i.food_phosphorus_intake_id DESC;
             ";
 
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -317,7 +350,9 @@ namespace DailyVitals.Data.Services
                     AiConfidence = reader.IsDBNull(15) ? null : reader.GetString(15),
                     SourceNotes = reader.IsDBNull(16) ? null : reader.GetString(16),
                     CreatedAt = reader.GetDateTime(17),
-                    UpdatedAt = reader.IsDBNull(18) ? null : reader.GetDateTime(18)
+                    UpdatedAt = reader.IsDBNull(18) ? null : reader.GetDateTime(18),
+                    FoodPhosphorusFoodId = reader.IsDBNull(19) ? null : reader.GetInt64(19),
+                    FoodNotes = reader.IsDBNull(20) ? null : reader.GetString(20)
                 });
             }
 
@@ -327,7 +362,34 @@ namespace DailyVitals.Data.Services
         private static void EnsureFoodPhosphorusIntakeColumns(NpgsqlConnection conn)
         {
             const string sql = @"
+                CREATE TABLE IF NOT EXISTS public.food_phosphorus_food (
+                    food_phosphorus_food_id bigserial NOT NULL,
+                    person_id int8 NOT NULL,
+                    food_name varchar(200) NOT NULL,
+                    default_phosphorus_mg int4 NULL,
+                    default_calories int4 NULL,
+                    default_sodium_mg int4 NULL,
+                    default_protein_g numeric(8, 2) NULL,
+                    default_potassium_mg int4 NULL,
+                    default_binders int4 NULL,
+                    default_serving_description varchar(200) NULL,
+                    food_notes text NULL,
+                    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT food_phosphorus_food_pkey PRIMARY KEY (food_phosphorus_food_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS public.food_phosphorus_food_note (
+                    food_phosphorus_food_note_id bigserial NOT NULL,
+                    food_phosphorus_food_id int8 NOT NULL,
+                    note_text text NULL,
+                    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT food_phosphorus_food_note_pkey PRIMARY KEY (food_phosphorus_food_note_id)
+                );
+
                 ALTER TABLE public.food_phosphorus_intake
+                    ADD COLUMN IF NOT EXISTS food_phosphorus_food_id int8 NULL,
                     ADD COLUMN IF NOT EXISTS binders integer NOT NULL DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS calories integer NULL,
                     ADD COLUMN IF NOT EXISTS sodium_mg integer NULL,
@@ -358,6 +420,46 @@ namespace DailyVitals.Data.Services
 
                 DO $$
                 BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_food_person_food_name_key'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_food
+                            ADD CONSTRAINT food_phosphorus_food_person_food_name_key UNIQUE (person_id, food_name);
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_intake_food_fk'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_intake
+                            ADD CONSTRAINT food_phosphorus_intake_food_fk
+                            FOREIGN KEY (food_phosphorus_food_id)
+                            REFERENCES public.food_phosphorus_food(food_phosphorus_food_id);
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_food_note_food_key'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_food_note
+                            ADD CONSTRAINT food_phosphorus_food_note_food_key UNIQUE (food_phosphorus_food_id);
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'food_phosphorus_food_note_food_fk'
+                    ) THEN
+                        ALTER TABLE public.food_phosphorus_food_note
+                            ADD CONSTRAINT food_phosphorus_food_note_food_fk
+                            FOREIGN KEY (food_phosphorus_food_id)
+                            REFERENCES public.food_phosphorus_food(food_phosphorus_food_id);
+                    END IF;
+
                     IF NOT EXISTS (
                         SELECT 1
                         FROM pg_constraint
@@ -414,6 +516,146 @@ namespace DailyVitals.Data.Services
                 END $$;";
 
             using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.ExecuteNonQuery();
+        }
+
+        private static long UpsertFoodProfile(
+            NpgsqlConnection conn,
+            long personId,
+            string foodName,
+            int phosphorusMg,
+            int? calories,
+            int? sodiumMg,
+            decimal? proteinG,
+            int? potassiumMg,
+            int binders,
+            string? servingDescription)
+        {
+            const string sql = @"
+                INSERT INTO public.food_phosphorus_food (
+                    person_id,
+                    food_name,
+                    default_phosphorus_mg,
+                    default_calories,
+                    default_sodium_mg,
+                    default_protein_g,
+                    default_potassium_mg,
+                    default_binders,
+                    default_serving_description
+                )
+                VALUES (
+                    @person_id,
+                    TRIM(@food_name),
+                    @phosphorus_mg,
+                    @calories,
+                    @sodium_mg,
+                    @protein_g,
+                    @potassium_mg,
+                    @binders,
+                    @serving_description
+                )
+                ON CONFLICT (person_id, food_name)
+                DO UPDATE SET
+                    default_phosphorus_mg = EXCLUDED.default_phosphorus_mg,
+                    default_calories = EXCLUDED.default_calories,
+                    default_sodium_mg = EXCLUDED.default_sodium_mg,
+                    default_protein_g = EXCLUDED.default_protein_g,
+                    default_potassium_mg = EXCLUDED.default_potassium_mg,
+                    default_binders = EXCLUDED.default_binders,
+                    default_serving_description = EXCLUDED.default_serving_description,
+                    updated_at = CURRENT_TIMESTAMP
+                RETURNING food_phosphorus_food_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("food_name", foodName);
+            cmd.Parameters.AddWithValue("phosphorus_mg", phosphorusMg);
+            cmd.Parameters.Add("calories", NpgsqlDbType.Integer).Value =
+                (object?)calories ?? DBNull.Value;
+            cmd.Parameters.Add("sodium_mg", NpgsqlDbType.Integer).Value =
+                (object?)sodiumMg ?? DBNull.Value;
+            cmd.Parameters.Add("protein_g", NpgsqlDbType.Numeric).Value =
+                (object?)proteinG ?? DBNull.Value;
+            cmd.Parameters.Add("potassium_mg", NpgsqlDbType.Integer).Value =
+                (object?)potassiumMg ?? DBNull.Value;
+            cmd.Parameters.AddWithValue("binders", binders);
+            cmd.Parameters.AddWithValue("serving_description", (object?)servingDescription ?? DBNull.Value);
+
+            return Convert.ToInt64(cmd.ExecuteScalar());
+        }
+
+        public string GetFoodNote(long foodPhosphorusFoodId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureFoodPhosphorusIntakeColumns(conn);
+
+            const string sql = @"
+                SELECT note_text
+                FROM public.food_phosphorus_food_note
+                WHERE food_phosphorus_food_id = @food_phosphorus_food_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("food_phosphorus_food_id", foodPhosphorusFoodId);
+
+            return cmd.ExecuteScalar() as string ?? string.Empty;
+        }
+
+        public long EnsureFoodProfileForIntake(FoodPhosphorusIntake intake)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureFoodPhosphorusIntakeColumns(conn);
+
+            var foodProfileId = UpsertFoodProfile(
+                conn,
+                intake.PersonId,
+                intake.FoodName,
+                intake.PhosphorusMg,
+                intake.Calories,
+                intake.SodiumMg,
+                intake.ProteinG,
+                intake.PotassiumMg,
+                intake.Binders,
+                intake.ServingDescription);
+
+            const string sql = @"
+                UPDATE public.food_phosphorus_intake
+                SET food_phosphorus_food_id = @food_phosphorus_food_id,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE food_phosphorus_intake_id = @food_phosphorus_intake_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("food_phosphorus_food_id", foodProfileId);
+            cmd.Parameters.AddWithValue("food_phosphorus_intake_id", intake.FoodPhosphorusIntakeId);
+            cmd.ExecuteNonQuery();
+
+            return foodProfileId;
+        }
+
+        public void SaveFoodNote(long foodPhosphorusFoodId, string? noteText)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureFoodPhosphorusIntakeColumns(conn);
+
+            const string sql = @"
+                INSERT INTO public.food_phosphorus_food_note (
+                    food_phosphorus_food_id,
+                    note_text
+                )
+                VALUES (
+                    @food_phosphorus_food_id,
+                    @note_text
+                )
+                ON CONFLICT (food_phosphorus_food_id)
+                DO UPDATE SET
+                    note_text = EXCLUDED.note_text,
+                    updated_at = CURRENT_TIMESTAMP;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("food_phosphorus_food_id", foodPhosphorusFoodId);
+            cmd.Parameters.AddWithValue("note_text", (object?)noteText ?? DBNull.Value);
             cmd.ExecuteNonQuery();
         }
 

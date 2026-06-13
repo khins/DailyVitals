@@ -22,6 +22,7 @@ namespace DailyVitals.App.ViewModels
         private string _binders = "0";
         private string _searchText = string.Empty;
         private string? _notes;
+        private string? _foodNotes;
         private string? _servingDescription;
         private string? _aiConfidence;
         private string? _sourceNotes;
@@ -60,6 +61,7 @@ namespace DailyVitals.App.ViewModels
         public bool CanDelete => SelectedHistory != null;
         public bool CanEstimate => !IsEstimating && !string.IsNullOrWhiteSpace(FoodName);
         public bool CanViewRunningTotals => SelectedPerson != null;
+        public bool CanEditFoodNotes => SelectedHistory != null;
         public string AuditTimestampText
         {
             get
@@ -187,6 +189,16 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
+        public string? FoodNotes
+        {
+            get => _foodNotes;
+            set
+            {
+                _foodNotes = value;
+                OnPropertyChanged();
+            }
+        }
+
         public string? ServingDescription
         {
             get => _servingDescription;
@@ -270,6 +282,7 @@ namespace DailyVitals.App.ViewModels
                 _selectedHistory = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanDelete));
+                OnPropertyChanged(nameof(CanEditFoodNotes));
                 LoadFromHistory();
             }
         }
@@ -289,6 +302,9 @@ namespace DailyVitals.App.ViewModels
             Persons.Clear();
             foreach (var person in _personService.GetAllPersons())
                 Persons.Add(person);
+
+            if (SelectedPerson == null && Persons.Count > 0)
+                SelectedPerson = Persons[0];
         }
 
         private void LoadHistoryForSelectedPerson()
@@ -318,7 +334,9 @@ namespace DailyVitals.App.ViewModels
                         (!string.IsNullOrWhiteSpace(item.ServingDescription) &&
                             item.ServingDescription.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
                         (!string.IsNullOrWhiteSpace(item.Notes) &&
-                            item.Notes.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
+                            item.Notes.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(item.FoodNotes) &&
+                            item.FoodNotes.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
 
             foreach (var item in filteredHistory)
@@ -339,6 +357,7 @@ namespace DailyVitals.App.ViewModels
             Binders = SelectedHistory.Binders.ToString();
             ConsumedAt = SelectedHistory.ConsumedAt;
             Notes = SelectedHistory.Notes;
+            FoodNotes = SelectedHistory.FoodNotes;
             ServingDescription = SelectedHistory.ServingDescription;
             EstimatedByAi = SelectedHistory.EstimatedByAi;
             AiConfidence = SelectedHistory.AiConfidence;
@@ -363,6 +382,7 @@ namespace DailyVitals.App.ViewModels
             Binders = "0";
             ConsumedAt = DateTime.Today;
             Notes = string.Empty;
+            FoodNotes = string.Empty;
             ServingDescription = string.Empty;
             EstimatedByAi = false;
             AiConfidence = null;
@@ -388,7 +408,7 @@ namespace DailyVitals.App.ViewModels
                 EstimatedByAi = true;
                 AiConfidence = estimate.Confidence;
                 SourceNotes = estimate.SourceNotes;
-                Notes = BuildAiNotes(estimate);
+                FoodNotes = BuildAiNotes(estimate);
                 EstimateStatus = $"Estimate ready: {estimate.EstimatedPhosphorusMg} mg ({estimate.Confidence ?? "unknown confidence"})";
             }
             finally
@@ -447,9 +467,14 @@ namespace DailyVitals.App.ViewModels
             if (!int.TryParse(Binders, out var binders) || binders < 0)
                 throw new InvalidOperationException("Binders must be a non-negative whole number.");
 
-            var savedFoodPhosphorusIntakeId = SelectedHistory?.FoodPhosphorusIntakeId;
+            var selectedHistory = SelectedHistory;
+            var shouldInsert = selectedHistory == null ||
+                selectedHistory.ConsumedAt.Date != ConsumedAt.Date;
+            long? savedFoodPhosphorusIntakeId = shouldInsert
+                ? null
+                : selectedHistory?.FoodPhosphorusIntakeId;
 
-            if (SelectedHistory == null)
+            if (shouldInsert)
             {
                 savedFoodPhosphorusIntakeId = _service.Insert(
                     SelectedPerson.PersonId,
@@ -462,7 +487,7 @@ namespace DailyVitals.App.ViewModels
                     null,
                     binders,
                     ConsumedAt,
-                    Notes,
+                    null,
                     ServingDescription,
                     EstimatedByAi,
                     EstimatedByAi ? "OpenAI" : null,
@@ -473,7 +498,7 @@ namespace DailyVitals.App.ViewModels
             else
             {
                 _service.Update(
-                    SelectedHistory.FoodPhosphorusIntakeId,
+                    selectedHistory!.FoodPhosphorusIntakeId,
                     SelectedPerson.PersonId,
                     FoodName.Trim(),
                     phosphorus,
@@ -481,10 +506,10 @@ namespace DailyVitals.App.ViewModels
                     sodiumMg,
                     proteinG,
                     potassiumMg,
-                    SelectedHistory.FluidMl,
+                    selectedHistory.FluidMl,
                     binders,
                     ConsumedAt,
-                    Notes,
+                    null,
                     ServingDescription,
                     EstimatedByAi,
                     EstimatedByAi ? "OpenAI" : null,
@@ -494,13 +519,64 @@ namespace DailyVitals.App.ViewModels
             }
 
             LoadHistoryForSelectedPerson();
-            if (savedFoodPhosphorusIntakeId.HasValue)
-            {
-                SelectedHistory = History
-                    .FirstOrDefault(item => item.FoodPhosphorusIntakeId == savedFoodPhosphorusIntakeId.Value);
-            }
+            SelectSavedHistoryItem(savedFoodPhosphorusIntakeId);
 
             RefreshSelectedDayTotal();
+        }
+
+        public string LoadFoodNote()
+        {
+            if (SelectedHistory == null)
+                return string.Empty;
+
+            return _service.GetFoodNote(GetOrCreateSelectedFoodProfileId());
+        }
+
+        public void SaveFoodNote(string noteText)
+        {
+            if (SelectedHistory == null)
+                throw new InvalidOperationException("Save the food entry before editing food notes.");
+
+            var foodPhosphorusFoodId = GetOrCreateSelectedFoodProfileId();
+            var foodPhosphorusIntakeId = SelectedHistory.FoodPhosphorusIntakeId;
+
+            _service.SaveFoodNote(foodPhosphorusFoodId, noteText);
+            LoadHistoryForSelectedPerson();
+            SelectSavedHistoryItem(foodPhosphorusIntakeId);
+        }
+
+        private long GetOrCreateSelectedFoodProfileId()
+        {
+            if (SelectedHistory == null)
+                throw new InvalidOperationException("Select a food entry before editing food notes.");
+
+            if (SelectedHistory.FoodPhosphorusFoodId.HasValue)
+                return SelectedHistory.FoodPhosphorusFoodId.Value;
+
+            var foodProfileId = _service.EnsureFoodProfileForIntake(SelectedHistory);
+            SelectedHistory.FoodPhosphorusFoodId = foodProfileId;
+            OnPropertyChanged(nameof(CanEditFoodNotes));
+            return foodProfileId;
+        }
+
+        private void SelectSavedHistoryItem(long? savedFoodPhosphorusIntakeId)
+        {
+            if (!savedFoodPhosphorusIntakeId.HasValue)
+                return;
+
+            var savedItem = _allHistory
+                .FirstOrDefault(item => item.FoodPhosphorusIntakeId == savedFoodPhosphorusIntakeId.Value);
+            if (savedItem == null)
+                return;
+
+            if (!History.Contains(savedItem))
+            {
+                _searchText = string.Empty;
+                OnPropertyChanged(nameof(SearchText));
+                ApplyHistorySearch();
+            }
+
+            SelectedHistory = savedItem;
         }
 
         public void DeleteSelected()
