@@ -47,15 +47,6 @@ namespace DailyVitals.App.Views
                 }
 
                 _vm.Save(_vm.SelectedPerson.PersonId);
-
-                MessageBox.Show(
-                    "Blood glucose reading saved successfully.",
-                    "Saved",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-
-                // Prepare for next entry
-                _vm.BeginNew();
             }
             catch (Exception ex)
             {

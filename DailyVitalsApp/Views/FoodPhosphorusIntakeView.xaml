@@ -149,6 +149,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0"
@@ -275,6 +276,13 @@
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
                          Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Row="11"
+                           Grid.Column="1"
+                           Text="{Binding AuditTimestampText}"
+                           Foreground="DimGray"
+                           FontSize="12"
+                           Margin="0,2,0,0"/>
             </Grid>
         </ScrollViewer>
 
