@@ -5,6 +5,7 @@ namespace DailyVitals.Domain.Models
     public class FoodPhosphorusIntake
     {
         public long FoodPhosphorusIntakeId { get; set; }
+        public long? FoodPhosphorusFoodId { get; set; }
         public long PersonId { get; set; }
         public string FoodName { get; set; } = string.Empty;
         public int PhosphorusMg { get; set; }
@@ -18,6 +19,7 @@ namespace DailyVitals.Domain.Models
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string? Notes { get; set; }
+        public string? FoodNotes { get; set; }
         public string? ServingDescription { get; set; }
         public bool EstimatedByAi { get; set; }
         public string? AiProvider { get; set; }

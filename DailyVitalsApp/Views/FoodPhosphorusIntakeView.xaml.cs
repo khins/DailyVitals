@@ -104,6 +104,42 @@ namespace DailyVitals.App.Views
             report.ShowDialog();
         }
 
+        private void FoodNotes_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_vm.CanEditFoodNotes || _vm.SelectedHistory == null)
+            {
+                MessageBox.Show(
+                    "Save or select a food entry before editing food notes.",
+                    "Food Entry Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var notesWindow = new FoodPhosphorusFoodNotesView(
+                _vm.SelectedHistory.FoodName,
+                _vm.LoadFoodNote())
+            {
+                Owner = this
+            };
+
+            if (notesWindow.ShowDialog() != true)
+                return;
+
+            try
+            {
+                _vm.SaveFoodNote(notesWindow.NoteText);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Food Notes Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             Close();
