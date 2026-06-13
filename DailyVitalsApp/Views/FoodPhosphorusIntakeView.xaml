@@ -98,7 +98,8 @@
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   HorizontalScrollBarVisibility="Auto"
-                  SelectionMode="Single">
+                  SelectionMode="Single"
+                  MouseDoubleClick="HistoryGrid_MouseDoubleClick">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Date"
                                     Width="110"

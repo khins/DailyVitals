@@ -106,6 +106,16 @@ namespace DailyVitals.App.Views
 
         private void FoodNotes_Click(object sender, RoutedEventArgs e)
         {
+            OpenFoodNotes();
+        }
+
+        private void HistoryGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            OpenFoodNotes();
+        }
+
+        private void OpenFoodNotes()
+        {
             if (!_vm.CanEditFoodNotes || _vm.SelectedHistory == null)
             {
                 MessageBox.Show(
