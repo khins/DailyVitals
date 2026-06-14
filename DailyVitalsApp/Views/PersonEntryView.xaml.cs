@@ -32,6 +32,34 @@ namespace DailyVitals.App.Views
                     ex.Message,
                     "Save Error",
                     MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            }
+        }
+
+        private void Delete_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_vm.CanDelete)
+                return;
+
+            var result = MessageBox.Show(
+                "Are you sure you want to delete this person?",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                _vm.DeleteSelected();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Delete Error",
+                    MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
         }
