@@ -15,8 +15,8 @@ namespace DailyVitals.App.ViewModels
         private Person? _selectedPerson;
         private WeightReading? _selectedHistory;
         private string _weightValue = string.Empty;
-        private const decimal FixedHeightFt = 6.08m;
-        private const string FixedHeightDisplay = "6 ft 1 in";
+        private DateTime? _createdAt;
+        private DateTime? _updatedAt;
 
         public bool IsEditMode => SelectedHistory != null;
         public bool CanUpdate => IsEditMode && CanSave;
@@ -32,7 +32,13 @@ namespace DailyVitals.App.ViewModels
             {
                 _selectedPerson = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(HeightFt));
+                OnPropertyChanged(nameof(HeightDisplay));
+                OnPropertyChanged(nameof(BMI));
+                OnPropertyChanged(nameof(BMICategory));
+                OnPropertyChanged(nameof(BMIBrush));
                 LoadHistory();
+                BeginNew();
             }
         }
 
@@ -65,8 +71,24 @@ namespace DailyVitals.App.ViewModels
         public DateTime ReadingTime { get; set; } = DateTime.Now;
         public string? Notes { get; set; } = "Morning weigh-in";
 
-        public string HeightFt => FixedHeightFt.ToString("0.00");
-        public string HeightDisplay => $"{FixedHeightDisplay} ({HeightFt} ft)";
+        private decimal? SelectedHeightFt => SelectedPerson?.HeightFt;
+        public string HeightFt => SelectedHeightFt?.ToString("0.00") ?? string.Empty;
+        public string HeightDisplay => SelectedHeightFt == null
+            ? "No height set"
+            : $"{FormatHeight(SelectedHeightFt.Value)} ({HeightFt} ft)";
+        public string AuditTimestampText
+        {
+            get
+            {
+                if (_updatedAt.HasValue)
+                    return $"Updated at: {_updatedAt.Value:g}";
+
+                if (_createdAt.HasValue)
+                    return $"Created at: {_createdAt.Value:g}";
+
+                return string.Empty;
+            }
+        }
 
         public WeightViewModel()
         {
@@ -78,6 +100,7 @@ namespace DailyVitals.App.ViewModels
         {
             get
             {
+                if (SelectedHeightFt == null) return "Height required";
                 if (BMI == null) return string.Empty;
 
                 var bmi = BMI.Value;
@@ -107,7 +130,9 @@ namespace DailyVitals.App.ViewModels
             get
             {
                 if (!decimal.TryParse(WeightValue, out var weight)) return null;
-                return HealthMetrics.CalculateBMI(weight, FixedHeightFt);
+                if (SelectedHeightFt == null) return null;
+
+                return HealthMetrics.CalculateBMI(weight, SelectedHeightFt.Value);
             }
         }
 
@@ -116,6 +141,9 @@ namespace DailyVitals.App.ViewModels
             Persons.Clear();
             foreach (var person in _personService.GetAllPersons())
                 Persons.Add(person);
+
+            if (SelectedPerson == null && Persons.Count > 0)
+                SelectedPerson = Persons[0];
         }
 
         private void LoadHistory()
@@ -137,10 +165,13 @@ namespace DailyVitals.App.ViewModels
             WeightUnit = SelectedHistory.WeightUnit;
             ReadingTime = SelectedHistory.ReadingTime;
             Notes = SelectedHistory.Notes;
+            _createdAt = SelectedHistory.CreatedAt;
+            _updatedAt = SelectedHistory.UpdatedAt;
 
             OnPropertyChanged(nameof(WeightUnit));
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Notes));
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public void BeginNew()
@@ -150,10 +181,13 @@ namespace DailyVitals.App.ViewModels
             WeightUnit = "lb";
             ReadingTime = DateTime.Now;
             Notes = "Morning weigh-in";
+            _createdAt = null;
+            _updatedAt = null;
 
             OnPropertyChanged(nameof(WeightUnit));
             OnPropertyChanged(nameof(ReadingTime));
             OnPropertyChanged(nameof(Notes));
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public void Save()
@@ -173,7 +207,7 @@ namespace DailyVitals.App.ViewModels
                     selectedHistory.WeightId,
                     weight,
                     WeightUnit,
-                    FixedHeightFt,
+                    SelectedHeightFt ?? 0,
                     ReadingTime,
                     Notes ?? string.Empty,
                     Environment.UserName);
@@ -184,7 +218,7 @@ namespace DailyVitals.App.ViewModels
                     SelectedPerson.PersonId,
                     weight,
                     WeightUnit,
-                    FixedHeightFt,
+                    SelectedHeightFt ?? 0,
                     ReadingTime,
                     Notes ?? string.Empty,
                     Environment.UserName);
@@ -205,6 +239,14 @@ namespace DailyVitals.App.ViewModels
 
             LoadHistory();
             BeginNew();
+        }
+
+        private static string FormatHeight(decimal heightFt)
+        {
+            var totalInches = (int)Math.Round(heightFt * 12, MidpointRounding.AwayFromZero);
+            var feet = totalInches / 12;
+            var inches = totalInches % 12;
+            return $"{feet} ft {inches} in";
         }
     }
 }

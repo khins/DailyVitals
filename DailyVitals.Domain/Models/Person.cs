@@ -5,6 +5,7 @@
         public long PersonId { get; set; }
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+        public decimal? HeightFt { get; set; }
 
         public string FullName => $"{FirstName} {LastName}";
     }
