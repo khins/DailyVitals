@@ -19,6 +19,7 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureWeightColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_insert_weight(@p_person_id, @p_weight_value, @p_weight_unit, @p_reading_time, @p_notes, @p_entered_by)",
@@ -36,9 +37,7 @@ namespace DailyVitals.Data.Services
             if (result is null or DBNull)
                 throw new Exception("Weight insert failed. No ID returned.");
 
-            var weightId = Convert.ToInt64(result);
-            SetHeightFt(conn, weightId, heightFt);
-            return weightId;
+            return Convert.ToInt64(result);
         }
 
         public List<WeightReading> GetHistory(long personId)
@@ -47,12 +46,23 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureWeightColumns(conn);
 
             const string sql = @"
-            SELECT weight_id, weight_value, weight_unit, reading_time, notes, COALESCE(height_ft, 6.08) AS height_ft
-            FROM weight
-            WHERE person_id = @person_id
-            ORDER BY reading_time DESC;
+            SELECT
+                w.weight_id,
+                w.weight_value,
+                w.weight_unit,
+                w.reading_time,
+                w.notes,
+                COALESCE(p.height_ft, w.height_ft, 6.08) AS height_ft,
+                w.created_at,
+                w.updated_at
+            FROM weight w
+            JOIN person p
+                ON p.person_id = w.person_id
+            WHERE w.person_id = @person_id
+            ORDER BY w.reading_time DESC;
         ";
 
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -68,7 +78,9 @@ namespace DailyVitals.Data.Services
                     WeightUnit = reader.GetString(2),
                     ReadingTime = reader.GetDateTime(3),
                     Notes = reader.IsDBNull(4) ? null : reader.GetString(4),
-                    HeightFt = reader.IsDBNull(5) ? null : reader.GetDecimal(5)
+                    HeightFt = reader.IsDBNull(5) ? null : reader.GetDecimal(5),
+                    CreatedAt = reader.GetDateTime(6),
+                    UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
                 });
             }
 
@@ -80,6 +92,7 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureWeightColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_delete_weight(@p_weight_id, @p_entered_by)",
@@ -102,6 +115,7 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureWeightColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_update_weight(@id,@val,@unit,@time,@notes,@by)", conn);
@@ -114,37 +128,30 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("by", enteredBy);
 
             cmd.ExecuteNonQuery();
-            SetHeightFt(conn, weightId, heightFt);
-        }
-
-        private static void SetHeightFt(NpgsqlConnection conn, long weightId, decimal heightFt)
-        {
-            using var cmd = new NpgsqlCommand(
-                "UPDATE weight SET height_ft = @height_ft WHERE weight_id = @weight_id",
-                conn);
-
-            cmd.Parameters.AddWithValue("height_ft", heightFt);
-            cmd.Parameters.AddWithValue("weight_id", weightId);
-
-            cmd.ExecuteNonQuery();
+            SetUpdatedAt(conn, weightId);
         }
 
         public WeightReading? GetLatestForPerson(long personId)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureWeightColumns(conn);
 
             const string sql = @"
                     SELECT
-                        weight_id,
-                        weight_value,
-                        weight_unit,
-                        COALESCE(height_ft, 6.08) AS height_ft,
-                        reading_time,
-                        notes
-                    FROM weight
-                    WHERE person_id = @person_id
-                    ORDER BY reading_time DESC
+                        w.weight_id,
+                        w.weight_value,
+                        w.weight_unit,
+                        COALESCE(p.height_ft, w.height_ft, 6.08) AS height_ft,
+                        w.reading_time,
+                        w.notes,
+                        w.created_at,
+                        w.updated_at
+                    FROM weight w
+                    JOIN person p
+                        ON p.person_id = w.person_id
+                    WHERE w.person_id = @person_id
+                    ORDER BY w.reading_time DESC
                     LIMIT 1;
                 ";
 
@@ -163,7 +170,9 @@ namespace DailyVitals.Data.Services
                 WeightUnit = reader.GetString(2),
                 HeightFt = reader.IsDBNull(3) ? null : reader.GetDecimal(3),
                 ReadingTime = reader.GetDateTime(4),
-                Notes = reader.IsDBNull(5) ? null : reader.GetString(5)
+                Notes = reader.IsDBNull(5) ? null : reader.GetString(5),
+                CreatedAt = reader.GetDateTime(6),
+                UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
             };
         }
 
@@ -173,6 +182,7 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureWeightColumns(conn);
 
             const string sql = @"
                     SELECT reading_time, weight_value
@@ -199,6 +209,41 @@ namespace DailyVitals.Data.Services
             // Reverse so chart draws left → right chronologically
             list.Reverse();
             return list;
+        }
+
+        private static void EnsureWeightColumns(NpgsqlConnection conn)
+        {
+            const string sql = @"
+                ALTER TABLE public.weight
+                    ADD COLUMN IF NOT EXISTS created_at timestamp NULL,
+                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
+
+                UPDATE public.weight
+                SET created_at = COALESCE(created_at, reading_time, CURRENT_TIMESTAMP)
+                WHERE created_at IS NULL;
+
+                UPDATE public.weight
+                SET updated_at = COALESCE(updated_at, created_at, reading_time, CURRENT_TIMESTAMP)
+                WHERE updated_at IS NULL;
+
+                ALTER TABLE public.weight
+                    ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP,
+                    ALTER COLUMN created_at SET NOT NULL,
+                    ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP,
+                    ALTER COLUMN updated_at SET NOT NULL;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.ExecuteNonQuery();
+        }
+
+        private static void SetUpdatedAt(NpgsqlConnection conn, long weightId)
+        {
+            using var cmd = new NpgsqlCommand(
+                "UPDATE public.weight SET updated_at = CURRENT_TIMESTAMP WHERE weight_id = @weight_id",
+                conn);
+
+            cmd.Parameters.AddWithValue("weight_id", weightId);
+            cmd.ExecuteNonQuery();
         }
 
 

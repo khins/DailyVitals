@@ -136,6 +136,8 @@
                 <!-- BMI -->
                 <RowDefinition Height="Auto"/>
                 <!-- Notes -->
+                <RowDefinition Height="Auto"/>
+                <!-- Audit -->
             </Grid.RowDefinitions>
 
             <!-- READING TIME -->
@@ -218,6 +220,13 @@
                      AcceptsReturn="True"
                      TextWrapping="Wrap"
                      Text="{Binding Notes}"/>
+
+            <TextBlock Grid.Row="5"
+                       Grid.Column="1"
+                       Text="{Binding AuditTimestampText}"
+                       Foreground="DimGray"
+                       FontSize="12"
+                       Margin="0,3,0,0"/>
         </Grid>
 
         <!-- BUTTON BAR -->
