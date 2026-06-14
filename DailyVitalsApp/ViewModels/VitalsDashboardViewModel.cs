@@ -181,6 +181,14 @@ namespace DailyVitals.App.ViewModels
                 Persons.Add(person);
         }
 
+        public void RefreshPeople()
+        {
+            var selectedPersonId = SelectedPerson?.PersonId;
+            LoadPersons();
+            SelectedPerson = Persons.FirstOrDefault(person => person.PersonId == selectedPersonId) ??
+                Persons.FirstOrDefault();
+        }
+
         private void LoadLatestVitals()
         {
             WeightTrendPoints.Clear();

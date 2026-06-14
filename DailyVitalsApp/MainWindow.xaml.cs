@@ -48,6 +48,12 @@ namespace DailyVitals.App
             window.ShowDialog();
         }
 
+        private void OpenPeople_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new PersonEntryView { Owner = this };
+            window.ShowDialog();
+        }
+
         private void OpenKidneyLabs_Click(object sender, RoutedEventArgs e)
         {
             var window = new KidneyLabResultsView { Owner = this };

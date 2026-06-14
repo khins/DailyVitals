@@ -77,5 +77,18 @@ namespace DailyVitals.App.Views
 
             window.ShowDialog();
         }
+
+        private void People_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new PersonEntryView
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+
+            if (DataContext is VitalsDashboardViewModel vm)
+                vm.RefreshPeople();
+        }
     }
 }
