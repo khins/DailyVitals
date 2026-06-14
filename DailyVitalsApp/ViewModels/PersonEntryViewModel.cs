@@ -13,6 +13,10 @@ namespace DailyVitals.App.ViewModels
         private string _firstName = string.Empty;
         private string _lastName = string.Empty;
         private string _heightFt = string.Empty;
+        private DateTime? _birthDate;
+        private string _gender = string.Empty;
+        private DateTime? _createdAt;
+        private DateTime? _updatedAt;
 
         public PersonEntryViewModel()
         {
@@ -30,6 +34,7 @@ namespace DailyVitals.App.ViewModels
                 _selectedPerson = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanSave));
+                OnPropertyChanged(nameof(CanDelete));
                 LoadFromSelected();
             }
         }
@@ -67,10 +72,67 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
+        public DateTime? BirthDate
+        {
+            get => _birthDate;
+            set
+            {
+                _birthDate = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string Gender
+        {
+            get => _gender;
+            set
+            {
+                _gender = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsMale));
+                OnPropertyChanged(nameof(IsFemale));
+            }
+        }
+
+        public bool IsMale
+        {
+            get => string.Equals(Gender, "Male", StringComparison.OrdinalIgnoreCase);
+            set
+            {
+                if (value)
+                    Gender = "Male";
+            }
+        }
+
+        public bool IsFemale
+        {
+            get => string.Equals(Gender, "Female", StringComparison.OrdinalIgnoreCase);
+            set
+            {
+                if (value)
+                    Gender = "Female";
+            }
+        }
+
+        public string AuditTimestampText
+        {
+            get
+            {
+                if (_updatedAt.HasValue)
+                    return $"Updated at: {_updatedAt.Value:g}";
+
+                if (_createdAt.HasValue)
+                    return $"Created at: {_createdAt.Value:g}";
+
+                return string.Empty;
+            }
+        }
+
         public bool CanSave =>
             !string.IsNullOrWhiteSpace(FirstName) &&
             !string.IsNullOrWhiteSpace(LastName) &&
             IsOptionalPositiveDecimal(HeightFt);
+        public bool CanDelete => SelectedPerson != null;
 
         public void BeginNew()
         {
@@ -78,6 +140,11 @@ namespace DailyVitals.App.ViewModels
             FirstName = string.Empty;
             LastName = string.Empty;
             HeightFt = string.Empty;
+            BirthDate = null;
+            Gender = string.Empty;
+            _createdAt = null;
+            _updatedAt = null;
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public void Save()
@@ -103,7 +170,9 @@ namespace DailyVitals.App.ViewModels
                 selectedPersonId = _personService.InsertPerson(
                     FirstName.Trim(),
                     LastName.Trim(),
-                    heightFt);
+                    heightFt,
+                    BirthDate,
+                    Gender.Trim());
             }
             else
             {
@@ -111,11 +180,23 @@ namespace DailyVitals.App.ViewModels
                     SelectedPerson.PersonId,
                     FirstName.Trim(),
                     LastName.Trim(),
-                    heightFt);
+                    heightFt,
+                    BirthDate,
+                    Gender.Trim());
             }
 
             LoadPeople();
             SelectedPerson = People.FirstOrDefault(person => person.PersonId == selectedPersonId);
+        }
+
+        public void DeleteSelected()
+        {
+            if (SelectedPerson == null)
+                return;
+
+            _personService.DeletePerson(SelectedPerson.PersonId);
+            LoadPeople();
+            BeginNew();
         }
 
         private void LoadPeople()
@@ -133,6 +214,11 @@ namespace DailyVitals.App.ViewModels
             FirstName = SelectedPerson.FirstName;
             LastName = SelectedPerson.LastName;
             HeightFt = SelectedPerson.HeightFt?.ToString("0.##") ?? string.Empty;
+            BirthDate = SelectedPerson.BirthDate;
+            Gender = SelectedPerson.Gender ?? string.Empty;
+            _createdAt = SelectedPerson.CreatedAt;
+            _updatedAt = SelectedPerson.UpdatedAt;
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         private static bool IsOptionalPositiveDecimal(string value)

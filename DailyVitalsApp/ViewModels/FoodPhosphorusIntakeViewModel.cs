@@ -34,6 +34,9 @@ namespace DailyVitals.App.ViewModels
         private DateTime? _updatedAt;
         private Person? _selectedPerson;
         private FoodPhosphorusIntake? _selectedHistory;
+        private long? _editingFoodPhosphorusIntakeId;
+        private DateTime? _editingConsumedDate;
+        private int? _editingFluidMl;
         private int _selectedDayTotalMg;
         private readonly List<FoodPhosphorusIntake> _allHistory = new();
 
@@ -364,6 +367,9 @@ namespace DailyVitals.App.ViewModels
             SourceNotes = SelectedHistory.SourceNotes;
             _createdAt = SelectedHistory.CreatedAt;
             _updatedAt = SelectedHistory.UpdatedAt;
+            _editingFoodPhosphorusIntakeId = SelectedHistory.FoodPhosphorusIntakeId;
+            _editingConsumedDate = SelectedHistory.ConsumedAt.Date;
+            _editingFluidMl = SelectedHistory.FluidMl;
             EstimateStatus = EstimatedByAi
                 ? $"AI estimate: {AiConfidence ?? "unknown confidence"}"
                 : string.Empty;
@@ -390,6 +396,9 @@ namespace DailyVitals.App.ViewModels
             EstimateStatus = string.Empty;
             _createdAt = null;
             _updatedAt = null;
+            _editingFoodPhosphorusIntakeId = null;
+            _editingConsumedDate = null;
+            _editingFluidMl = null;
             OnPropertyChanged(nameof(AuditTimestampText));
         }
 
@@ -467,12 +476,12 @@ namespace DailyVitals.App.ViewModels
             if (!int.TryParse(Binders, out var binders) || binders < 0)
                 throw new InvalidOperationException("Binders must be a non-negative whole number.");
 
-            var selectedHistory = SelectedHistory;
-            var shouldInsert = selectedHistory == null ||
-                selectedHistory.ConsumedAt.Date != ConsumedAt.Date;
+            var editingFoodPhosphorusIntakeId = _editingFoodPhosphorusIntakeId;
+            var shouldInsert = !editingFoodPhosphorusIntakeId.HasValue ||
+                (_editingConsumedDate.HasValue && _editingConsumedDate.Value != ConsumedAt.Date);
             long? savedFoodPhosphorusIntakeId = shouldInsert
                 ? null
-                : selectedHistory?.FoodPhosphorusIntakeId;
+                : editingFoodPhosphorusIntakeId;
 
             if (shouldInsert)
             {
@@ -498,7 +507,7 @@ namespace DailyVitals.App.ViewModels
             else
             {
                 _service.Update(
-                    selectedHistory!.FoodPhosphorusIntakeId,
+                    editingFoodPhosphorusIntakeId!.Value,
                     SelectedPerson.PersonId,
                     FoodName.Trim(),
                     phosphorus,
@@ -506,7 +515,7 @@ namespace DailyVitals.App.ViewModels
                     sodiumMg,
                     proteinG,
                     potassiumMg,
-                    selectedHistory.FluidMl,
+                    _editingFluidMl,
                     binders,
                     ConsumedAt,
                     null,

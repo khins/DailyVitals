@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Media;
 
@@ -21,6 +22,18 @@ namespace DailyVitals.App.ViewModels
         private readonly NutritionAnalyticsService _analyticsService = new();
         private readonly PersonService _personService = new();
         private Person? _selectedPerson;
+        private PointCollection _calorieBalancePoints = new();
+        private PointCollection _caloriesInPoints = new();
+        private PointCollection _sodiumUsagePoints = new();
+        private PointCollection _phosphorusUsagePoints = new();
+        private PointCollection _weightPoints = new();
+        private PointCollection _exerciseCaloriesPoints = new();
+        private PointCollection _exerciseRollingPoints = new();
+        private bool _hasCalorieBalanceData;
+        private bool _hasNutrientTargetData;
+        private bool _hasWeightData;
+        private bool _hasExerciseSessionData;
+        private bool _hasMonthlyExerciseData;
 
         public NutritionAnalyticsViewModel()
         {
@@ -31,13 +44,77 @@ namespace DailyVitals.App.ViewModels
         public ObservableCollection<NutritionAnalyticsDailyRow> DailyRows { get; } = new();
         public ObservableCollection<ExerciseAnalyticsMonthlyRow> MonthlyExerciseRows { get; } = new();
         public ObservableCollection<MonthlyExerciseBar> MonthlyExerciseBars { get; } = new();
-        public PointCollection CalorieBalancePoints { get; } = new();
-        public PointCollection CaloriesInPoints { get; } = new();
-        public PointCollection SodiumUsagePoints { get; } = new();
-        public PointCollection PhosphorusUsagePoints { get; } = new();
-        public PointCollection WeightPoints { get; } = new();
-        public PointCollection ExerciseCaloriesPoints { get; } = new();
-        public PointCollection ExerciseRollingPoints { get; } = new();
+        public PointCollection CalorieBalancePoints
+        {
+            get => _calorieBalancePoints;
+            private set => SetProperty(ref _calorieBalancePoints, value);
+        }
+
+        public PointCollection CaloriesInPoints
+        {
+            get => _caloriesInPoints;
+            private set => SetProperty(ref _caloriesInPoints, value);
+        }
+
+        public PointCollection SodiumUsagePoints
+        {
+            get => _sodiumUsagePoints;
+            private set => SetProperty(ref _sodiumUsagePoints, value);
+        }
+
+        public PointCollection PhosphorusUsagePoints
+        {
+            get => _phosphorusUsagePoints;
+            private set => SetProperty(ref _phosphorusUsagePoints, value);
+        }
+
+        public PointCollection WeightPoints
+        {
+            get => _weightPoints;
+            private set => SetProperty(ref _weightPoints, value);
+        }
+
+        public PointCollection ExerciseCaloriesPoints
+        {
+            get => _exerciseCaloriesPoints;
+            private set => SetProperty(ref _exerciseCaloriesPoints, value);
+        }
+
+        public PointCollection ExerciseRollingPoints
+        {
+            get => _exerciseRollingPoints;
+            private set => SetProperty(ref _exerciseRollingPoints, value);
+        }
+
+        public bool HasCalorieBalanceData
+        {
+            get => _hasCalorieBalanceData;
+            private set => SetProperty(ref _hasCalorieBalanceData, value);
+        }
+
+        public bool HasNutrientTargetData
+        {
+            get => _hasNutrientTargetData;
+            private set => SetProperty(ref _hasNutrientTargetData, value);
+        }
+
+        public bool HasWeightData
+        {
+            get => _hasWeightData;
+            private set => SetProperty(ref _hasWeightData, value);
+        }
+
+        public bool HasExerciseSessionData
+        {
+            get => _hasExerciseSessionData;
+            private set => SetProperty(ref _hasExerciseSessionData, value);
+        }
+
+        public bool HasMonthlyExerciseData
+        {
+            get => _hasMonthlyExerciseData;
+            private set => SetProperty(ref _hasMonthlyExerciseData, value);
+        }
 
         public string SummaryText { get; private set; } = "Select a person to view nutrition analytics";
         public string CalorieChartSummary { get; private set; } = string.Empty;
@@ -89,7 +166,9 @@ namespace DailyVitals.App.ViewModels
             var exerciseSessions = _analyticsService.GetExerciseSessions(SelectedPerson.PersonId);
             var monthlyExerciseRows = _analyticsService.GetMonthlyExerciseAnalytics(SelectedPerson.PersonId);
 
-            foreach (var row in rows.OrderByDescending(row => row.Date))
+            foreach (var row in rows
+                .Where(HasVisibleDailyData)
+                .OrderByDescending(row => row.Date))
                 DailyRows.Add(row);
             foreach (var row in monthlyExerciseRows.OrderByDescending(row => row.Month))
                 MonthlyExerciseRows.Add(row);
@@ -101,50 +180,66 @@ namespace DailyVitals.App.ViewModels
 
         private void BuildCharts(List<NutritionAnalyticsDailyRow> rows)
         {
-            var activeRows = rows
-                .Where(row =>
-                    row.CaloriesIn > 0 ||
-                    row.ExerciseCalories > 0 ||
-                    row.SodiumMg > 0 ||
-                    row.NetPhosphorusMg > 0 ||
-                    row.WeightValue != null)
+            var calorieRows = rows
+                .Where(row => row.CaloriesIn > 0 || row.ExerciseCalories > 0)
                 .ToList();
+            HasCalorieBalanceData = calorieRows.Count > 0;
 
-            if (activeRows.Count == 0)
+            if (HasCalorieBalanceData)
             {
-                NotifyChartsChanged();
-                return;
+                BuildSharedPoints(
+                    SmallChartWidth,
+                    ChartHeight,
+                    new List<(IReadOnlyList<decimal> Values, PointCollection Points)>
+                    {
+                        (calorieRows.Select(row => (decimal)row.CalorieBalance).ToList(), CalorieBalancePoints),
+                        (calorieRows.Select(row => (decimal)row.CaloriesIn).ToList(), CaloriesInPoints)
+                    });
             }
 
-            BuildSharedPoints(
-                SmallChartWidth,
-                ChartHeight,
-                new List<(IReadOnlyList<decimal> Values, PointCollection Points)>
-                {
-                    (activeRows.Select(row => (decimal)row.CalorieBalance).ToList(), CalorieBalancePoints),
-                    (activeRows.Select(row => (decimal)row.CaloriesIn).ToList(), CaloriesInPoints)
-                });
+            var nutrientRows = rows
+                .Where(row =>
+                    (row.SodiumMg > 0 && row.SodiumLimitMg > 0) ||
+                    (row.NetPhosphorusMg > 0 && row.PhosphorusLimitMg > 0))
+                .ToList();
+            HasNutrientTargetData = nutrientRows.Count > 0;
 
-            BuildSharedPoints(
-                SmallChartWidth,
-                ChartHeight,
-                new List<(IReadOnlyList<decimal> Values, PointCollection Points)>
-                {
-                    (activeRows.Select(row => row.SodiumLimitMg > 0
-                        ? (decimal)row.SodiumMg / row.SodiumLimitMg.Value * 100m
-                        : 0m).ToList(), SodiumUsagePoints),
-                    (activeRows.Select(row => row.PhosphorusLimitMg > 0
-                        ? row.NetPhosphorusMg / row.PhosphorusLimitMg.Value * 100m
-                        : 0m).ToList(), PhosphorusUsagePoints)
-                });
+            if (HasNutrientTargetData)
+            {
+                BuildSharedPoints(
+                    SmallChartWidth,
+                    ChartHeight,
+                    new List<(IReadOnlyList<decimal> Values, PointCollection Points)>
+                    {
+                        (nutrientRows.Select(row => row.SodiumLimitMg > 0
+                            ? (decimal)row.SodiumMg / row.SodiumLimitMg.Value * 100m
+                            : 0m).ToList(), SodiumUsagePoints),
+                        (nutrientRows.Select(row => row.PhosphorusLimitMg > 0
+                            ? row.NetPhosphorusMg / row.PhosphorusLimitMg.Value * 100m
+                            : 0m).ToList(), PhosphorusUsagePoints)
+                    });
+            }
 
-            var weightRows = activeRows
+            var weightRows = rows
                 .Where(row => row.WeightValue != null)
                 .Select(row => row.WeightValue!.Value)
                 .ToList();
-            BuildPoints(weightRows, WeightPoints, WideChartWidth, WeightChartHeight);
+            HasWeightData = weightRows.Count > 0;
+            if (HasWeightData)
+            {
+                BuildPoints(weightRows, WeightPoints, WideChartWidth, WeightChartHeight);
+            }
 
             NotifyChartsChanged();
+        }
+
+        private static bool HasVisibleDailyData(NutritionAnalyticsDailyRow row)
+        {
+            return row.CaloriesIn > 0 ||
+                row.ExerciseCalories > 0 ||
+                row.SodiumMg > 0 ||
+                row.NetPhosphorusMg > 0 ||
+                row.WeightValue != null;
         }
 
         private void BuildExerciseCharts(
@@ -155,15 +250,20 @@ namespace DailyVitals.App.ViewModels
                 .Select(row => row.CaloriesExpended)
                 .ToList();
             var rolling = BuildRollingAverage(calories, 7);
+            HasExerciseSessionData = exerciseSessions.Count > 0;
+            HasMonthlyExerciseData = monthlyExerciseRows.Count > 0;
 
-            BuildSharedPoints(
-                WideChartWidth,
-                ChartHeight,
-                new List<(IReadOnlyList<decimal> Values, PointCollection Points)>
-                {
-                    (calories, ExerciseCaloriesPoints),
-                    (rolling, ExerciseRollingPoints)
-                });
+            if (HasExerciseSessionData)
+            {
+                BuildSharedPoints(
+                    WideChartWidth,
+                    ChartHeight,
+                    new List<(IReadOnlyList<decimal> Values, PointCollection Points)>
+                    {
+                        (calories, ExerciseCaloriesPoints),
+                        (rolling, ExerciseRollingPoints)
+                    });
+            }
 
             BuildMonthlyBars(monthlyExerciseRows);
             NotifyChartsChanged();
@@ -387,13 +487,18 @@ namespace DailyVitals.App.ViewModels
 
         private void ClearCharts()
         {
-            CalorieBalancePoints.Clear();
-            CaloriesInPoints.Clear();
-            SodiumUsagePoints.Clear();
-            PhosphorusUsagePoints.Clear();
-            WeightPoints.Clear();
-            ExerciseCaloriesPoints.Clear();
-            ExerciseRollingPoints.Clear();
+            CalorieBalancePoints = new PointCollection();
+            CaloriesInPoints = new PointCollection();
+            SodiumUsagePoints = new PointCollection();
+            PhosphorusUsagePoints = new PointCollection();
+            WeightPoints = new PointCollection();
+            ExerciseCaloriesPoints = new PointCollection();
+            ExerciseRollingPoints = new PointCollection();
+            HasCalorieBalanceData = false;
+            HasNutrientTargetData = false;
+            HasWeightData = false;
+            HasExerciseSessionData = false;
+            HasMonthlyExerciseData = false;
             NotifyChartsChanged();
         }
 
@@ -422,6 +527,16 @@ namespace DailyVitals.App.ViewModels
             OnPropertyChanged(nameof(ExerciseStartDurationLabel));
             OnPropertyChanged(nameof(ExerciseCurrentDurationLabel));
             OnPropertyChanged(nameof(MonthlyExerciseSummary));
+        }
+
+        private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(storage, value))
+                return false;
+
+            storage = value;
+            OnPropertyChanged(propertyName);
+            return true;
         }
     }
 

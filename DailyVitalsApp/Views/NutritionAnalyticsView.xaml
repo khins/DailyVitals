@@ -8,6 +8,8 @@
         MinWidth="1040"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
         <Style x:Key="MainMenuButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="220"/>
             <Setter Property="Height" Value="38"/>
@@ -90,7 +92,8 @@
                     </Grid.RowDefinitions>
 
                     <GroupBox Header="Calorie Balance"
-                              Margin="0,0,8,8">
+                              Margin="0,0,8,8"
+                              Visibility="{Binding HasCalorieBalanceData, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <Canvas Width="520"
                                     Height="190"
@@ -119,7 +122,8 @@
 
                     <GroupBox Grid.Column="1"
                               Header="Target Usage"
-                              Margin="8,0,0,8">
+                              Margin="8,0,0,8"
+                              Visibility="{Binding HasNutrientTargetData, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <Canvas Width="520"
                                     Height="190"
@@ -149,7 +153,8 @@
                     <GroupBox Grid.Row="1"
                               Grid.ColumnSpan="2"
                               Header="Weight Trend"
-                              Margin="0,4,0,0">
+                              Margin="0,4,0,0"
+                              Visibility="{Binding HasWeightData, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <Canvas Width="1080"
                                     Height="160"
@@ -186,7 +191,8 @@
                     </Grid.RowDefinitions>
 
                     <GroupBox Header="Calories Burned Per Session"
-                              Margin="0,0,0,8">
+                              Margin="0,0,0,8"
+                              Visibility="{Binding HasExerciseSessionData, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <Canvas Width="1080"
                                     Height="190"
@@ -223,7 +229,8 @@
                     </GroupBox>
 
                     <GroupBox Grid.Row="1"
-                              Header="Total Calories Burned Per Month">
+                              Header="Total Calories Burned Per Month"
+                              Visibility="{Binding HasMonthlyExerciseData, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <Canvas Width="1080"
                                     Height="220"
