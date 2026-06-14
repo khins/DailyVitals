@@ -82,11 +82,20 @@
         </Grid.RowDefinitions>
 
         <!-- PERSON SELECT -->
-        <ComboBox Grid.Row="0"
-                  Width="260"
-                  ItemsSource="{Binding Persons}"
-                  SelectedItem="{Binding SelectedPerson}"
-                  DisplayMemberPath="FullName"/>
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center">
+            <ComboBox Width="260"
+                      ItemsSource="{Binding Persons}"
+                      SelectedItem="{Binding SelectedPerson}"
+                      DisplayMemberPath="FullName"/>
+            <Button Width="90"
+                    Height="32"
+                    Margin="10,0,0,0"
+                    Content="People"
+                    Style="{StaticResource MainMenuButtonStyle}"
+                    Click="People_Click"/>
+        </StackPanel>
 
         <!-- DASHBOARD CARDS -->
         <UniformGrid Grid.Row="1"

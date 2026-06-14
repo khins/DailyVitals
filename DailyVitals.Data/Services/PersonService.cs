@@ -2,6 +2,7 @@
 using Npgsql;
 using DailyVitals.Domain.Models;
 using DailyVitals.Data.Configuration;
+using System;
 
 namespace DailyVitals.Data.Services
 {
@@ -41,6 +42,58 @@ namespace DailyVitals.Data.Services
         public List<Person> GetPeople()
         {
             return GetAllPersons();
+        }
+
+        public long InsertPerson(string firstName, string lastName, decimal? heightFt)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsurePersonColumns(conn);
+
+            const string sql = @"
+                INSERT INTO public.person (
+                    first_name,
+                    last_name,
+                    height_ft
+                )
+                VALUES (
+                    TRIM(@first_name),
+                    TRIM(@last_name),
+                    @height_ft
+                )
+                RETURNING person_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("first_name", firstName);
+            cmd.Parameters.AddWithValue("last_name", lastName);
+            cmd.Parameters.AddWithValue("height_ft", (object?)heightFt ?? DBNull.Value);
+
+            var result = cmd.ExecuteScalar();
+            if (result is null or DBNull)
+                throw new Exception("Person insert failed. No ID returned.");
+
+            return Convert.ToInt64(result);
+        }
+
+        public void UpdatePerson(long personId, string firstName, string lastName, decimal? heightFt)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsurePersonColumns(conn);
+
+            const string sql = @"
+                UPDATE public.person
+                SET first_name = TRIM(@first_name),
+                    last_name = TRIM(@last_name),
+                    height_ft = @height_ft
+                WHERE person_id = @person_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("first_name", firstName);
+            cmd.Parameters.AddWithValue("last_name", lastName);
+            cmd.Parameters.AddWithValue("height_ft", (object?)heightFt ?? DBNull.Value);
+            cmd.ExecuteNonQuery();
         }
 
         private static void EnsurePersonColumns(NpgsqlConnection conn)
