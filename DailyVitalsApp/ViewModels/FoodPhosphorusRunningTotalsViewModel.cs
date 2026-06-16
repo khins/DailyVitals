@@ -62,6 +62,14 @@ namespace DailyVitals.App.ViewModels
                 return;
             }
 
+            var today = DateTime.Today;
+            var todayRows = rows
+                .Where(row => row.IntakeDate.Date == today)
+                .ToList();
+            var todayTotals = todayRows.Count == 0
+                ? new DailyNutritionTotals()
+                : BuildDailyTotals(todayRows);
+
             var latestDay = rows
                 .GroupBy(row => row.IntakeDate)
                 .OrderByDescending(group => group.Key)
@@ -69,7 +77,7 @@ namespace DailyVitals.App.ViewModels
             var latestTotals = BuildDailyTotals(latestDay);
 
             SummaryText = $"{latestDay.Key:d}: {latestTotals.RawPhosphorusMg} mg phosphorus, {latestTotals.NetPhosphorusMg:F0} net mg phosphorus, {latestTotals.Calories} calories, {latestTotals.SodiumMg} mg sodium";
-            LoadNutritionGoal(personId, latestDay.Key, latestTotals);
+            LoadNutritionGoal(personId, today, todayTotals);
 
             foreach (var month in rows
                 .GroupBy(row => new DateTime(row.IntakeDate.Year, row.IntakeDate.Month, 1))

@@ -55,6 +55,8 @@ namespace DailyVitals.App.ViewModels
 
         public bool IsEditMode { get; private set; }
         public long? EditingExerciseSessionId { get; private set; }
+        private DateTime? _createdAt;
+        private DateTime? _updatedAt;
 
         private string _durationMinutes = string.Empty;
         public string DurationMinutes
@@ -100,6 +102,20 @@ namespace DailyVitals.App.ViewModels
             }
         }
 
+        public string AuditTimestampText
+        {
+            get
+            {
+                if (_updatedAt.HasValue)
+                    return $"Updated at: {_updatedAt.Value:g}";
+
+                if (_createdAt.HasValue)
+                    return $"Created at: {_createdAt.Value:g}";
+
+                return string.Empty;
+            }
+        }
+
         public ExerciseEntryViewModel()
         {
             foreach (var person in _personService.GetPeople())
@@ -140,6 +156,11 @@ namespace DailyVitals.App.ViewModels
             SelectedIntensity = SelectedSession.Intensity;
             Notes = SelectedSession.Notes ?? string.Empty;
             StartTime = SelectedSession.StartTime;
+            EditingExerciseSessionId = SelectedSession.ExerciseSessionId;
+            _createdAt = SelectedSession.CreatedAt;
+            _updatedAt = SelectedSession.UpdatedAt;
+            IsEditMode = true;
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
 
         public void DeleteSelected()
@@ -203,19 +224,38 @@ namespace DailyVitals.App.ViewModels
                 }
             }
 
-            _service.InsertExerciseSession(
-                SelectedPerson.PersonId,
-                SelectedExercise.ExerciseTypeId,
-                StartTime,
-                durationMinutes,
-                caloriesExpended,
-                SelectedIntensity,
-                Notes,
-                Environment.UserName
-            );
+            var editingExerciseSessionId = EditingExerciseSessionId;
+            if (editingExerciseSessionId.HasValue)
+            {
+                _service.UpdateExerciseSession(
+                    editingExerciseSessionId.Value,
+                    SelectedPerson.PersonId,
+                    SelectedExercise.ExerciseTypeId,
+                    StartTime,
+                    durationMinutes,
+                    caloriesExpended,
+                    SelectedIntensity,
+                    Notes,
+                    Environment.UserName);
+            }
+            else
+            {
+                _service.InsertExerciseSession(
+                    SelectedPerson.PersonId,
+                    SelectedExercise.ExerciseTypeId,
+                    StartTime,
+                    durationMinutes,
+                    caloriesExpended,
+                    SelectedIntensity,
+                    Notes,
+                    Environment.UserName);
+            }
 
             LoadHistory();
-            ClearEntry();
+            if (editingExerciseSessionId.HasValue)
+                SelectedSession = History.FirstOrDefault(session => session.ExerciseSessionId == editingExerciseSessionId.Value);
+            else
+                ClearEntry();
         }
 
         private void ClearEntry()
@@ -225,6 +265,11 @@ namespace DailyVitals.App.ViewModels
             Notes = string.Empty;
             SelectedIntensity = "Moderate";
             StartTime = DateTime.Today;
+            EditingExerciseSessionId = null;
+            IsEditMode = false;
+            _createdAt = null;
+            _updatedAt = null;
+            OnPropertyChanged(nameof(AuditTimestampText));
         }
     }
 }

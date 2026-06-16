@@ -58,6 +58,7 @@ namespace DailyVitals.Data.Services
             {
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
+                EnsureExerciseSessionColumns(conn);
 
                 using var cmd = new NpgsqlCommand(
                     "CALL sp_insert_exercise_session(" +
@@ -88,6 +89,7 @@ namespace DailyVitals.Data.Services
             {
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
+                EnsureExerciseSessionColumns(conn);
 
                 using var cmd = new NpgsqlCommand(
                     "CALL sp_insert_exercise_session(" +
@@ -139,16 +141,31 @@ namespace DailyVitals.Data.Services
 
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
+                EnsureExerciseSessionColumns(conn);
 
-                using var cmd = new NpgsqlCommand(
-                    "SELECT * FROM sp_get_exercise_history(@p_person_id)", conn);
+                const string sql = @"
+                    SELECT
+                        es.exercise_session_id,
+                        es.exercise_type_id,
+                        COALESCE(et.exercise_name, 'Exercise') AS exercise_name,
+                        es.start_time,
+                        es.duration_minutes,
+                        es.calories_expended,
+                        es.intensity,
+                        es.notes,
+                        es.created_at,
+                        es.updated_at
+                    FROM public.exercise_session es
+                    LEFT JOIN public.exercise_type et
+                        ON et.exercise_type_id = es.exercise_type_id
+                    WHERE es.person_id = @p_person_id
+                    ORDER BY es.start_time DESC, es.exercise_session_id DESC;";
+
+                using var cmd = new NpgsqlCommand(sql, conn);
 
                 cmd.Parameters.AddWithValue("p_person_id", personId);
 
                 using var reader = cmd.ExecuteReader();
-                bool hasCaloriesExpended = reader.FieldCount > 7 &&
-                    string.Equals(reader.GetName(5), "calories_expended", StringComparison.OrdinalIgnoreCase);
-
                 while (reader.Read())
                 {
                     list.Add(new ExerciseSession
@@ -158,17 +175,61 @@ namespace DailyVitals.Data.Services
                         ExerciseName = reader.GetString(2),
                         StartTime = reader.GetDateTime(3),
                         DurationMinutes = reader.GetDecimal(4),
-                        CaloriesExpended = hasCaloriesExpended && !reader.IsDBNull(5)
+                        CaloriesExpended = !reader.IsDBNull(5)
                             ? reader.GetDecimal(5)
                             : null,
-                        Intensity = reader.GetString(hasCaloriesExpended ? 6 : 5),
-                        Notes = reader.IsDBNull(hasCaloriesExpended ? 7 : 6)
+                        Intensity = reader.GetString(6),
+                        Notes = reader.IsDBNull(7)
                             ? null
-                            : reader.GetString(hasCaloriesExpended ? 7 : 6)
+                            : reader.GetString(7),
+                        CreatedAt = reader.GetDateTime(8),
+                        UpdatedAt = reader.IsDBNull(9) ? null : reader.GetDateTime(9)
                     });
                 }
 
                 return list;
+            }
+
+            public void UpdateExerciseSession(
+                long exerciseSessionId,
+                long personId,
+                long exerciseTypeId,
+                DateTime startTime,
+                decimal durationMinutes,
+                decimal? caloriesExpended,
+                string intensity,
+                string notes,
+                string enteredBy)
+            {
+                using var conn = DbConnectionFactory.Create();
+                conn.Open();
+                EnsureExerciseSessionColumns(conn);
+
+                const string sql = @"
+                    UPDATE public.exercise_session
+                    SET person_id = @person_id,
+                        exercise_type_id = @exercise_type_id,
+                        start_time = @start_time,
+                        duration_minutes = @duration_minutes,
+                        calories_expended = @calories_expended,
+                        intensity = @intensity,
+                        notes = @notes,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE exercise_session_id = @exercise_session_id;";
+
+                using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("exercise_session_id", exerciseSessionId);
+                cmd.Parameters.AddWithValue("person_id", personId);
+                cmd.Parameters.AddWithValue("exercise_type_id", exerciseTypeId);
+                cmd.Parameters.AddWithValue("start_time", startTime);
+                cmd.Parameters.AddWithValue("duration_minutes", durationMinutes);
+                cmd.Parameters.Add("calories_expended", NpgsqlDbType.Numeric).Value =
+                    (object?)caloriesExpended ?? DBNull.Value;
+                cmd.Parameters.Add("intensity", NpgsqlDbType.Varchar).Value = intensity;
+                cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("entered_by", enteredBy);
+
+                cmd.ExecuteNonQuery();
             }
 
             public void DeleteExerciseSession(long exerciseSessionId, string enteredBy)
@@ -220,6 +281,17 @@ namespace DailyVitals.Data.Services
                 cmd.Parameters.AddWithValue("person_id", personId);
 
                 return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+
+            private static void EnsureExerciseSessionColumns(NpgsqlConnection conn)
+            {
+                const string sql = @"
+                    ALTER TABLE public.exercise_session
+                        ADD COLUMN IF NOT EXISTS created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;";
+
+                using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.ExecuteNonQuery();
             }
 
         }
