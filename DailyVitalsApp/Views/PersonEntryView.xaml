@@ -171,17 +171,15 @@
                     Style="{StaticResource MainMenuButtonStyle}"
                     Click="New_Click"/>
 
-            <Button Grid.Column="1"
-                    Width="100"
-                    Height="32"
-                    HorizontalAlignment="Center"
-                    Content="Delete"
-                    Style="{StaticResource MainMenuButtonStyle}"
-                    IsEnabled="{Binding CanDelete}"
-                    Click="Delete_Click"/>
-
             <StackPanel Grid.Column="2"
                         Orientation="Horizontal">
+                <Button Width="100"
+                        Height="32"
+                        Margin="0,0,10,0"
+                        Content="Delete"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        IsEnabled="{Binding CanDelete}"
+                        Click="Delete_Click"/>
                 <Button Width="100"
                         Height="32"
                         Margin="0,0,10,0"
