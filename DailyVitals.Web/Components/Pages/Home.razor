@@ -1,0 +1,119 @@
+@page "/"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyVitals.Web.Services
+@inject NavigationManager Navigation
+@inject LocalLoginService LoginService
+@inject LocalLoginSession LoginSession
+
+<PageTitle>Sign in | DailyVitals</PageTitle>
+
+<section class="login-page">
+    <div class="login-visual" aria-hidden="true">
+        <div class="vitals-card">
+            <div class="vitals-card__header">
+                <span>Today</span>
+                <strong>Stable</strong>
+            </div>
+            <div class="pulse-line"></div>
+            <div class="metric-grid">
+                <div>
+                    <span>BP</span>
+                    <strong>118/76</strong>
+                </div>
+                <div>
+                    <span>Glucose</span>
+                    <strong>96</strong>
+                </div>
+                <div>
+                    <span>Weight</span>
+                    <strong>182.4</strong>
+                </div>
+                <div>
+                    <span>Exercise</span>
+                    <strong>42m</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-panel">
+        <div class="brand-row">
+            <div class="brand-mark" aria-hidden="true">DV</div>
+            <div>
+                <p class="eyebrow">DailyVitals Web</p>
+                <h1>Sign in</h1>
+            </div>
+        </div>
+
+        <EditForm Model="_model" OnValidSubmit="SignIn" class="login-form">
+            <DataAnnotationsValidator />
+
+            <div class="field-group">
+                <label for="user-name">Email or username</label>
+                <InputText id="user-name" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
+                <ValidationMessage For="() => _model.UserName" />
+            </div>
+
+            <div class="field-group">
+                <label for="password">Password</label>
+                <InputText id="password" type="password" class="form-input" autocomplete="current-password" @bind-Value="_model.Password" />
+                <ValidationMessage For="() => _model.Password" />
+            </div>
+
+            <div class="form-options">
+                <label class="checkbox-row">
+                    <InputCheckbox @bind-Value="_model.RememberMe" />
+                    <span>Remember this device</span>
+                </label>
+                <a href="account-recovery">Forgot password?</a>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="login-message" role="status">@_message</div>
+            }
+
+            <button type="submit" class="primary-button">Sign in</button>
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    private readonly LoginModel _model = new()
+    {
+        UserName = "Kevin"
+    };
+
+    private string? _message;
+
+    private void SignIn()
+    {
+        if (!LoginService.IsConfigured)
+        {
+            _message = "Local sign-in is not configured yet. Add DailyVitalsLogin username and password settings.";
+            return;
+        }
+
+        if (!LoginService.ValidateCredentials(_model.UserName, _model.Password))
+        {
+            _message = "The username or password is incorrect.";
+            return;
+        }
+
+        _message = null;
+        LoginSession.SignIn(_model.UserName!.Trim());
+        Navigation.NavigateTo("/dashboard");
+    }
+
+    private sealed class LoginModel
+    {
+        [Required(ErrorMessage = "Enter your email or username.")]
+        public string? UserName { get; set; }
+
+        [Required(ErrorMessage = "Enter your password.")]
+        public string? Password { get; set; }
+
+        public bool RememberMe { get; set; } = true;
+    }
+}

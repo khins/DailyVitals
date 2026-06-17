@@ -42,4 +42,5 @@
   <Folder Name="/Presentation/">
     <Project Path="DailyVitalsApp/DailyVitals.App.csproj" />
   </Folder>
+  <Project Path="DailyVitals.Web/DailyVitals.Web.csproj" />
 </Solution>
