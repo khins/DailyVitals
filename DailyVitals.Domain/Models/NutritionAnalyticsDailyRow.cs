@@ -9,6 +9,7 @@ namespace DailyVitals.Domain.Models
         public int ExerciseCalories { get; set; }
         public int CalorieBalance { get; set; }
         public int SodiumMg { get; set; }
+        public int PhosphorusMg { get; set; }
         public decimal NetPhosphorusMg { get; set; }
         public decimal? WeightValue { get; set; }
         public int? CalorieLimit { get; set; }

@@ -3,6 +3,7 @@ using System;
 using System.Configuration;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -66,7 +67,16 @@ namespace DailyVitals.Data.Services
             var responseText = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-                throw new InvalidOperationException($"OpenAI estimate failed: {(int)response.StatusCode} {response.ReasonPhrase}. {responseText}");
+            {
+                if (IsInsufficientQuotaResponse(response.StatusCode, responseText))
+                {
+                    throw new InvalidOperationException(
+                        "AI Lookup is configured, but the OpenAI project does not currently have available billing quota. " +
+                        "Check the OpenAI API billing, credits, or project budget settings, then try again.");
+                }
+
+                throw new InvalidOperationException($"OpenAI estimate failed: {(int)response.StatusCode} {response.ReasonPhrase}.");
+            }
 
             var estimateJson = ExtractResponseText(responseText);
             var estimate = JsonSerializer.Deserialize<FoodPhosphorusEstimate>(
@@ -131,6 +141,12 @@ namespace DailyVitals.Data.Services
                 return value;
 
             return ConfigurationManager.AppSettings[appSettingKey];
+        }
+
+        private static bool IsInsufficientQuotaResponse(HttpStatusCode statusCode, string responseText)
+        {
+            return statusCode == HttpStatusCode.TooManyRequests &&
+                responseText.Contains("insufficient_quota", StringComparison.OrdinalIgnoreCase);
         }
 
         private sealed class OpenAiResponse

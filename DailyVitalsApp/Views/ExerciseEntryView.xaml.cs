@@ -24,6 +24,11 @@ namespace DailyVitals.App.Views
             _vm.LoadHistory();
         }
 
+        private void New_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.BeginNew();
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             try
