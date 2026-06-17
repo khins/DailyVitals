@@ -1,0 +1,39 @@
+@page "/dashboard"
+@rendermode InteractiveServer
+@using DailyVitals.Web.Services
+@inject NavigationManager Navigation
+@inject LocalLoginSession LoginSession
+
+<PageTitle>Dashboard | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <header class="dashboard-header">
+            <div>
+                <p class="eyebrow">DailyVitals Web</p>
+                <h1>Dashboard</h1>
+            </div>
+            <button type="button" class="secondary-link" @onclick="SignOut">Sign out</button>
+        </header>
+
+        <div class="empty-state">
+            <h2>Web dashboard comes next</h2>
+            <p>The Blazor Server app is running, the login screen is in place, and this route is ready for the first vitals module.</p>
+        </div>
+    </section>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        if (!LoginSession.IsSignedIn)
+            Navigation.NavigateTo("/");
+    }
+
+    private void SignOut()
+    {
+        LoginSession.SignOut();
+        Navigation.NavigateTo("/");
+    }
+}
