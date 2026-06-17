@@ -332,6 +332,9 @@
                 <DataGridTextColumn Header="Sodium (mg)"
                                     Width="105"
                                     Binding="{Binding SodiumMg}"/>
+                <DataGridTextColumn Header="Phos Actual (mg)"
+                                    Width="120"
+                                    Binding="{Binding PhosphorusMg}"/>
                 <DataGridTextColumn Header="Net Phos (mg)"
                                     Width="115"
                                     Binding="{Binding NetPhosphorusMg, StringFormat={}{0:F0}}"/>

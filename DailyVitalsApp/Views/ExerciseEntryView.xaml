@@ -240,35 +240,49 @@
         </GroupBox>
 
         <!-- BUTTONS -->
-        <StackPanel Grid.Row="3"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right">
-            <Button Content="Save"
-                    Width="100"
-                    Height="32"
-                    Margin="0,0,10,0"
-                    Style="{StaticResource MainMenuButtonStyle}"
-                    Click="Save_Click"/>
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-            <Button Content="Delete"
-                    Width="100"
-                    Height="32"
-                    Margin="0,0,10,0"
-                    Style="{StaticResource MainMenuButtonStyle}"
-                    Click="Delete_Click"/>
-
-            <Button Content="Edit Selected"
-                    Width="120"
-                    Height="32"
-                    Margin="0,0,10,0"
-                    Style="{StaticResource MainMenuButtonStyle}"
-                    Click="Edit_Click"/>
-
-            <Button Content="Close"
+            <Button Grid.Column="0"
+                    Content="New"
                     Width="100"
                     Height="32"
                     Style="{StaticResource MainMenuButtonStyle}"
-                    Click="Close_Click"/>
-        </StackPanel>
+                    Click="New_Click"/>
+
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal">
+                <Button Content="Save"
+                        Width="100"
+                        Height="32"
+                        Margin="0,0,10,0"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="Save_Click"/>
+
+                <Button Content="Delete"
+                        Width="100"
+                        Height="32"
+                        Margin="0,0,10,0"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="Delete_Click"/>
+
+                <Button Content="Edit Selected"
+                        Width="120"
+                        Height="32"
+                        Margin="0,0,10,0"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="Edit_Click"/>
+
+                <Button Content="Close"
+                        Width="100"
+                        Height="32"
+                        Style="{StaticResource MainMenuButtonStyle}"
+                        Click="Close_Click"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

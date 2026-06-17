@@ -33,6 +33,7 @@ namespace DailyVitals.Data.Services
                         f.consumed_at::date AS day,
                         COALESCE(SUM(f.calories), 0)::int AS calories_in,
                         COALESCE(SUM(f.sodium_mg), 0)::int AS sodium_mg,
+                        COALESCE(SUM(f.phosphorus_mg), 0)::int AS phosphorus_mg,
                         COALESCE(SUM(GREATEST(
                             f.phosphorus_mg - (COALESCE(f.binders, 0) * bc.mg_per_pill * bc.binding_efficiency),
                             0
@@ -67,6 +68,7 @@ namespace DailyVitals.Data.Services
                     COALESCE(ed.exercise_calories, 0) AS exercise_calories,
                     COALESCE(fd.calories_in, 0) - COALESCE(ed.exercise_calories, 0) AS calorie_balance,
                     COALESCE(fd.sodium_mg, 0) AS sodium_mg,
+                    COALESCE(fd.phosphorus_mg, 0) AS phosphorus_mg,
                     COALESCE(fd.net_phosphorus_mg, 0) AS net_phosphorus_mg,
                     wd.weight_value,
                     ng.calorie_limit,
@@ -100,11 +102,12 @@ namespace DailyVitals.Data.Services
                     ExerciseCalories = reader.GetInt32(2),
                     CalorieBalance = reader.GetInt32(3),
                     SodiumMg = reader.GetInt32(4),
-                    NetPhosphorusMg = reader.GetDecimal(5),
-                    WeightValue = reader.IsDBNull(6) ? null : reader.GetDecimal(6),
-                    CalorieLimit = reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                    SodiumLimitMg = reader.IsDBNull(8) ? null : reader.GetInt32(8),
-                    PhosphorusLimitMg = reader.IsDBNull(9) ? null : reader.GetInt32(9)
+                    PhosphorusMg = reader.GetInt32(5),
+                    NetPhosphorusMg = reader.GetDecimal(6),
+                    WeightValue = reader.IsDBNull(7) ? null : reader.GetDecimal(7),
+                    CalorieLimit = reader.IsDBNull(8) ? null : reader.GetInt32(8),
+                    SodiumLimitMg = reader.IsDBNull(9) ? null : reader.GetInt32(9),
+                    PhosphorusLimitMg = reader.IsDBNull(10) ? null : reader.GetInt32(10)
                 });
             }
 

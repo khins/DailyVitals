@@ -144,6 +144,12 @@ namespace DailyVitals.App.ViewModels
             LoadSelectedSession();
         }
 
+        public void BeginNew()
+        {
+            SelectedSession = null;
+            ClearEntry();
+        }
+
         private void LoadSelectedSession()
         {
             if (SelectedSession == null)
