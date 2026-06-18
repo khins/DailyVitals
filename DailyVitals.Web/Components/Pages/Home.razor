@@ -87,6 +87,12 @@
 
     private string? _message;
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && LoginSession.IsSignedIn)
+            Navigation.NavigateTo("/dashboard", replace: true);
+    }
+
     private void SignIn()
     {
         if (!LoginService.IsConfigured)
@@ -103,7 +109,7 @@
 
         _message = null;
         LoginSession.SignIn(_model.UserName!.Trim());
-        Navigation.NavigateTo("/dashboard");
+        Navigation.NavigateTo("/dashboard", replace: true);
     }
 
     private sealed class LoginModel
