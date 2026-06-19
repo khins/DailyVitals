@@ -176,6 +176,12 @@ h1 {
     font-weight: 700;
 }
 
+.field-hint {
+    margin: -2px 0 0;
+    color: #5d6a68;
+    font-size: 0.88rem;
+}
+
 .form-input {
     width: 100%;
     min-height: 46px;
@@ -773,6 +779,138 @@ h1 {
     gap: 12px;
 }
 
+.weight-number-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 120px;
+    gap: 12px;
+}
+
+.exercise-number-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.nutrition-entry-grid {
+    grid-template-columns: minmax(420px, 0.45fr) minmax(0, 0.55fr);
+}
+
+.food-lookup-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.estimate-action {
+    min-height: 46px;
+}
+
+.nutrition-number-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.nutrition-notes-input {
+    min-height: 96px;
+}
+
+.table-search {
+    margin-top: 16px;
+}
+
+.nutrition-table-wrap {
+    margin-top: 14px;
+    max-height: 480px;
+}
+
+.advanced-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0 10px;
+}
+
+.advanced-toggle-row span {
+    color: #5d6a68;
+    font-size: 0.9rem;
+}
+
+.help-icon-button {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #c9d6d3;
+    border-radius: 50%;
+    background: #f6f9f8;
+    color: #184652;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.help-icon-button:hover,
+.help-icon-button:focus-visible {
+    border-color: #184652;
+    outline: none;
+}
+
+.inline-toast {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    border: 1px solid #cfe0dc;
+    border-radius: 8px;
+    padding: 11px 12px;
+    background: #e7f5ed;
+    color: #25553b;
+    font-weight: 700;
+}
+
+.inline-toast button {
+    border: 0;
+    background: transparent;
+    color: #184652;
+    cursor: pointer;
+    font-weight: 850;
+}
+
+.bmi-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: #f6f9f8;
+}
+
+.bmi-panel span {
+    font-weight: 800;
+}
+
+.bmi-panel--ok {
+    border-color: #bee0ca;
+    background: #e1f4e8;
+    color: #23623f;
+}
+
+.bmi-panel--watch {
+    border-color: #ead9ad;
+    background: #fff4d8;
+    color: #80611d;
+}
+
+.bmi-panel--high {
+    border-color: #e3b5b7;
+    background: #f8dddd;
+    color: #8f2329;
+}
+
 .notes-input {
     min-height: 116px;
     resize: vertical;
@@ -972,7 +1110,9 @@ h1 {
         grid-template-columns: 1fr;
     }
 
-    .bp-number-grid {
+    .bp-number-grid,
+    .weight-number-grid,
+    .exercise-number-grid {
         grid-template-columns: 1fr;
     }
 

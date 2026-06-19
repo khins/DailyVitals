@@ -104,6 +104,24 @@ namespace DailyVitals.Data.Services
             cmd.ExecuteNonQuery();
         }
 
+        public bool DeleteWeightForPerson(long personId, long weightId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureWeightColumns(conn);
+
+            const string sql = @"
+                DELETE FROM public.weight
+                WHERE weight_id = @weight_id
+                  AND person_id = @person_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("weight_id", weightId);
+
+            return cmd.ExecuteNonQuery() == 1;
+        }
+
         public void UpdateWeight(
                 long weightId,
                 decimal weightValue,
@@ -129,6 +147,40 @@ namespace DailyVitals.Data.Services
 
             cmd.ExecuteNonQuery();
             SetUpdatedAt(conn, weightId);
+        }
+
+        public bool UpdateWeightForPerson(
+                long personId,
+                long weightId,
+                decimal weightValue,
+                string weightUnit,
+                DateTime readingTime,
+                string notes,
+                string enteredBy)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureWeightColumns(conn);
+
+            const string sql = @"
+                UPDATE public.weight
+                SET weight_value = @weight_value,
+                    weight_unit = @weight_unit,
+                    reading_time = @reading_time,
+                    notes = @notes,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE weight_id = @weight_id
+                  AND person_id = @person_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("weight_id", weightId);
+            cmd.Parameters.AddWithValue("weight_value", weightValue);
+            cmd.Parameters.AddWithValue("weight_unit", weightUnit);
+            cmd.Parameters.AddWithValue("reading_time", readingTime);
+            cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
+
+            return cmd.ExecuteNonQuery() == 1;
         }
 
         public WeightReading? GetLatestForPerson(long personId)

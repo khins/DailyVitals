@@ -797,5 +797,23 @@ namespace DailyVitals.Data.Services
 
             cmd.ExecuteNonQuery();
         }
+
+        public bool DeleteForPerson(long personId, long foodPhosphorusIntakeId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureFoodPhosphorusIntakeColumns(conn);
+
+            const string sql = @"
+                DELETE FROM public.food_phosphorus_intake
+                WHERE person_id = @person_id
+                  AND food_phosphorus_intake_id = @food_phosphorus_intake_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("food_phosphorus_intake_id", foodPhosphorusIntakeId);
+
+            return cmd.ExecuteNonQuery() == 1;
+        }
     }
 }

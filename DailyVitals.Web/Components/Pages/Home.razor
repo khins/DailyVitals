@@ -46,12 +46,12 @@
             </div>
         </div>
 
-        <EditForm Model="_model" OnValidSubmit="SignIn" class="login-form">
+        <EditForm Model="_model" FormName="sign-in-form" OnValidSubmit="SignIn" class="login-form">
             <DataAnnotationsValidator />
 
             <div class="field-group">
-                <label for="user-name">Email or username</label>
-                <InputText id="user-name" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
+                <label for="user-name">Email</label>
+                <InputText id="user-name" type="email" class="form-input" autocomplete="email" @bind-Value="_model.UserName" />
                 <ValidationMessage For="() => _model.UserName" />
             </div>
 
@@ -83,7 +83,7 @@
 @code {
     private readonly LoginModel _model = new()
     {
-        UserName = "Kevin"
+        UserName = string.Empty
     };
 
     private string? _message;
@@ -98,14 +98,14 @@
     {
         if (!LoginService.IsConfigured)
         {
-            _message = "Local sign-in is not configured yet. Add DailyVitalsLogin username and password settings.";
+            _message = "Local sign-in is not configured yet. Add DailyVitalsLogin email and password settings.";
             return;
         }
 
         var loginUser = LoginService.ValidateLogin(_model.UserName, _model.Password);
         if (loginUser is null)
         {
-            _message = "The username or password is incorrect.";
+            _message = "The email or password is incorrect.";
             return;
         }
 
@@ -122,7 +122,8 @@
 
     private sealed class LoginModel
     {
-        [Required(ErrorMessage = "Enter your email or username.")]
+        [Required(ErrorMessage = "Enter your email.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string? UserName { get; set; }
 
         [Required(ErrorMessage = "Enter your password.")]

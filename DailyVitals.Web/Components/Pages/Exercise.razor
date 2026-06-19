@@ -1,0 +1,599 @@
+@page "/exercise"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyVitals.Data.Services
+@using DailyVitals.Data.Services.DailyVitals.App.Services
+@using DailyVitals.Domain.Models
+@using DailyVitals.Domain.Models.Calculations
+@using DailyVitals.Web.Services
+@inject ExerciseService ExerciseService
+@inject WeightService WeightService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Exercise | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
+            </div>
+
+            <nav class="rail-nav">
+                <a href="dashboard">Dashboard</a>
+                <a href="blood-pressure">Blood Pressure</a>
+                <a href="blood-glucose">Glucose</a>
+                <a href="weight">Weight</a>
+                <a class="is-active" href="exercise">Exercise</a>
+                <a href="nutrition">Nutrition</a>
+                <a href="labs">Kidney Labs</a>
+            </nav>
+
+            <a class="rail-profile" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Exercise</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Person</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                    <button type="button" class="primary-action" @onclick="BeginNewSession">New Session</button>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <section class="status-band" aria-label="Current exercise summary">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>@ExerciseSummary</strong>
+                    <p>@CaloriesSummary</p>
+                </div>
+                <div>
+                    <span>Latest session</span>
+                    <strong>@LatestSessionText</strong>
+                </div>
+            </section>
+
+            <section class="entry-grid">
+                <article class="dashboard-card entry-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>@(_editingId.HasValue ? "Edit Session" : "New Session")</span>
+                            <h2>Exercise Details</h2>
+                        </div>
+                    </div>
+
+                    <EditForm Model="_form" FormName="exercise-entry-form" OnValidSubmit="SaveSession" class="bp-form">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-row">
+                            <label for="start-time">Date</label>
+                            <input id="start-time" class="form-input" type="datetime-local" value="@_startTimeText" @onchange="SetStartTime" />
+                        </div>
+
+                        <div class="field-group">
+                            <label for="exercise-type">Exercise</label>
+                            <InputSelect id="exercise-type" class="form-input" @bind-Value="_form.ExerciseTypeId">
+                                <option value="">Select exercise</option>
+                                @foreach (var exerciseType in _exerciseTypes)
+                                {
+                                    <option value="@exerciseType.ExerciseTypeId">@exerciseType.ExerciseName</option>
+                                }
+                                <option value="@OtherExerciseTypeId">Other</option>
+                            </InputSelect>
+                            <ValidationMessage For="() => _form.ExerciseTypeId" />
+                        </div>
+
+                        @if (IsOtherExerciseSelected)
+                        {
+                            <div class="field-group">
+                                <label for="other-exercise">Other Exercise</label>
+                                <InputText id="other-exercise" class="form-input" @bind-Value="_form.OtherExerciseName" />
+                                <p class="field-hint">Existing exercise names are checked before a new option is added.</p>
+                            </div>
+                        }
+
+                        <div class="exercise-number-grid">
+                            <div class="field-group">
+                                <label for="duration">Duration (min)</label>
+                                <InputNumber id="duration" class="form-input" @bind-Value="_form.DurationMinutes" />
+                                <ValidationMessage For="() => _form.DurationMinutes" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="intensity">Intensity</label>
+                                <InputSelect id="intensity" class="form-input" @bind-Value="_form.Intensity">
+                                    <option value="Low">Low</option>
+                                    <option value="Moderate">Moderate</option>
+                                    <option value="High">High</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+
+                        <div class="advanced-toggle-row">
+                            <button type="button" class="secondary-link" @onclick="ToggleAdvancedCalories">
+                                @(_showAdvancedCalories ? "Hide Advanced" : "Advanced")
+                            </button>
+                            <span>@CaloriesHelpText</span>
+                            <button type="button" class="help-icon-button" aria-label="Calories estimate note" @onclick="ShowCaloriesTip">?</button>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_caloriesTip))
+                        {
+                            <div class="inline-toast" role="status">
+                                <span>@_caloriesTip</span>
+                                <button type="button" aria-label="Dismiss calories estimate note" @onclick="DismissCaloriesTip">Close</button>
+                            </div>
+                        }
+
+                        @if (_showAdvancedCalories)
+                        {
+                            <div class="field-group">
+                                <label for="calories">Calories expended</label>
+                                <InputNumber id="calories" class="form-input" @bind-Value="_form.CaloriesExpended" />
+                            </div>
+                        }
+
+                        <div class="field-group">
+                            <label for="notes">Notes</label>
+                            <InputTextArea id="notes" class="form-input notes-input" @bind-Value="_form.Notes" />
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(AuditText))
+                        {
+                            <p class="audit-text">@AuditText</p>
+                        }
+
+                        <div class="form-command-row">
+                            <button type="button" class="secondary-link" @onclick="BeginNewSession">New</button>
+                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="submit" class="primary-action">Save</button>
+                        </div>
+                    </EditForm>
+                </article>
+
+                <article class="dashboard-card history-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>History</span>
+                            <h2>Recent Sessions</h2>
+                        </div>
+                        <strong>@_history.Count entries</strong>
+                    </div>
+
+                    @if (_history.Count == 0)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>No sessions yet</h2>
+                            <p>Save an exercise session to start this person's history.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="data-table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Exercise</th>
+                                        <th>Minutes</th>
+                                        <th>Calories</th>
+                                        <th>Intensity</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var session in _history)
+                                    {
+                                        <tr class="@(session.ExerciseSessionId == _editingId ? "is-selected" : null)" @onclick="() => SelectSession(session)">
+                                            <td>@session.StartTime.ToString("M/d/yyyy h:mm tt")</td>
+                                            <td>@session.ExerciseName</td>
+                                            <td>@session.DurationMinutes.ToString("0.##")</td>
+                                            <td>@(session.CaloriesExpended?.ToString("0.##") ?? "")</td>
+                                            <td>@session.Intensity</td>
+                                            <td>@session.Notes</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </article>
+            </section>
+        </main>
+    </section>
+}
+
+@code {
+    private const long OtherExerciseTypeId = -1;
+    private readonly ExerciseForm _form = new();
+    private readonly List<ExerciseSession> _history = [];
+    private readonly List<ExerciseType> _exerciseTypes = [];
+    private long? _editingId;
+    private DateTime? _createdAt;
+    private DateTime? _updatedAt;
+    private bool _showAdvancedCalories;
+    private string? _caloriesTip;
+    private string _startTimeText = ToDateTimeLocal(DateTime.Now);
+    private string? _message;
+    private string _messageClass = "page-message";
+
+    protected override void OnInitialized()
+    {
+        ResetForm();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !LoginSession.IsSignedIn)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (firstRender && !LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            StateHasChanged();
+            return;
+        }
+
+        if (firstRender)
+        {
+            LoadExerciseTypes();
+            LoadHistory();
+            StateHasChanged();
+        }
+    }
+
+    private string ExerciseSummary
+    {
+        get
+        {
+            var totalMinutes = _history.Sum(x => x.DurationMinutes);
+            return _history.Count == 0
+                ? "Ready for first session"
+                : $"{_history.Count} sessions, {totalMinutes:0.##} total minutes";
+        }
+    }
+
+    private string CaloriesSummary
+    {
+        get
+        {
+            var totalCalories = _history.Sum(x => x.CaloriesExpended ?? 0);
+            return totalCalories <= 0
+                ? "Calories can be entered or estimated from latest weight."
+                : $"{totalCalories:0.##} total calories expended.";
+        }
+    }
+
+    private string LatestSessionText =>
+        _history.Count == 0
+            ? "None yet"
+            : $"{_history[0].ExerciseName} on {_history[0].StartTime:M/d/yyyy}";
+
+    private bool IsOtherExerciseSelected => _form.ExerciseTypeId == OtherExerciseTypeId;
+
+    private string CaloriesHelpText =>
+        _showAdvancedCalories
+            ? "Leave calories blank to estimate from duration, intensity, and latest weight."
+            : "Calories are estimated automatically unless you choose an override.";
+
+    private string AuditText
+    {
+        get
+        {
+            if (_updatedAt.HasValue)
+                return $"Updated at: {_updatedAt.Value:g}";
+
+            if (_createdAt.HasValue)
+                return $"Created at: {_createdAt.Value:g}";
+
+            return string.Empty;
+        }
+    }
+
+    private void LoadExerciseTypes()
+    {
+        _exerciseTypes.Clear();
+        _exerciseTypes.AddRange(ExerciseService.GetExerciseTypes());
+
+        if (!_form.ExerciseTypeId.HasValue && _exerciseTypes.Count > 0)
+            _form.ExerciseTypeId = _exerciseTypes[0].ExerciseTypeId;
+    }
+
+    private void LoadHistory()
+    {
+        _history.Clear();
+
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _history.AddRange(ExerciseService.GetHistory(LoginSession.PersonId.Value));
+    }
+
+    private void SelectSession(ExerciseSession session)
+    {
+        _editingId = session.ExerciseSessionId;
+        _form.ExerciseTypeId = session.ExerciseTypeId;
+        _form.OtherExerciseName = string.Empty;
+        _form.DurationMinutes = session.DurationMinutes;
+        _form.CaloriesExpended = session.CaloriesExpended;
+        _form.Intensity = string.IsNullOrWhiteSpace(session.Intensity) ? "Moderate" : session.Intensity;
+        _form.Notes = session.Notes ?? string.Empty;
+        _startTimeText = ToDateTimeLocal(session.StartTime);
+        _createdAt = session.CreatedAt;
+        _updatedAt = session.UpdatedAt;
+        _showAdvancedCalories = session.CaloriesExpended.HasValue;
+        _message = null;
+    }
+
+    private void BeginNewSession()
+    {
+        ResetForm();
+        if (_exerciseTypes.Count > 0)
+            _form.ExerciseTypeId = _exerciseTypes[0].ExerciseTypeId;
+        _message = null;
+    }
+
+    private void SetStartTime(ChangeEventArgs args)
+    {
+        _startTimeText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _form.ExerciseTypeId = null;
+        _form.OtherExerciseName = string.Empty;
+        _form.DurationMinutes = null;
+        _form.CaloriesExpended = null;
+        _form.Intensity = "Moderate";
+        _form.Notes = string.Empty;
+        _startTimeText = ToDateTimeLocal(DateTime.Now);
+        _createdAt = null;
+        _updatedAt = null;
+        _showAdvancedCalories = false;
+    }
+
+    private void ToggleAdvancedCalories()
+    {
+        _showAdvancedCalories = !_showAdvancedCalories;
+
+        if (!_showAdvancedCalories)
+            _form.CaloriesExpended = null;
+    }
+
+    private void ShowCaloriesTip()
+    {
+        _caloriesTip = "Calories are estimated automatically, but you can use an AI lookup or exercise device for a more accurate number and enter it in Advanced.";
+    }
+
+    private void DismissCaloriesTip()
+    {
+        _caloriesTip = null;
+    }
+
+    private void SaveSession()
+    {
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            return;
+        }
+
+        if (!TryGetStartTime(out var startTime))
+            return;
+
+        var exerciseTypeId = ResolveExerciseTypeId();
+        if (!exerciseTypeId.HasValue)
+            return;
+
+        if (!_form.DurationMinutes.HasValue || _form.DurationMinutes.Value <= 0)
+        {
+            ShowError("Duration must be greater than zero.");
+            return;
+        }
+
+        if (_form.CaloriesExpended.HasValue && _form.CaloriesExpended.Value < 0)
+        {
+            ShowError("Calories expended cannot be negative.");
+            return;
+        }
+
+        var calories = _form.CaloriesExpended ?? EstimateCalories();
+        var personId = LoginSession.PersonId.Value;
+        var notes = _form.Notes ?? string.Empty;
+
+        try
+        {
+            if (_editingId.HasValue)
+            {
+                var updated = ExerciseService.UpdateExerciseSessionForPerson(
+                    _editingId.Value,
+                    personId,
+                    exerciseTypeId.Value,
+                    startTime,
+                    _form.DurationMinutes.Value,
+                    calories,
+                    _form.Intensity,
+                    notes,
+                    LoginSession.UserName ?? string.Empty);
+
+                if (!updated)
+                {
+                    ShowError("The selected exercise session could not be updated.");
+                    return;
+                }
+
+                ShowSuccess("Exercise session updated.");
+            }
+            else
+            {
+                ExerciseService.InsertExerciseSession(
+                    personId,
+                    exerciseTypeId.Value,
+                    startTime,
+                    _form.DurationMinutes.Value,
+                    calories,
+                    _form.Intensity,
+                    notes,
+                    LoginSession.UserName ?? string.Empty);
+
+                ShowSuccess("Exercise session saved.");
+            }
+
+            LoadHistory();
+
+            if (_editingId.HasValue)
+            {
+                var selected = _history.FirstOrDefault(x => x.ExerciseSessionId == _editingId);
+                if (selected is not null)
+                    SelectSession(selected);
+            }
+            else
+            {
+                ResetForm();
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private long? ResolveExerciseTypeId()
+    {
+        if (!_form.ExerciseTypeId.HasValue)
+        {
+            ShowError("Select an exercise.");
+            return null;
+        }
+
+        if (!IsOtherExerciseSelected)
+            return _form.ExerciseTypeId.Value;
+
+        if (string.IsNullOrWhiteSpace(_form.OtherExerciseName))
+        {
+            ShowError("Enter the other exercise name.");
+            return null;
+        }
+
+        var exerciseTypeId = ExerciseService.GetOrCreateExerciseType(_form.OtherExerciseName);
+        LoadExerciseTypes();
+        _form.ExerciseTypeId = exerciseTypeId;
+        _form.OtherExerciseName = string.Empty;
+
+        return exerciseTypeId;
+    }
+
+    private decimal? EstimateCalories()
+    {
+        if (!LoginSession.PersonId.HasValue || !_form.DurationMinutes.HasValue)
+            return null;
+
+        var latestWeight = WeightService.GetLatestForPerson(LoginSession.PersonId.Value);
+        if (latestWeight is null)
+            return null;
+
+        return ExerciseMetrics.EstimateCaloriesBurned(
+            _form.DurationMinutes.Value,
+            _form.Intensity,
+            latestWeight.WeightValue,
+            latestWeight.WeightUnit);
+    }
+
+    private void DeleteSelected()
+    {
+        if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
+            return;
+
+        try
+        {
+            var deleted = ExerciseService.DeleteExerciseSessionForPerson(
+                LoginSession.PersonId.Value,
+                _editingId.Value);
+
+            if (!deleted)
+            {
+                ShowError("The selected exercise session could not be deleted.");
+                return;
+            }
+
+            LoadHistory();
+            ResetForm();
+            ShowSuccess("Exercise session deleted.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private bool TryGetStartTime(out DateTime startTime)
+    {
+        if (DateTime.TryParse(_startTimeText, out startTime))
+            return true;
+
+        ShowError("Enter a valid date.");
+        return false;
+    }
+
+    private void ShowSuccess(string message)
+    {
+        _messageClass = "page-message";
+        _message = message;
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "page-message page-message--error";
+        _message = message;
+    }
+
+    private void SignOut()
+    {
+        LoginSession.SignOut();
+        Navigation.NavigateTo("/");
+    }
+
+    private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
+
+    private sealed class ExerciseForm
+    {
+        [Required]
+        public long? ExerciseTypeId { get; set; }
+
+        public string OtherExerciseName { get; set; } = string.Empty;
+
+        [Required]
+        [Range(typeof(decimal), "0.01", "10000")]
+        public decimal? DurationMinutes { get; set; }
+
+        public decimal? CaloriesExpended { get; set; }
+
+        public string Intensity { get; set; } = "Moderate";
+
+        public string? Notes { get; set; }
+    }
+}
