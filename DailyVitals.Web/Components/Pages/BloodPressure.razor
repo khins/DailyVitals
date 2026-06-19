@@ -1,0 +1,464 @@
+@page "/blood-pressure"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyVitals.Data.Services
+@using DailyVitals.Domain.Models
+@using DailyVitals.Web.Services
+@inject BloodPressureService BloodPressureService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Blood Pressure | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
+            </div>
+
+            <nav class="rail-nav">
+                <a href="dashboard">Dashboard</a>
+                <a class="is-active" href="blood-pressure">Blood Pressure</a>
+                <a href="blood-glucose">Glucose</a>
+                <a href="weight">Weight</a>
+                <a href="exercise">Exercise</a>
+                <a href="nutrition">Nutrition</a>
+                <a href="labs">Kidney Labs</a>
+            </nav>
+
+            <a class="rail-profile" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Blood Pressure</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Person</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                    <button type="button" class="primary-action" @onclick="BeginNewReading">New Reading</button>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <section class="@SeverityBandClass" aria-label="Current blood pressure status">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>@SeverityText</strong>
+                    <p>@SeveritySummary</p>
+                </div>
+                <div>
+                    <span>Latest reading</span>
+                    <strong>@LatestReadingText</strong>
+                </div>
+            </section>
+
+            <section class="entry-grid">
+                <article class="dashboard-card entry-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>@(_editingId.HasValue ? "Edit Reading" : "New Reading")</span>
+                            <h2>Details</h2>
+                        </div>
+                    </div>
+
+                    <EditForm Model="_form" OnValidSubmit="SaveReading" class="bp-form">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-row">
+                            <label for="reading-time">Reading Time</label>
+                            <input id="reading-time" class="form-input" type="datetime-local" value="@_readingTimeText" @onchange="SetReadingTime" />
+                        </div>
+
+                        <div class="bp-number-grid">
+                            <div class="field-group">
+                                <label for="systolic">Systolic</label>
+                                <InputNumber id="systolic" class="form-input" @bind-Value="_form.Systolic" />
+                                <ValidationMessage For="() => _form.Systolic" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="diastolic">Diastolic</label>
+                                <InputNumber id="diastolic" class="form-input" @bind-Value="_form.Diastolic" />
+                                <ValidationMessage For="() => _form.Diastolic" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="pulse">Pulse</label>
+                                <InputNumber id="pulse" class="form-input" @bind-Value="_form.Pulse" />
+                                <ValidationMessage For="() => _form.Pulse" />
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="notes">Notes</label>
+                            <InputTextArea id="notes" class="form-input notes-input" @bind-Value="_form.Notes" />
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(AuditText))
+                        {
+                            <p class="audit-text">@AuditText</p>
+                        }
+
+                        <div class="form-command-row">
+                            <button type="button" class="secondary-link" @onclick="BeginNewReading">New</button>
+                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="submit" class="primary-action">Save</button>
+                        </div>
+                    </EditForm>
+                </article>
+
+                <article class="dashboard-card history-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>History</span>
+                            <h2>Recent Readings</h2>
+                        </div>
+                        <strong>@_history.Count entries</strong>
+                    </div>
+
+                    @if (_history.Count == 0)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>No readings yet</h2>
+                            <p>Save a blood pressure reading to start this person's history.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="data-table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Sys</th>
+                                        <th>Dia</th>
+                                        <th>Pulse</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var reading in _history)
+                                    {
+                                        <tr class="@(reading.BloodPressureId == _editingId ? "is-selected" : null)" @onclick="() => SelectReading(reading)">
+                                            <td>@reading.ReadingTime.ToString("M/d/yyyy h:mm tt")</td>
+                                            <td>@reading.Systolic</td>
+                                            <td>@reading.Diastolic</td>
+                                            <td>@reading.Pulse</td>
+                                            <td>@reading.Notes</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </article>
+            </section>
+        </main>
+    </section>
+}
+
+@code {
+    private readonly BloodPressureForm _form = new();
+    private readonly List<BloodPressureReading> _history = [];
+    private long? _editingId;
+    private DateTime? _createdAt;
+    private DateTime? _updatedAt;
+    private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
+    private string? _message;
+    private string _messageClass = "page-message";
+
+    protected override void OnInitialized()
+    {
+        ResetForm();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !LoginSession.IsSignedIn)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (firstRender && !LoginSession.PersonId.HasValue)
+        {
+            _messageClass = "page-message page-message--error";
+            _message = "This login is not linked to a person record yet.";
+            StateHasChanged();
+            return;
+        }
+
+        if (firstRender)
+        {
+            LoadHistory();
+            StateHasChanged();
+        }
+    }
+
+    private string SeverityText
+    {
+        get
+        {
+            if (!_form.Systolic.HasValue || !_form.Diastolic.HasValue)
+                return "Ready";
+
+            if (_form.Systolic < 120 && _form.Diastolic < 80)
+                return "Normal";
+
+            if (_form.Systolic < 130 && _form.Diastolic < 80)
+                return "Elevated";
+
+            return "High";
+        }
+    }
+
+    private string SeverityBandClass =>
+        SeverityText switch
+        {
+            "Normal" => "status-band status-band--ok",
+            "Elevated" => "status-band status-band--watch",
+            "High" => "status-band status-band--high",
+            _ => "status-band"
+        };
+
+    private string SeveritySummary =>
+        SeverityText switch
+        {
+            "Normal" => "This reading is inside the normal tracking range.",
+            "Elevated" => "This reading is elevated and worth watching.",
+            "High" => "This reading is high compared with the normal range.",
+            _ => "Enter systolic and diastolic values to classify the reading."
+        };
+
+    private string LatestReadingText =>
+        _history.Count == 0
+            ? "None yet"
+            : $"{_history[0].Systolic}/{_history[0].Diastolic} on {_history[0].ReadingTime:M/d/yyyy}";
+
+    private string AuditText
+    {
+        get
+        {
+            if (_updatedAt.HasValue)
+                return $"Updated at: {_updatedAt.Value:g}";
+
+            if (_createdAt.HasValue)
+                return $"Created at: {_createdAt.Value:g}";
+
+            return string.Empty;
+        }
+    }
+
+    private void LoadHistory()
+    {
+        _history.Clear();
+
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _history.AddRange(BloodPressureService.GetHistoryForPerson(LoginSession.PersonId.Value));
+    }
+
+    private void SelectReading(BloodPressureReading reading)
+    {
+        _editingId = reading.BloodPressureId;
+        _form.Systolic = reading.Systolic;
+        _form.Diastolic = reading.Diastolic;
+        _form.Pulse = reading.Pulse;
+        _form.Notes = reading.Notes ?? string.Empty;
+        _readingTimeText = ToDateTimeLocal(reading.ReadingTime);
+        _createdAt = reading.CreatedAt;
+        _updatedAt = reading.UpdatedAt;
+        _message = null;
+    }
+
+    private void BeginNewReading()
+    {
+        ResetForm();
+        _message = null;
+    }
+
+    private void SetReadingTime(ChangeEventArgs args)
+    {
+        _readingTimeText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void ResetForm()
+    {
+        var now = DateTime.Now;
+        _editingId = null;
+        _form.Systolic = null;
+        _form.Diastolic = null;
+        _form.Pulse = null;
+        _form.Notes = $"Morning reading, seated at {now:h:mm tt}";
+        _readingTimeText = ToDateTimeLocal(now);
+        _createdAt = null;
+        _updatedAt = null;
+    }
+
+    private void SaveReading()
+    {
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            return;
+        }
+
+        if (!TryGetReadingTime(out var readingTime))
+            return;
+
+        if (!_form.Systolic.HasValue || !_form.Diastolic.HasValue || !_form.Pulse.HasValue)
+        {
+            ShowError("Enter systolic, diastolic, and pulse values.");
+            return;
+        }
+
+        if (_form.Systolic.Value <= _form.Diastolic.Value)
+        {
+            ShowError("Systolic must be greater than diastolic.");
+            return;
+        }
+
+        var personId = LoginSession.PersonId.Value;
+        var notes = _form.Notes ?? string.Empty;
+
+        try
+        {
+            if (_editingId.HasValue)
+            {
+                var updated = BloodPressureService.UpdateBloodPressureForPerson(
+                    personId,
+                    _editingId.Value,
+                    _form.Systolic.Value,
+                    _form.Diastolic.Value,
+                    _form.Pulse.Value,
+                    readingTime,
+                    notes,
+                    LoginSession.UserName ?? string.Empty);
+
+                if (!updated)
+                {
+                    ShowError("The selected blood pressure record could not be updated.");
+                    return;
+                }
+
+                ShowSuccess("Blood pressure reading updated.");
+            }
+            else
+            {
+                var insertedId = BloodPressureService.InsertBloodPressure(
+                    personId,
+                    _form.Systolic.Value,
+                    _form.Diastolic.Value,
+                    _form.Pulse.Value,
+                    readingTime,
+                    notes,
+                    LoginSession.UserName ?? string.Empty);
+
+                _editingId = insertedId;
+                ShowSuccess("Blood pressure reading saved.");
+            }
+
+            LoadHistory();
+
+            var selected = _history.FirstOrDefault(x => x.BloodPressureId == _editingId);
+            if (selected is not null)
+                SelectReading(selected);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void DeleteSelected()
+    {
+        if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
+            return;
+
+        try
+        {
+            var deleted = BloodPressureService.DeleteBloodPressureForPerson(
+                LoginSession.PersonId.Value,
+                _editingId.Value);
+
+            if (!deleted)
+            {
+                ShowError("The selected blood pressure record could not be deleted.");
+                return;
+            }
+
+            LoadHistory();
+            ResetForm();
+            ShowSuccess("Blood pressure reading deleted.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private bool TryGetReadingTime(out DateTime readingTime)
+    {
+        if (DateTime.TryParse(_readingTimeText, out readingTime))
+            return true;
+
+        ShowError("Enter a valid reading time.");
+        return false;
+    }
+
+    private void ShowSuccess(string message)
+    {
+        _messageClass = "page-message";
+        _message = message;
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "page-message page-message--error";
+        _message = message;
+    }
+
+    private void SignOut()
+    {
+        LoginSession.SignOut();
+        Navigation.NavigateTo("/");
+    }
+
+    private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
+
+    private sealed class BloodPressureForm
+    {
+        [Required]
+        [Range(1, 300)]
+        public int? Systolic { get; set; }
+
+        [Required]
+        [Range(1, 200)]
+        public int? Diastolic { get; set; }
+
+        [Required]
+        [Range(1, 250)]
+        public int? Pulse { get; set; }
+
+        public string? Notes { get; set; }
+    }
+}

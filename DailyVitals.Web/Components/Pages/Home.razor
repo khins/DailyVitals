@@ -75,6 +75,7 @@
             }
 
             <button type="submit" class="primary-button">Sign in</button>
+            <a class="form-link" href="create-account">Create account</a>
         </EditForm>
     </div>
 </section>
@@ -101,14 +102,21 @@
             return;
         }
 
-        if (!LoginService.ValidateCredentials(_model.UserName, _model.Password))
+        var loginUser = LoginService.ValidateLogin(_model.UserName, _model.Password);
+        if (loginUser is null)
         {
             _message = "The username or password is incorrect.";
             return;
         }
 
+        if (!loginUser.PersonId.HasValue)
+        {
+            _message = "This login is not linked to a person record yet.";
+            return;
+        }
+
         _message = null;
-        LoginSession.SignIn(_model.UserName!.Trim());
+        LoginSession.SignIn(loginUser.UserName, loginUser.PersonId);
         Navigation.NavigateTo("/dashboard", replace: true);
     }
 

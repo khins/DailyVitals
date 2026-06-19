@@ -1,4 +1,5 @@
 using DailyVitals.Data.Services;
+using DailyVitals.Domain.Models;
 using Microsoft.Extensions.Configuration;
 
 namespace DailyVitals.Web.Services;
@@ -16,15 +17,27 @@ public sealed class LocalLoginService
 
     public bool ValidateCredentials(string? userName, string? password)
     {
+        return ValidateLogin(userName, password) is not null;
+    }
+
+    public LoginUser? ValidateLogin(string? userName, string? password)
+    {
         TrySeedConfiguredLogin();
 
         try
         {
-            return _loginUserService.ValidateCredentials(userName, password) is not null;
+            return _loginUserService.ValidateCredentials(userName, password);
         }
         catch
         {
-            return ValidateConfiguredFallback(userName, password);
+            if (!ValidateConfiguredFallback(userName, password))
+                return null;
+
+            return new LoginUser
+            {
+                UserName = userName?.Trim() ?? string.Empty,
+                IsActive = true
+            };
         }
     }
 

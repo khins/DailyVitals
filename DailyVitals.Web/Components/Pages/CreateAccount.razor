@@ -1,0 +1,230 @@
+@page "/create-account"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyVitals.Data.Services
+@using DailyVitals.Web.Services
+@inject PersonService PersonService
+@inject LoginUserService LoginUserService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Create Account | DailyVitals</PageTitle>
+
+<section class="login-page account-page">
+    <div class="login-visual" aria-hidden="true">
+        <div class="vitals-card">
+            <div class="vitals-card__header">
+                <span>New Profile</span>
+                <strong>Person-scoped</strong>
+            </div>
+            <div class="pulse-line"></div>
+            <div class="metric-grid">
+                <div>
+                    <span>BP</span>
+                    <strong>Private</strong>
+                </div>
+                <div>
+                    <span>Glucose</span>
+                    <strong>Private</strong>
+                </div>
+                <div>
+                    <span>Weight</span>
+                    <strong>Private</strong>
+                </div>
+                <div>
+                    <span>Labs</span>
+                    <strong>Private</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-panel account-panel">
+        <div class="brand-row">
+            <div class="brand-mark" aria-hidden="true">DV</div>
+            <div>
+                <p class="eyebrow">DailyVitals Web</p>
+                <h1>Create Account</h1>
+            </div>
+        </div>
+
+        <EditForm Model="_model" OnValidSubmit="SubmitAccount" class="login-form account-form">
+            <DataAnnotationsValidator />
+
+            <div class="account-form-grid">
+                <div class="field-group">
+                    <label for="first-name">First Name</label>
+                    <InputText id="first-name" class="form-input" autocomplete="given-name" @bind-Value="_model.FirstName" />
+                    <ValidationMessage For="() => _model.FirstName" />
+                </div>
+
+                <div class="field-group">
+                    <label for="last-name">Last Name</label>
+                    <InputText id="last-name" class="form-input" autocomplete="family-name" @bind-Value="_model.LastName" />
+                    <ValidationMessage For="() => _model.LastName" />
+                </div>
+
+                <div class="field-group">
+                    <label for="birth-date">Birth Date</label>
+                    <input id="birth-date" class="form-input" type="date" value="@_birthDateText" @onchange="SetBirthDate" />
+                </div>
+
+                <div class="field-group">
+                    <label for="height-ft">Height (ft)</label>
+                    <InputNumber id="height-ft" class="form-input" @bind-Value="_model.HeightFt" />
+                    <ValidationMessage For="() => _model.HeightFt" />
+                </div>
+            </div>
+
+            <fieldset class="gender-options">
+                <legend>Gender</legend>
+                <InputRadioGroup @bind-Value="_model.Gender">
+                    <label>
+                        <InputRadio Value="@("Male")" />
+                        <span>Male</span>
+                    </label>
+                    <label>
+                        <InputRadio Value="@("Female")" />
+                        <span>Female</span>
+                    </label>
+                </InputRadioGroup>
+            </fieldset>
+
+            <div class="field-group">
+                <label for="account-user-name">Username</label>
+                <InputText id="account-user-name" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
+                <ValidationMessage For="() => _model.UserName" />
+            </div>
+
+            <div class="account-form-grid">
+                <div class="field-group">
+                    <label for="account-password">Password</label>
+                    <InputText id="account-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.Password" />
+                    <ValidationMessage For="() => _model.Password" />
+                </div>
+
+                <div class="field-group">
+                    <label for="confirm-password">Confirm Password</label>
+                    <InputText id="confirm-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
+                    <ValidationMessage For="() => _model.ConfirmPassword" />
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <button type="submit" class="primary-button">Create Account</button>
+            <a class="form-link" href="/">Back to sign in</a>
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    private readonly CreateAccountModel _model = new();
+    private string _birthDateText = string.Empty;
+    private string? _message;
+    private string _messageClass = "login-message";
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && LoginSession.IsSignedIn)
+            Navigation.NavigateTo("/dashboard", replace: true);
+    }
+
+    private void SetBirthDate(ChangeEventArgs args)
+    {
+        _birthDateText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void SubmitAccount()
+    {
+        if (!string.Equals(_model.Password, _model.ConfirmPassword, StringComparison.Ordinal))
+        {
+            ShowError("Passwords must match.");
+            return;
+        }
+
+        if (LoginUserService.UserNameExists(_model.UserName ?? string.Empty))
+        {
+            ShowError("That username is already in use.");
+            return;
+        }
+
+        if (!DateTime.TryParse(_birthDateText, out var parsedBirthDate))
+        {
+            ShowError("Enter a valid birth date.");
+            return;
+        }
+
+        if (!_model.HeightFt.HasValue)
+        {
+            ShowError("Enter height in feet.");
+            return;
+        }
+
+        if (PersonService.PersonExists(
+            _model.FirstName ?? string.Empty,
+            _model.LastName ?? string.Empty,
+            parsedBirthDate.Date,
+            _model.HeightFt.Value))
+        {
+            ShowError("A person with this name, birth date, and height already exists.");
+            return;
+        }
+
+        try
+        {
+            var personId = PersonService.InsertPerson(
+                _model.FirstName!.Trim(),
+                _model.LastName!.Trim(),
+                _model.HeightFt,
+                parsedBirthDate.Date,
+                _model.Gender);
+
+            var loginUser = LoginUserService.CreateLoginUser(
+                personId,
+                _model.UserName!.Trim(),
+                _model.Password!);
+
+            LoginSession.SignIn(loginUser.UserName, loginUser.PersonId);
+            Navigation.NavigateTo("/dashboard", replace: true);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "login-message login-message--error";
+        _message = message;
+    }
+
+    private sealed class CreateAccountModel
+    {
+        [Required(ErrorMessage = "Enter a first name.")]
+        public string? FirstName { get; set; }
+
+        [Required(ErrorMessage = "Enter a last name.")]
+        public string? LastName { get; set; }
+
+        [Range(typeof(decimal), "1", "9", ErrorMessage = "Enter height as feet, such as 6.08.")]
+        public decimal? HeightFt { get; set; }
+
+        [Required(ErrorMessage = "Choose a gender.")]
+        public string? Gender { get; set; }
+
+        [Required(ErrorMessage = "Enter a username.")]
+        public string? UserName { get; set; }
+
+        [Required(ErrorMessage = "Enter a password.")]
+        [MinLength(8, ErrorMessage = "Password must be at least 8 characters.")]
+        public string? Password { get; set; }
+
+        [Required(ErrorMessage = "Confirm the password.")]
+        public string? ConfirmPassword { get; set; }
+    }
+}

@@ -110,6 +110,44 @@ namespace DailyVitals.Data.Services
             cmd.ExecuteNonQuery();
         }
 
+        public bool UpdateBloodPressureForPerson(
+                    long personId,
+                    long bpId,
+                    int systolic,
+                    int diastolic,
+                    int pulse,
+                    DateTime readingTime,
+                    string notes,
+                    string updatedBy)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureBloodPressureColumns(conn);
+
+            const string sql = @"
+                    UPDATE blood_pressure
+                    SET systolic = @systolic,
+                        diastolic = @diastolic,
+                        pulse = @pulse,
+                        reading_time = @reading_time,
+                        notes = @notes,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE bp_id = @bp_id
+                      AND person_id = @person_id;
+                ";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("bp_id", bpId);
+            cmd.Parameters.AddWithValue("systolic", systolic);
+            cmd.Parameters.AddWithValue("diastolic", diastolic);
+            cmd.Parameters.AddWithValue("pulse", pulse);
+            cmd.Parameters.AddWithValue("reading_time", readingTime);
+            cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
+
+            return cmd.ExecuteNonQuery() == 1;
+        }
+
         public List<BloodPressureReading> GetHistoryForPerson(long personId)
         {
             var list = new List<BloodPressureReading>();
@@ -162,6 +200,25 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("bp_id", bpId);
 
             cmd.ExecuteNonQuery();
+        }
+
+        public bool DeleteBloodPressureForPerson(long personId, long bpId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureBloodPressureColumns(conn);
+
+            const string sql = @"
+                    DELETE FROM blood_pressure
+                    WHERE bp_id = @bp_id
+                      AND person_id = @person_id;
+                ";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("bp_id", bpId);
+
+            return cmd.ExecuteNonQuery() == 1;
         }
 
         public List<BloodPressureReading> GetTrend(

@@ -56,6 +56,85 @@ namespace DailyVitals.Data.Services
             return GetAllPersons();
         }
 
+        public Person? GetPersonById(long personId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsurePersonColumns(conn);
+
+            const string sql = @"
+                SELECT
+                    person_id,
+                    first_name,
+                    last_name,
+                    height_ft,
+                    birth_date,
+                    gender,
+                    created_at,
+                    updated_at
+                FROM public.person
+                WHERE person_id = @person_id
+                LIMIT 1;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read())
+                return null;
+
+            return new Person
+            {
+                PersonId = reader.GetInt64(0),
+                FirstName = reader.GetString(1),
+                LastName = reader.GetString(2),
+                HeightFt = reader.IsDBNull(3) ? null : reader.GetDecimal(3),
+                BirthDate = reader.IsDBNull(4) ? null : reader.GetDateTime(4),
+                Gender = reader.IsDBNull(5) ? null : reader.GetString(5),
+                CreatedAt = reader.GetDateTime(6),
+                UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
+            };
+        }
+
+        public bool PersonExists(
+            string firstName,
+            string lastName,
+            DateTime birthDate,
+            decimal heightFt)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsurePersonColumns(conn);
+
+            return PersonExists(conn, firstName, lastName, birthDate, heightFt);
+        }
+
+        private static bool PersonExists(
+            NpgsqlConnection conn,
+            string firstName,
+            string lastName,
+            DateTime birthDate,
+            decimal heightFt)
+        {
+            const string sql = @"
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM public.person
+                    WHERE lower(TRIM(first_name)) = lower(TRIM(@first_name))
+                      AND lower(TRIM(last_name)) = lower(TRIM(@last_name))
+                      AND birth_date = @birth_date
+                      AND ROUND(height_ft, 2) = ROUND(@height_ft, 2)
+                );";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("first_name", firstName);
+            cmd.Parameters.AddWithValue("last_name", lastName);
+            cmd.Parameters.AddWithValue("birth_date", birthDate.Date);
+            cmd.Parameters.AddWithValue("height_ft", Math.Round(heightFt, 2));
+
+            return cmd.ExecuteScalar() is true;
+        }
+
         public long InsertPerson(
             string firstName,
             string lastName,
@@ -66,6 +145,14 @@ namespace DailyVitals.Data.Services
             using var conn = DbConnectionFactory.Create();
             conn.Open();
             EnsurePersonColumns(conn);
+
+            if (birthDate.HasValue &&
+                heightFt.HasValue &&
+                PersonExists(conn, firstName, lastName, birthDate.Value, heightFt.Value))
+            {
+                throw new InvalidOperationException(
+                    "A person with this name, birth date, and height already exists.");
+            }
 
             const string sql = @"
                 INSERT INTO public.person (
