@@ -135,6 +135,57 @@ namespace DailyVitals.Data.Services
                 return list;
             }
 
+            public long GetOrCreateExerciseType(string exerciseName)
+            {
+                var normalizedName = NormalizeExerciseName(exerciseName);
+
+                if (string.IsNullOrWhiteSpace(normalizedName))
+                    throw new ArgumentException("Exercise name is required.", nameof(exerciseName));
+
+                using var conn = DbConnectionFactory.Create();
+                conn.Open();
+
+                const string findSql = @"
+                    SELECT exercise_type_id
+                    FROM public.exercise_type
+                    WHERE lower(trim(exercise_name)) = lower(trim(@exercise_name))
+                    LIMIT 1;";
+
+                using (var findCmd = new NpgsqlCommand(findSql, conn))
+                {
+                    findCmd.Parameters.Add("exercise_name", NpgsqlDbType.Varchar).Value = normalizedName;
+                    var existing = findCmd.ExecuteScalar();
+
+                    if (existing is not null && existing != DBNull.Value)
+                        return Convert.ToInt64(existing);
+                }
+
+                const string insertSql = @"
+                    INSERT INTO public.exercise_type (exercise_name, category)
+                    VALUES (@exercise_name, @category)
+                    RETURNING exercise_type_id;";
+
+                using var insertCmd = new NpgsqlCommand(insertSql, conn);
+                insertCmd.Parameters.Add("exercise_name", NpgsqlDbType.Varchar).Value = normalizedName;
+                insertCmd.Parameters.Add("category", NpgsqlDbType.Varchar).Value = "Other";
+
+                try
+                {
+                    return Convert.ToInt64(insertCmd.ExecuteScalar());
+                }
+                catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+                {
+                    using var retryCmd = new NpgsqlCommand(findSql, conn);
+                    retryCmd.Parameters.Add("exercise_name", NpgsqlDbType.Varchar).Value = normalizedName;
+                    var existing = retryCmd.ExecuteScalar();
+
+                    if (existing is not null && existing != DBNull.Value)
+                        return Convert.ToInt64(existing);
+
+                    throw;
+                }
+            }
+
             public List<ExerciseSession> GetHistory(long personId)
             {
                 var list = new List<ExerciseSession>();
@@ -232,6 +283,48 @@ namespace DailyVitals.Data.Services
                 cmd.ExecuteNonQuery();
             }
 
+            public bool UpdateExerciseSessionForPerson(
+                long exerciseSessionId,
+                long personId,
+                long exerciseTypeId,
+                DateTime startTime,
+                decimal durationMinutes,
+                decimal? caloriesExpended,
+                string intensity,
+                string notes,
+                string enteredBy)
+            {
+                using var conn = DbConnectionFactory.Create();
+                conn.Open();
+                EnsureExerciseSessionColumns(conn);
+
+                const string sql = @"
+                    UPDATE public.exercise_session
+                    SET exercise_type_id = @exercise_type_id,
+                        start_time = @start_time,
+                        duration_minutes = @duration_minutes,
+                        calories_expended = @calories_expended,
+                        intensity = @intensity,
+                        notes = @notes,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE exercise_session_id = @exercise_session_id
+                      AND person_id = @person_id;";
+
+                using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("exercise_session_id", exerciseSessionId);
+                cmd.Parameters.AddWithValue("person_id", personId);
+                cmd.Parameters.AddWithValue("exercise_type_id", exerciseTypeId);
+                cmd.Parameters.AddWithValue("start_time", startTime);
+                cmd.Parameters.AddWithValue("duration_minutes", durationMinutes);
+                cmd.Parameters.Add("calories_expended", NpgsqlDbType.Numeric).Value =
+                    (object?)caloriesExpended ?? DBNull.Value;
+                cmd.Parameters.Add("intensity", NpgsqlDbType.Varchar).Value = intensity;
+                cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("entered_by", enteredBy);
+
+                return cmd.ExecuteNonQuery() == 1;
+            }
+
             public void DeleteExerciseSession(long exerciseSessionId, string enteredBy)
             {
                 using var conn = DbConnectionFactory.Create();
@@ -244,6 +337,24 @@ namespace DailyVitals.Data.Services
                 cmd.Parameters.AddWithValue("p_entered_by", enteredBy);
 
                 cmd.ExecuteNonQuery();
+            }
+
+            public bool DeleteExerciseSessionForPerson(long personId, long exerciseSessionId)
+            {
+                using var conn = DbConnectionFactory.Create();
+                conn.Open();
+                EnsureExerciseSessionColumns(conn);
+
+                const string sql = @"
+                    DELETE FROM public.exercise_session
+                    WHERE exercise_session_id = @exercise_session_id
+                      AND person_id = @person_id;";
+
+                using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("person_id", personId);
+                cmd.Parameters.AddWithValue("exercise_session_id", exerciseSessionId);
+
+                return cmd.ExecuteNonQuery() == 1;
             }
 
             public int GetWeeklyTotalMinutes(long personId)
@@ -292,6 +403,15 @@ namespace DailyVitals.Data.Services
 
                 using var cmd = new NpgsqlCommand(sql, conn);
                 cmd.ExecuteNonQuery();
+            }
+
+            private static string NormalizeExerciseName(string exerciseName)
+            {
+                return string.Join(
+                    ' ',
+                    (exerciseName ?? string.Empty)
+                        .Trim()
+                        .Split(' ', StringSplitOptions.RemoveEmptyEntries));
             }
 
         }

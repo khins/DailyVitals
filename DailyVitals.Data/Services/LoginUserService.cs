@@ -134,7 +134,7 @@ namespace DailyVitals.Data.Services
             EnsureLoginUserTable(conn);
 
             if (TryGetLoginUserId(conn, userName.Trim(), out _))
-                throw new InvalidOperationException("That user name is already in use.");
+                throw new InvalidOperationException("That email is already in use.");
 
             var loginUserId = InsertLoginUser(conn, personId, userName, password, isActive);
 
@@ -189,7 +189,7 @@ namespace DailyVitals.Data.Services
                 string.IsNullOrWhiteSpace(lastName) ||
                 string.IsNullOrWhiteSpace(newPassword))
             {
-                failureReason = "Enter username, first name, last name, birth date, and a new password.";
+                failureReason = "Enter email, first name, last name, birth date, and a new password.";
                 return false;
             }
 
@@ -211,7 +211,7 @@ namespace DailyVitals.Data.Services
             using var reader = cmd.ExecuteReader();
             if (!reader.Read())
             {
-                failureReason = "Username was not found.";
+                failureReason = "Email was not found.";
                 return false;
             }
 

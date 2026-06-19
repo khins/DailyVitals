@@ -1,14 +1,16 @@
-@page "/blood-pressure"
+@page "/weight"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using DailyVitals.Data.Services
 @using DailyVitals.Domain.Models
+@using DailyVitals.Domain.Models.Calculations
 @using DailyVitals.Web.Services
-@inject BloodPressureService BloodPressureService
+@inject WeightService WeightService
+@inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 
-<PageTitle>Blood Pressure | DailyVitals</PageTitle>
+<PageTitle>Weight | DailyVitals</PageTitle>
 
 @if (LoginSession.IsSignedIn)
 {
@@ -21,9 +23,9 @@
 
             <nav class="rail-nav">
                 <a href="dashboard">Dashboard</a>
-                <a class="is-active" href="blood-pressure">Blood Pressure</a>
+                <a href="blood-pressure">Blood Pressure</a>
                 <a href="blood-glucose">Glucose</a>
-                <a href="weight">Weight</a>
+                <a class="is-active" href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
                 <a href="nutrition">Nutrition</a>
                 <a href="labs">Kidney Labs</a>
@@ -41,7 +43,7 @@
             <header class="dashboard-topbar">
                 <div>
                     <p class="eyebrow">DailyVitals Web</p>
-                    <h1>Blood Pressure</h1>
+                    <h1>Weight</h1>
                 </div>
 
                 <div class="dashboard-actions">
@@ -58,15 +60,15 @@
                 <div class="@_messageClass" role="status">@_message</div>
             }
 
-            <section class="@SeverityBandClass" aria-label="Current blood pressure status">
+            <section class="@BmiBandClass" aria-label="Current BMI status">
                 <div>
                     <span class="status-dot"></span>
-                    <strong>@SeverityText</strong>
-                    <p>@SeveritySummary</p>
+                    <strong>@BmiStatusText</strong>
+                    <p>@HeightDisplay</p>
                 </div>
                 <div>
-                    <span>Latest reading</span>
-                    <strong>@LatestReadingText</strong>
+                    <span>Latest weight</span>
+                    <strong>@LatestWeightText</strong>
                 </div>
             </section>
 
@@ -79,7 +81,7 @@
                         </div>
                     </div>
 
-                    <EditForm Model="_form" FormName="blood-pressure-entry-form" OnValidSubmit="SaveReading" class="bp-form">
+                    <EditForm Model="_form" FormName="weight-entry-form" OnValidSubmit="SaveReading" class="bp-form">
                         <DataAnnotationsValidator />
 
                         <div class="form-row">
@@ -87,24 +89,25 @@
                             <input id="reading-time" class="form-input" type="datetime-local" value="@_readingTimeText" @onchange="SetReadingTime" />
                         </div>
 
-                        <div class="bp-number-grid">
+                        <div class="weight-number-grid">
                             <div class="field-group">
-                                <label for="systolic">Systolic</label>
-                                <InputNumber id="systolic" class="form-input" @bind-Value="_form.Systolic" />
-                                <ValidationMessage For="() => _form.Systolic" />
+                                <label for="weight-value">Weight</label>
+                                <InputNumber id="weight-value" class="form-input" @bind-Value="_form.WeightValue" />
+                                <ValidationMessage For="() => _form.WeightValue" />
                             </div>
 
                             <div class="field-group">
-                                <label for="diastolic">Diastolic</label>
-                                <InputNumber id="diastolic" class="form-input" @bind-Value="_form.Diastolic" />
-                                <ValidationMessage For="() => _form.Diastolic" />
+                                <label for="weight-unit">Unit</label>
+                                <InputSelect id="weight-unit" class="form-input" @bind-Value="_form.WeightUnit">
+                                    <option value="lb">lb</option>
+                                    <option value="kg">kg</option>
+                                </InputSelect>
                             </div>
+                        </div>
 
-                            <div class="field-group">
-                                <label for="pulse">Pulse</label>
-                                <InputNumber id="pulse" class="form-input" @bind-Value="_form.Pulse" />
-                                <ValidationMessage For="() => _form.Pulse" />
-                            </div>
+                        <div class="bmi-panel @BmiPanelClass">
+                            <strong>BMI: @BmiText</strong>
+                            <span>@BmiCategory</span>
                         </div>
 
                         <div class="field-group">
@@ -129,7 +132,7 @@
                     <div class="card-heading">
                         <div>
                             <span>History</span>
-                            <h2>Recent Readings</h2>
+                            <h2>Recent Weights</h2>
                         </div>
                         <strong>@_history.Count entries</strong>
                     </div>
@@ -138,7 +141,7 @@
                     {
                         <div class="empty-state compact-empty">
                             <h2>No readings yet</h2>
-                            <p>Save a blood pressure reading to start this person's history.</p>
+                            <p>Save a weight reading to start this person's history.</p>
                         </div>
                     }
                     else
@@ -148,20 +151,18 @@
                                 <thead>
                                     <tr>
                                         <th>Date</th>
-                                        <th>Sys</th>
-                                        <th>Dia</th>
-                                        <th>Pulse</th>
+                                        <th>Weight</th>
+                                        <th>BMI</th>
                                         <th>Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var reading in _history)
                                     {
-                                        <tr class="@(reading.BloodPressureId == _editingId ? "is-selected" : null)" @onclick="() => SelectReading(reading)">
+                                        <tr class="@(reading.WeightId == _editingId ? "is-selected" : null)" @onclick="() => SelectReading(reading)">
                                             <td>@reading.ReadingTime.ToString("M/d/yyyy h:mm tt")</td>
-                                            <td>@reading.Systolic</td>
-                                            <td>@reading.Diastolic</td>
-                                            <td>@reading.Pulse</td>
+                                            <td>@reading.WeightValue.ToString("0.##") @reading.WeightUnit</td>
+                                            <td>@FormatBmi(reading.WeightValue, reading.HeightFt)</td>
                                             <td>@reading.Notes</td>
                                         </tr>
                                     }
@@ -176,9 +177,10 @@
 }
 
 @code {
-    private readonly BloodPressureForm _form = new();
-    private readonly List<BloodPressureReading> _history = [];
+    private readonly WeightForm _form = new();
+    private readonly List<WeightReading> _history = [];
     private long? _editingId;
+    private decimal? _heightFt;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
@@ -200,58 +202,81 @@
 
         if (firstRender && !LoginSession.PersonId.HasValue)
         {
-            _messageClass = "page-message page-message--error";
-            _message = "This login is not linked to a person record yet.";
+            ShowError("This login is not linked to a person record yet.");
             StateHasChanged();
             return;
         }
 
         if (firstRender)
         {
+            LoadPersonHeight();
             LoadHistory();
             StateHasChanged();
         }
     }
 
-    private string SeverityText
+    private string BmiText => CurrentBmi?.ToString("0.0") ?? "--";
+
+    private decimal? CurrentBmi
     {
         get
         {
-            if (!_form.Systolic.HasValue || !_form.Diastolic.HasValue)
-                return "Ready";
+            if (!_form.WeightValue.HasValue || !_heightFt.HasValue)
+                return null;
 
-            if (_form.Systolic < 120 && _form.Diastolic < 80)
-                return "Normal";
-
-            if (_form.Systolic < 130 && _form.Diastolic < 80)
-                return "Elevated";
-
-            return "High";
+            return HealthMetrics.CalculateBMI(_form.WeightValue.Value, _heightFt.Value);
         }
     }
 
-    private string SeverityBandClass =>
-        SeverityText switch
+    private string BmiCategory
+    {
+        get
+        {
+            if (!_heightFt.HasValue)
+                return "Height required";
+
+            if (!CurrentBmi.HasValue)
+                return "Enter weight";
+
+            var bmi = CurrentBmi.Value;
+            if (bmi < 18.5m) return "Underweight";
+            if (bmi < 25.0m) return "Normal";
+            if (bmi < 30.0m) return "Overweight";
+            return "Obese";
+        }
+    }
+
+    private string BmiStatusText => CurrentBmi.HasValue ? $"BMI {BmiText} {BmiCategory}" : BmiCategory;
+
+    private string BmiBandClass =>
+        BmiCategory switch
         {
             "Normal" => "status-band status-band--ok",
-            "Elevated" => "status-band status-band--watch",
-            "High" => "status-band status-band--high",
+            "Underweight" => "status-band status-band--watch",
+            "Overweight" => "status-band status-band--watch",
+            "Obese" => "status-band status-band--high",
             _ => "status-band"
         };
 
-    private string SeveritySummary =>
-        SeverityText switch
+    private string BmiPanelClass =>
+        BmiCategory switch
         {
-            "Normal" => "This reading is inside the normal tracking range.",
-            "Elevated" => "This reading is elevated and worth watching.",
-            "High" => "This reading is high compared with the normal range.",
-            _ => "Enter systolic and diastolic values to classify the reading."
+            "Normal" => "bmi-panel--ok",
+            "Underweight" => "bmi-panel--watch",
+            "Overweight" => "bmi-panel--watch",
+            "Obese" => "bmi-panel--high",
+            _ => string.Empty
         };
 
-    private string LatestReadingText =>
+    private string LatestWeightText =>
         _history.Count == 0
             ? "None yet"
-            : $"{_history[0].Systolic}/{_history[0].Diastolic} on {_history[0].ReadingTime:M/d/yyyy}";
+            : $"{_history[0].WeightValue:0.##} {_history[0].WeightUnit} on {_history[0].ReadingTime:M/d/yyyy}";
+
+    private string HeightDisplay =>
+        _heightFt.HasValue
+            ? $"Height: {FormatHeight(_heightFt.Value)} ({_heightFt.Value:0.00} ft)"
+            : "Set height on Profile before using BMI.";
 
     private string AuditText
     {
@@ -267,6 +292,15 @@
         }
     }
 
+    private void LoadPersonHeight()
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        var person = PersonService.GetPersonById(LoginSession.PersonId.Value);
+        _heightFt = person?.HeightFt;
+    }
+
     private void LoadHistory()
     {
         _history.Clear();
@@ -274,15 +308,14 @@
         if (!LoginSession.PersonId.HasValue)
             return;
 
-        _history.AddRange(BloodPressureService.GetHistoryForPerson(LoginSession.PersonId.Value));
+        _history.AddRange(WeightService.GetHistory(LoginSession.PersonId.Value));
     }
 
-    private void SelectReading(BloodPressureReading reading)
+    private void SelectReading(WeightReading reading)
     {
-        _editingId = reading.BloodPressureId;
-        _form.Systolic = reading.Systolic;
-        _form.Diastolic = reading.Diastolic;
-        _form.Pulse = reading.Pulse;
+        _editingId = reading.WeightId;
+        _form.WeightValue = reading.WeightValue;
+        _form.WeightUnit = string.IsNullOrWhiteSpace(reading.WeightUnit) ? "lb" : reading.WeightUnit;
         _form.Notes = reading.Notes ?? string.Empty;
         _readingTimeText = ToDateTimeLocal(reading.ReadingTime);
         _createdAt = reading.CreatedAt;
@@ -305,10 +338,9 @@
     {
         var now = DateTime.Now;
         _editingId = null;
-        _form.Systolic = null;
-        _form.Diastolic = null;
-        _form.Pulse = null;
-        _form.Notes = $"Morning reading, seated at {now:h:mm tt}";
+        _form.WeightValue = null;
+        _form.WeightUnit = "lb";
+        _form.Notes = "Morning weigh-in";
         _readingTimeText = ToDateTimeLocal(now);
         _createdAt = null;
         _updatedAt = null;
@@ -322,18 +354,18 @@
             return;
         }
 
-        if (!TryGetReadingTime(out var readingTime))
-            return;
-
-        if (!_form.Systolic.HasValue || !_form.Diastolic.HasValue || !_form.Pulse.HasValue)
+        if (!_heightFt.HasValue)
         {
-            ShowError("Enter systolic, diastolic, and pulse values.");
+            ShowError("Set height on Profile before saving weight.");
             return;
         }
 
-        if (_form.Systolic.Value <= _form.Diastolic.Value)
+        if (!TryGetReadingTime(out var readingTime))
+            return;
+
+        if (!_form.WeightValue.HasValue || _form.WeightValue.Value <= 0)
         {
-            ShowError("Systolic must be greater than diastolic.");
+            ShowError("Enter a valid weight.");
             return;
         }
 
@@ -344,42 +376,41 @@
         {
             if (_editingId.HasValue)
             {
-                var updated = BloodPressureService.UpdateBloodPressureForPerson(
+                var updated = WeightService.UpdateWeightForPerson(
                     personId,
                     _editingId.Value,
-                    _form.Systolic.Value,
-                    _form.Diastolic.Value,
-                    _form.Pulse.Value,
+                    _form.WeightValue.Value,
+                    _form.WeightUnit,
                     readingTime,
                     notes,
                     LoginSession.UserName ?? string.Empty);
 
                 if (!updated)
                 {
-                    ShowError("The selected blood pressure record could not be updated.");
+                    ShowError("The selected weight record could not be updated.");
                     return;
                 }
 
-                ShowSuccess("Blood pressure reading updated.");
+                ShowSuccess("Weight reading updated.");
             }
             else
             {
-                var insertedId = BloodPressureService.InsertBloodPressure(
+                var insertedId = WeightService.InsertWeight(
                     personId,
-                    _form.Systolic.Value,
-                    _form.Diastolic.Value,
-                    _form.Pulse.Value,
+                    _form.WeightValue.Value,
+                    _form.WeightUnit,
+                    _heightFt.Value,
                     readingTime,
                     notes,
                     LoginSession.UserName ?? string.Empty);
 
                 _editingId = insertedId;
-                ShowSuccess("Blood pressure reading saved.");
+                ShowSuccess("Weight reading saved.");
             }
 
             LoadHistory();
 
-            var selected = _history.FirstOrDefault(x => x.BloodPressureId == _editingId);
+            var selected = _history.FirstOrDefault(x => x.WeightId == _editingId);
             if (selected is not null)
                 SelectReading(selected);
         }
@@ -396,19 +427,19 @@
 
         try
         {
-            var deleted = BloodPressureService.DeleteBloodPressureForPerson(
+            var deleted = WeightService.DeleteWeightForPerson(
                 LoginSession.PersonId.Value,
                 _editingId.Value);
 
             if (!deleted)
             {
-                ShowError("The selected blood pressure record could not be deleted.");
+                ShowError("The selected weight record could not be deleted.");
                 return;
             }
 
             LoadHistory();
             ResetForm();
-            ShowSuccess("Blood pressure reading deleted.");
+            ShowSuccess("Weight reading deleted.");
         }
         catch (Exception ex)
         {
@@ -445,19 +476,35 @@
 
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
 
-    private sealed class BloodPressureForm
+    private static string FormatBmi(decimal weight, decimal? heightFt)
+    {
+        if (!heightFt.HasValue)
+            return string.Empty;
+
+        return HealthMetrics.CalculateBMI(weight, heightFt.Value)?.ToString("0.0") ?? string.Empty;
+    }
+
+    private static string FormatHeight(decimal heightFt)
+    {
+        var feet = (int)Math.Truncate(heightFt);
+        var inches = (int)Math.Round((heightFt - feet) * 100m);
+
+        if (inches >= 12)
+        {
+            feet += inches / 12;
+            inches %= 12;
+        }
+
+        return $"{feet} ft {inches} in";
+    }
+
+    private sealed class WeightForm
     {
         [Required]
-        [Range(1, 300)]
-        public int? Systolic { get; set; }
+        [Range(typeof(decimal), "1", "1500")]
+        public decimal? WeightValue { get; set; }
 
-        [Required]
-        [Range(1, 200)]
-        public int? Diastolic { get; set; }
-
-        [Required]
-        [Range(1, 250)]
-        public int? Pulse { get; set; }
+        public string WeightUnit { get; set; } = "lb";
 
         public string? Notes { get; set; }
     }

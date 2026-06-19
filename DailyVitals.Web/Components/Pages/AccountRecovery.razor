@@ -47,12 +47,12 @@
             </div>
         </div>
 
-        <EditForm Model="_model" OnValidSubmit="ResetPassword" class="login-form account-form">
+        <EditForm Model="_model" FormName="account-recovery-form" OnValidSubmit="ResetPassword" class="login-form account-form">
             <DataAnnotationsValidator />
 
             <div class="field-group">
-                <label for="recovery-user-name">Username</label>
-                <InputText id="recovery-user-name" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
+                <label for="recovery-user-name">Email</label>
+                <InputText id="recovery-user-name" type="email" class="form-input" autocomplete="email" @bind-Value="_model.UserName" />
                 <ValidationMessage For="() => _model.UserName" />
             </div>
 
@@ -164,7 +164,8 @@
 
     private sealed class AccountRecoveryModel
     {
-        [Required(ErrorMessage = "Enter your username.")]
+        [Required(ErrorMessage = "Enter your email.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string? UserName { get; set; }
 
         [Required(ErrorMessage = "Enter the first name.")]

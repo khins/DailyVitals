@@ -1,0 +1,634 @@
+@page "/nutrition"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyVitals.Data.Services
+@using DailyVitals.Domain.Models
+@using DailyVitals.Web.Services
+@inject FoodPhosphorusIntakeService FoodService
+@inject FoodPhosphorusEstimateService EstimateService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Nutrition | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
+            </div>
+
+            <nav class="rail-nav">
+                <a href="dashboard">Dashboard</a>
+                <a href="blood-pressure">Blood Pressure</a>
+                <a href="blood-glucose">Glucose</a>
+                <a href="weight">Weight</a>
+                <a href="exercise">Exercise</a>
+                <a class="is-active" href="nutrition">Nutrition</a>
+                <a href="labs">Kidney Labs</a>
+            </nav>
+
+            <a class="rail-profile" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Nutrition</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Person</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                    <button type="button" class="primary-action" @onclick="BeginNewEntry">New Food</button>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <section class="status-band" aria-label="Selected day nutrition summary">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>Selected day total: @_selectedDayTotal mg phosphorus</strong>
+                    <p>@SelectedDayText</p>
+                </div>
+                <div>
+                    <span>Entries</span>
+                    <strong>@_history.Count</strong>
+                </div>
+            </section>
+
+            <section class="entry-grid nutrition-entry-grid">
+                <article class="dashboard-card entry-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>@(_editingId.HasValue ? "Edit Food" : "New Food")</span>
+                            <h2>Food Details</h2>
+                        </div>
+                    </div>
+
+                    <EditForm Model="_form" FormName="nutrition-entry-form" OnValidSubmit="SaveEntry" class="bp-form">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-row">
+                            <label for="consumed-at">Date Eaten</label>
+                            <input id="consumed-at" class="form-input" type="datetime-local" value="@_consumedAtText" @onchange="SetConsumedAt" />
+                        </div>
+
+                        <div class="food-lookup-row">
+                            <div class="field-group">
+                                <label for="food-name">Food Item</label>
+                                <InputText id="food-name" class="form-input" @bind-Value="_form.FoodName" />
+                                <ValidationMessage For="() => _form.FoodName" />
+                            </div>
+
+                            <button type="button" class="secondary-link estimate-action" @onclick="EstimateFood" disabled="@IsEstimateDisabled">
+                                @(_isEstimating ? "Estimating..." : "Estimate")
+                            </button>
+                        </div>
+
+                        <div class="advanced-toggle-row">
+                            <span>AI lookup can eventually estimate phosphorus and serving details from the food description.</span>
+                            <button type="button" class="help-icon-button" aria-label="AI lookup note" @onclick="ShowLookupTip">?</button>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_lookupTip))
+                        {
+                            <div class="inline-toast" role="status">
+                                <span>@_lookupTip</span>
+                                <button type="button" aria-label="Dismiss AI lookup note" @onclick="DismissLookupTip">Close</button>
+                            </div>
+                        }
+
+                        <div class="nutrition-number-grid">
+                            <div class="field-group">
+                                <label for="phosphorus">Phosphorus (mg)</label>
+                                <InputNumber id="phosphorus" class="form-input" @bind-Value="_form.PhosphorusMg" />
+                                <ValidationMessage For="() => _form.PhosphorusMg" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="calories">Calories</label>
+                                <InputNumber id="calories" class="form-input" @bind-Value="_form.Calories" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="sodium">Sodium (mg)</label>
+                                <InputNumber id="sodium" class="form-input" @bind-Value="_form.SodiumMg" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="protein">Protein (g)</label>
+                                <InputNumber id="protein" class="form-input" @bind-Value="_form.ProteinG" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="potassium">Potassium (mg)</label>
+                                <InputNumber id="potassium" class="form-input" @bind-Value="_form.PotassiumMg" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="binders">Binders</label>
+                                <InputNumber id="binders" class="form-input" @bind-Value="_form.Binders" />
+                                <ValidationMessage For="() => _form.Binders" />
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="serving">Serving</label>
+                            <InputText id="serving" class="form-input" @bind-Value="_form.ServingDescription" />
+                        </div>
+
+                        <div class="field-group">
+                            <label for="food-notes">Food Notes</label>
+                            <InputTextArea id="food-notes" class="form-input notes-input nutrition-notes-input" @bind-Value="_foodNotes" />
+                            <p class="field-hint">Food notes belong to the food profile, so repeat entries do not duplicate the same reference note.</p>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(AuditText))
+                        {
+                            <p class="audit-text">@AuditText</p>
+                        }
+
+                        <div class="form-command-row">
+                            <button type="button" class="secondary-link" @onclick="BeginNewEntry">New</button>
+                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="submit" class="primary-action">Save</button>
+                        </div>
+                    </EditForm>
+                </article>
+
+                <article class="dashboard-card history-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>History</span>
+                            <h2>Food Entries</h2>
+                        </div>
+                        <strong>@FilteredHistory.Count entries</strong>
+                    </div>
+
+                    <div class="field-group table-search">
+                        <label for="nutrition-search">Search</label>
+                        <input id="nutrition-search" class="form-input" value="@_searchText" @oninput="SetSearchText" />
+                    </div>
+
+                    @if (FilteredHistory.Count == 0)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>No food entries</h2>
+                            <p>Save a food entry to start this person's nutrition history.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="data-table-wrap nutrition-table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Food Item</th>
+                                        <th>Phos</th>
+                                        <th>Calories</th>
+                                        <th>Sodium</th>
+                                        <th>Protein</th>
+                                        <th>Potassium</th>
+                                        <th>Binders</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in FilteredHistory)
+                                    {
+                                        <tr class="@(item.FoodPhosphorusIntakeId == _editingId ? "is-selected" : null)" @onclick="() => SelectEntry(item)">
+                                            <td>@item.ConsumedAt.ToString("M/d/yyyy")</td>
+                                            <td>@item.FoodName</td>
+                                            <td>@item.PhosphorusMg</td>
+                                            <td>@item.Calories</td>
+                                            <td>@item.SodiumMg</td>
+                                            <td>@(item.ProteinG?.ToString("0.##"))</td>
+                                            <td>@item.PotassiumMg</td>
+                                            <td>@item.Binders</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </article>
+            </section>
+        </main>
+    </section>
+}
+
+@code {
+    private readonly NutritionForm _form = new();
+    private readonly List<FoodPhosphorusIntake> _history = [];
+    private long? _editingId;
+    private DateTime? _editingConsumedDate;
+    private DateTime? _createdAt;
+    private DateTime? _updatedAt;
+    private string _consumedAtText = ToDateTimeLocal(DateTime.Now);
+    private string _foodNotes = string.Empty;
+    private string _searchText = string.Empty;
+    private string? _message;
+    private string _messageClass = "page-message";
+    private string? _lookupTip;
+    private int _selectedDayTotal;
+    private bool _isEstimating;
+
+    protected override void OnInitialized()
+    {
+        ResetForm();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !LoginSession.IsSignedIn)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (firstRender && !LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            StateHasChanged();
+            return;
+        }
+
+        if (firstRender)
+        {
+            LoadHistory();
+            RefreshSelectedDayTotal();
+            StateHasChanged();
+        }
+    }
+
+    private List<FoodPhosphorusIntake> FilteredHistory
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_searchText))
+                return _history;
+
+            return _history
+                .Where(x => x.FoodName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private string SelectedDayText => TryGetConsumedAt(out var consumedAt)
+        ? $"Tracking {consumedAt:M/d/yyyy} for phosphorus entries."
+        : "Enter a valid consumed date to calculate the selected day total.";
+
+    private string AuditText
+    {
+        get
+        {
+            if (_updatedAt.HasValue)
+                return $"Updated at: {_updatedAt.Value:g}";
+
+            if (_createdAt.HasValue)
+                return $"Created at: {_createdAt.Value:g}";
+
+            return string.Empty;
+        }
+    }
+
+    private bool IsEstimateDisabled => _isEstimating || string.IsNullOrWhiteSpace(_form.FoodName);
+
+    private void LoadHistory()
+    {
+        _history.Clear();
+
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _history.AddRange(FoodService.GetHistory(LoginSession.PersonId.Value));
+    }
+
+    private void SelectEntry(FoodPhosphorusIntake item)
+    {
+        _editingId = item.FoodPhosphorusIntakeId;
+        _editingConsumedDate = item.ConsumedAt.Date;
+        _form.FoodName = item.FoodName;
+        _form.PhosphorusMg = item.PhosphorusMg;
+        _form.Calories = item.Calories;
+        _form.SodiumMg = item.SodiumMg;
+        _form.ProteinG = item.ProteinG;
+        _form.PotassiumMg = item.PotassiumMg;
+        _form.Binders = item.Binders;
+        _form.ServingDescription = item.ServingDescription ?? string.Empty;
+        _form.EstimatedByAi = item.EstimatedByAi;
+        _form.AiConfidence = item.AiConfidence;
+        _form.SourceNotes = item.SourceNotes;
+        _foodNotes = item.FoodNotes ?? string.Empty;
+        _consumedAtText = ToDateTimeLocal(item.ConsumedAt);
+        _createdAt = item.CreatedAt;
+        _updatedAt = item.UpdatedAt;
+        _message = null;
+        RefreshSelectedDayTotal();
+    }
+
+    private void BeginNewEntry()
+    {
+        ResetForm();
+        _message = null;
+        RefreshSelectedDayTotal();
+    }
+
+    private void SetConsumedAt(ChangeEventArgs args)
+    {
+        _consumedAtText = args.Value?.ToString() ?? string.Empty;
+        RefreshSelectedDayTotal();
+    }
+
+    private void SetSearchText(ChangeEventArgs args)
+    {
+        _searchText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _editingConsumedDate = null;
+        _form.FoodName = string.Empty;
+        _form.PhosphorusMg = null;
+        _form.Calories = null;
+        _form.SodiumMg = null;
+        _form.ProteinG = null;
+        _form.PotassiumMg = null;
+        _form.Binders = 0;
+        _form.ServingDescription = string.Empty;
+        _form.EstimatedByAi = false;
+        _form.AiConfidence = null;
+        _form.SourceNotes = null;
+        _foodNotes = string.Empty;
+        _consumedAtText = ToDateTimeLocal(DateTime.Now);
+        _createdAt = null;
+        _updatedAt = null;
+    }
+
+    private async Task EstimateFood()
+    {
+        if (string.IsNullOrWhiteSpace(_form.FoodName))
+        {
+            ShowError("Enter a food item before estimating.");
+            return;
+        }
+
+        _isEstimating = true;
+        _message = null;
+
+        try
+        {
+            var estimate = await EstimateService.EstimateAsync(_form.FoodName);
+            _form.FoodName = estimate.FoodName;
+            _form.PhosphorusMg = estimate.EstimatedPhosphorusMg;
+            _form.ServingDescription = estimate.ServingDescription ?? _form.ServingDescription;
+            _form.EstimatedByAi = true;
+            _form.AiConfidence = estimate.Confidence;
+            _form.SourceNotes = estimate.SourceNotes;
+            _foodNotes = string.IsNullOrWhiteSpace(estimate.SourceNotes)
+                ? _foodNotes
+                : estimate.SourceNotes;
+            ShowSuccess($"Estimate ready: {estimate.EstimatedPhosphorusMg} mg phosphorus.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            _isEstimating = false;
+        }
+    }
+
+    private void SaveEntry()
+    {
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            return;
+        }
+
+        if (!TryGetConsumedAt(out var consumedAt))
+        {
+            ShowError("Enter a valid date eaten.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_form.FoodName))
+        {
+            ShowError("Food item is required.");
+            return;
+        }
+
+        if (!_form.PhosphorusMg.HasValue || _form.PhosphorusMg.Value < 0)
+        {
+            ShowError("Phosphorus must be a non-negative whole number.");
+            return;
+        }
+
+        if (_form.Calories is < 0 || _form.SodiumMg is < 0 || _form.ProteinG is < 0 || _form.PotassiumMg is < 0 || _form.Binders < 0)
+        {
+            ShowError("Nutrition values cannot be negative.");
+            return;
+        }
+
+        var personId = LoginSession.PersonId.Value;
+        var shouldInsert = !_editingId.HasValue || (_editingConsumedDate.HasValue && _editingConsumedDate.Value != consumedAt.Date);
+        long? savedId = shouldInsert ? null : _editingId;
+
+        try
+        {
+            if (shouldInsert)
+            {
+                savedId = FoodService.Insert(
+                    personId,
+                    _form.FoodName.Trim(),
+                    _form.PhosphorusMg.Value,
+                    _form.Calories,
+                    _form.SodiumMg,
+                    _form.ProteinG,
+                    _form.PotassiumMg,
+                    null,
+                    _form.Binders,
+                    consumedAt,
+                    null,
+                    _form.ServingDescription,
+                    _form.EstimatedByAi,
+                    _form.EstimatedByAi ? "OpenAI" : null,
+                    _form.AiConfidence,
+                    _form.SourceNotes,
+                    LoginSession.UserName ?? string.Empty);
+            }
+            else
+            {
+                FoodService.Update(
+                    _editingId!.Value,
+                    personId,
+                    _form.FoodName.Trim(),
+                    _form.PhosphorusMg.Value,
+                    _form.Calories,
+                    _form.SodiumMg,
+                    _form.ProteinG,
+                    _form.PotassiumMg,
+                    null,
+                    _form.Binders,
+                    consumedAt,
+                    null,
+                    _form.ServingDescription,
+                    _form.EstimatedByAi,
+                    _form.EstimatedByAi ? "OpenAI" : null,
+                    _form.AiConfidence,
+                    _form.SourceNotes,
+                    LoginSession.UserName ?? string.Empty);
+            }
+
+            LoadHistory();
+            var selected = _history.FirstOrDefault(x => x.FoodPhosphorusIntakeId == savedId);
+            if (selected is not null)
+            {
+                SaveFoodNotesFor(selected);
+                LoadHistory();
+                selected = _history.FirstOrDefault(x => x.FoodPhosphorusIntakeId == savedId);
+                if (selected is not null)
+                    SelectEntry(selected);
+            }
+
+            RefreshSelectedDayTotal();
+            ShowSuccess(shouldInsert ? "Food entry saved." : "Food entry updated.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void SaveFoodNotesFor(FoodPhosphorusIntake item)
+    {
+        var profileId = item.FoodPhosphorusFoodId ?? FoodService.EnsureFoodProfileForIntake(item);
+        FoodService.SaveFoodNote(profileId, _foodNotes);
+    }
+
+    private void DeleteSelected()
+    {
+        if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
+            return;
+
+        try
+        {
+            var deleted = FoodService.DeleteForPerson(LoginSession.PersonId.Value, _editingId.Value);
+            if (!deleted)
+            {
+                ShowError("The selected food entry could not be deleted.");
+                return;
+            }
+
+            LoadHistory();
+            ResetForm();
+            RefreshSelectedDayTotal();
+            ShowSuccess("Food entry deleted.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void RefreshSelectedDayTotal()
+    {
+        if (!LoginSession.PersonId.HasValue || !TryGetConsumedAt(out var consumedAt))
+        {
+            _selectedDayTotal = 0;
+            return;
+        }
+
+        _selectedDayTotal = FoodService.GetDailyTotal(LoginSession.PersonId.Value, consumedAt);
+    }
+
+    private bool TryGetConsumedAt(out DateTime consumedAt)
+    {
+        if (DateTime.TryParse(_consumedAtText, out consumedAt))
+            return true;
+
+        consumedAt = default;
+        return false;
+    }
+
+    private void ShowLookupTip()
+    {
+        _lookupTip = "AI lookup can estimate phosphorus from a food description. Review the estimate before saving, especially when serving size or brand is unclear.";
+    }
+
+    private void DismissLookupTip()
+    {
+        _lookupTip = null;
+    }
+
+    private void ShowSuccess(string message)
+    {
+        _messageClass = "page-message";
+        _message = message;
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "page-message page-message--error";
+        _message = message;
+    }
+
+    private void SignOut()
+    {
+        LoginSession.SignOut();
+        Navigation.NavigateTo("/");
+    }
+
+    private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
+
+    private sealed class NutritionForm
+    {
+        [Required]
+        public string FoodName { get; set; } = string.Empty;
+
+        [Required]
+        [Range(0, int.MaxValue)]
+        public int? PhosphorusMg { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int? Calories { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int? SodiumMg { get; set; }
+
+        [Range(typeof(decimal), "0", "10000")]
+        public decimal? ProteinG { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int? PotassiumMg { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int Binders { get; set; }
+
+        public string? ServingDescription { get; set; }
+
+        public bool EstimatedByAi { get; set; }
+
+        public string? AiConfidence { get; set; }
+
+        public string? SourceNotes { get; set; }
+    }
+}
