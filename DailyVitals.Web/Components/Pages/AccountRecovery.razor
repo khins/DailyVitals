@@ -1,0 +1,183 @@
+@page "/account-recovery"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyVitals.Data.Services
+@using DailyVitals.Web.Services
+@inject LoginUserService LoginUserService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Reset Password | DailyVitals</PageTitle>
+
+<section class="login-page account-page">
+    <div class="login-visual" aria-hidden="true">
+        <div class="vitals-card">
+            <div class="vitals-card__header">
+                <span>Account Recovery</span>
+                <strong>Verify person</strong>
+            </div>
+            <div class="pulse-line"></div>
+            <div class="metric-grid">
+                <div>
+                    <span>Step 1</span>
+                    <strong>User</strong>
+                </div>
+                <div>
+                    <span>Step 2</span>
+                    <strong>Person</strong>
+                </div>
+                <div>
+                    <span>Step 3</span>
+                    <strong>Reset</strong>
+                </div>
+                <div>
+                    <span>Result</span>
+                    <strong>Sign in</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-panel account-panel">
+        <div class="brand-row">
+            <div class="brand-mark" aria-hidden="true">DV</div>
+            <div>
+                <p class="eyebrow">DailyVitals Web</p>
+                <h1>Reset Password</h1>
+            </div>
+        </div>
+
+        <EditForm Model="_model" OnValidSubmit="ResetPassword" class="login-form account-form">
+            <DataAnnotationsValidator />
+
+            <div class="field-group">
+                <label for="recovery-user-name">Username</label>
+                <InputText id="recovery-user-name" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
+                <ValidationMessage For="() => _model.UserName" />
+            </div>
+
+            <div class="account-form-grid">
+                <div class="field-group">
+                    <label for="recovery-first-name">First Name</label>
+                    <InputText id="recovery-first-name" class="form-input" autocomplete="given-name" @bind-Value="_model.FirstName" />
+                    <ValidationMessage For="() => _model.FirstName" />
+                </div>
+
+                <div class="field-group">
+                    <label for="recovery-last-name">Last Name</label>
+                    <InputText id="recovery-last-name" class="form-input" autocomplete="family-name" @bind-Value="_model.LastName" />
+                    <ValidationMessage For="() => _model.LastName" />
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label for="recovery-birth-date">Birth Date</label>
+                <input id="recovery-birth-date" class="form-input" type="date" value="@_birthDateText" @onchange="SetBirthDate" />
+            </div>
+
+            <div class="account-form-grid">
+                <div class="field-group">
+                    <label for="new-password">New Password</label>
+                    <InputText id="new-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.NewPassword" />
+                    <ValidationMessage For="() => _model.NewPassword" />
+                </div>
+
+                <div class="field-group">
+                    <label for="confirm-new-password">Confirm Password</label>
+                    <InputText id="confirm-new-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
+                    <ValidationMessage For="() => _model.ConfirmPassword" />
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <button type="submit" class="primary-button">Reset Password</button>
+            <a class="form-link" href="/">Back to sign in</a>
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    private readonly AccountRecoveryModel _model = new();
+    private string _birthDateText = string.Empty;
+    private string? _message;
+    private string _messageClass = "login-message";
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && LoginSession.IsSignedIn)
+            Navigation.NavigateTo("/dashboard", replace: true);
+    }
+
+    private void SetBirthDate(ChangeEventArgs args)
+    {
+        _birthDateText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void ResetPassword()
+    {
+        if (!string.Equals(_model.NewPassword, _model.ConfirmPassword, StringComparison.Ordinal))
+        {
+            ShowError("Passwords must match.");
+            return;
+        }
+
+        if (!DateTime.TryParse(_birthDateText, out var birthDate))
+        {
+            ShowError("Enter the birth date for this person.");
+            return;
+        }
+
+        try
+        {
+            var reset = LoginUserService.TryResetPassword(
+                _model.UserName!.Trim(),
+                _model.FirstName!.Trim(),
+                _model.LastName!.Trim(),
+                birthDate.Date,
+                _model.NewPassword!,
+                out var failureReason);
+
+            if (!reset)
+            {
+                ShowError(failureReason);
+                return;
+            }
+
+            _messageClass = "login-message";
+            _message = "Password reset. Return to sign in with the new password.";
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "login-message login-message--error";
+        _message = message;
+    }
+
+    private sealed class AccountRecoveryModel
+    {
+        [Required(ErrorMessage = "Enter your username.")]
+        public string? UserName { get; set; }
+
+        [Required(ErrorMessage = "Enter the first name.")]
+        public string? FirstName { get; set; }
+
+        [Required(ErrorMessage = "Enter the last name.")]
+        public string? LastName { get; set; }
+
+        [Required(ErrorMessage = "Enter a new password.")]
+        [MinLength(8, ErrorMessage = "Password must be at least 8 characters.")]
+        public string? NewPassword { get; set; }
+
+        [Required(ErrorMessage = "Confirm the new password.")]
+        public string? ConfirmPassword { get; set; }
+    }
+}

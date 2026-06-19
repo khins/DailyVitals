@@ -93,6 +93,7 @@ StyleCopReport.xml
 *.tmp_proj
 *_wpftmp.csproj
 *.log
+DailyVitals.Web/App_Data/
 *.vspscc
 *.vssscc
 .builds

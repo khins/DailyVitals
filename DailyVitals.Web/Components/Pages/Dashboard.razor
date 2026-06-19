@@ -9,22 +9,207 @@
 @if (LoginSession.IsSignedIn)
 {
     <section class="dashboard-shell">
-        <header class="dashboard-header">
-            <div>
-                <p class="eyebrow">DailyVitals Web</p>
-                <h1>Dashboard</h1>
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
             </div>
-            <button type="button" class="secondary-link" @onclick="SignOut">Sign out</button>
-        </header>
 
-        <div class="empty-state">
-            <h2>Web dashboard comes next</h2>
-            <p>The Blazor Server app is running, the login screen is in place, and this route is ready for the first vitals module.</p>
-        </div>
+            <nav class="rail-nav">
+                <a class="is-active" href="dashboard">Dashboard</a>
+                <a href="blood-pressure">Blood Pressure</a>
+                <a href="blood-glucose">Glucose</a>
+                <a href="weight">Weight</a>
+                <a href="exercise">Exercise</a>
+                <a href="nutrition">Nutrition</a>
+                <a href="labs">Kidney Labs</a>
+            </nav>
+
+            <a class="rail-profile" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Vitals Dashboard</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Person</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                    <button type="button" class="secondary-link">Today</button>
+                    <a class="primary-action" href="blood-pressure">Add Reading</a>
+                </div>
+            </header>
+
+            <section class="status-band" aria-label="Current status">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>Stable overall</strong>
+                    <p>Blood pressure and glucose are inside the normal tracking range.</p>
+                </div>
+                <div>
+                    <span>Last sync</span>
+                    <strong>Local database</strong>
+                </div>
+            </section>
+
+            <section class="metric-card-grid" aria-label="Vital summary">
+                @foreach (var metric in Metrics)
+                {
+                    <article class="dashboard-card metric-card">
+                        <div class="card-heading">
+                            <span>@metric.Label</span>
+                            <strong class="@metric.StatusClass">@metric.Status</strong>
+                        </div>
+                        <div class="metric-value">
+                            @metric.Value
+                            <span>@metric.Unit</span>
+                        </div>
+                        <p>@metric.Context</p>
+                    </article>
+                }
+            </section>
+
+            <section class="dashboard-grid">
+                <article class="dashboard-card trend-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Seven-day trend</span>
+                            <h2>Blood Pressure</h2>
+                        </div>
+                        <strong class="status-pill status-ok">Controlled</strong>
+                    </div>
+
+                    <div class="bar-chart" aria-label="Blood pressure trend">
+                        @foreach (var point in BloodPressureTrend)
+                        {
+                            <div class="bar-column">
+                                <span class="bar-value">@point.Value</span>
+                                <span class="bar-track">
+                                    <span class="bar-fill" style="height:@point.Height%"></span>
+                                </span>
+                                <span class="bar-label">@point.Label</span>
+                            </div>
+                        }
+                    </div>
+                </article>
+
+                <article class="dashboard-card attention-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Needs attention</span>
+                            <h2>Today</h2>
+                        </div>
+                        <strong class="status-pill status-watch">2 items</strong>
+                    </div>
+
+                    <div class="attention-list">
+                        @foreach (var item in AttentionItems)
+                        {
+                            <div class="attention-row">
+                                <span class="@item.MarkerClass"></span>
+                                <div>
+                                    <strong>@item.Title</strong>
+                                    <p>@item.Description</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+
+                <article class="dashboard-card nutrition-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Nutrition</span>
+                            <h2>Phosphorus Budget</h2>
+                        </div>
+                        <strong>74%</strong>
+                    </div>
+
+                    <div class="progress-stack">
+                        <div>
+                            <span>Consumed</span>
+                            <strong>740 mg</strong>
+                        </div>
+                        <div class="progress-track">
+                            <span class="progress-fill"></span>
+                        </div>
+                        <div>
+                            <span>Daily target</span>
+                            <strong>1,000 mg</strong>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="dashboard-card activity-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Recent activity</span>
+                            <h2>Latest Entries</h2>
+                        </div>
+                    </div>
+
+                    <div class="activity-list">
+                        @foreach (var entry in RecentEntries)
+                        {
+                            <div class="activity-row">
+                                <time>@entry.Time</time>
+                                <div>
+                                    <strong>@entry.Title</strong>
+                                    <p>@entry.Detail</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+            </section>
+        </main>
     </section>
 }
 
 @code {
+    private static readonly MetricCard[] Metrics =
+    [
+        new("Blood Pressure", "118/76", "mmHg", "Normal", "status-pill status-ok", "Down 4 points from last reading"),
+        new("Blood Glucose", "96", "mg/dL", "In range", "status-pill status-ok", "Fasting reading logged this morning"),
+        new("Weight", "182.4", "lb", "Tracking", "status-pill status-info", "Rolling 7-day average is steady"),
+        new("Exercise", "42", "min", "Ahead", "status-pill status-ok", "18 minutes over today target")
+    ];
+
+    private static readonly TrendPoint[] BloodPressureTrend =
+    [
+        new("Thu", "122", 66),
+        new("Fri", "120", 61),
+        new("Sat", "119", 58),
+        new("Sun", "124", 72),
+        new("Mon", "121", 64),
+        new("Tue", "118", 54),
+        new("Wed", "118", 54)
+    ];
+
+    private static readonly AttentionItem[] AttentionItems =
+    [
+        new("Kidney labs", "Monthly lab entry is due this week.", "attention-marker marker-watch"),
+        new("Hydration note", "No fluid intake note has been logged today.", "attention-marker marker-info")
+    ];
+
+    private static readonly ActivityEntry[] RecentEntries =
+    [
+        new("8:12 AM", "Blood glucose", "96 mg/dL fasting"),
+        new("7:44 AM", "Weight", "182.4 lb"),
+        new("Yesterday", "Exercise", "42 minutes treadmill"),
+        new("Yesterday", "Blood pressure", "118/76 mmHg")
+    ];
+
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender && !LoginSession.IsSignedIn)
@@ -36,4 +221,18 @@
         LoginSession.SignOut();
         Navigation.NavigateTo("/");
     }
+
+    private sealed record MetricCard(
+        string Label,
+        string Value,
+        string Unit,
+        string Status,
+        string StatusClass,
+        string Context);
+
+    private sealed record TrendPoint(string Label, string Value, int Height);
+
+    private sealed record AttentionItem(string Title, string Description, string MarkerClass);
+
+    private sealed record ActivityEntry(string Time, string Title, string Detail);
 }

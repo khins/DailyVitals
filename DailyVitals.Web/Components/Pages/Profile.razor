@@ -1,0 +1,341 @@
+@page "/profile"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyVitals.Data.Services
+@using DailyVitals.Web.Services
+@inject PersonService PersonService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Profile | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
+            </div>
+
+            <nav class="rail-nav">
+                <a href="dashboard">Dashboard</a>
+                <a href="blood-pressure">Blood Pressure</a>
+                <a href="blood-glucose">Glucose</a>
+                <a href="weight">Weight</a>
+                <a href="exercise">Exercise</a>
+                <a href="nutrition">Nutrition</a>
+                <a href="labs">Kidney Labs</a>
+            </nav>
+
+            <a class="rail-profile is-active" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Profile</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Signed in</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <section class="profile-grid">
+                <article class="dashboard-card profile-summary-card">
+                    <div class="profile-avatar" aria-hidden="true">@Initials</div>
+                    <h2>@DisplayName</h2>
+                    <p>@ProfileDetails</p>
+                    @if (!string.IsNullOrWhiteSpace(AuditText))
+                    {
+                        <span class="audit-text">@AuditText</span>
+                    }
+                </article>
+
+                <article class="dashboard-card entry-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Manage Person</span>
+                            <h2>Profile Details</h2>
+                        </div>
+                    </div>
+
+                    <EditForm Model="_form" OnValidSubmit="SaveProfile" class="bp-form">
+                        <DataAnnotationsValidator />
+
+                        <div class="account-form-grid">
+                            <div class="field-group">
+                                <label for="profile-first-name">First Name</label>
+                                <InputText id="profile-first-name" class="form-input" @bind-Value="_form.FirstName" />
+                                <ValidationMessage For="() => _form.FirstName" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="profile-last-name">Last Name</label>
+                                <InputText id="profile-last-name" class="form-input" @bind-Value="_form.LastName" />
+                                <ValidationMessage For="() => _form.LastName" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="profile-birth-date">Birth Date</label>
+                                <input id="profile-birth-date" class="form-input" type="date" value="@_birthDateText" @onchange="SetBirthDate" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Height</label>
+                                <div class="height-picker">
+                                    <select class="form-input" @bind="_heightFeet">
+                                        @for (var feet = 3; feet <= 8; feet++)
+                                        {
+                                            <option value="@feet">@feet ft</option>
+                                        }
+                                    </select>
+                                    <select class="form-input" @bind="_heightInches">
+                                        @for (var inches = 0; inches <= 11; inches++)
+                                        {
+                                            <option value="@inches">@inches in</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <fieldset class="gender-options">
+                            <legend>Gender</legend>
+                            <InputRadioGroup @bind-Value="_form.Gender">
+                                <label>
+                                    <InputRadio Value="@("Male")" />
+                                    <span>Male</span>
+                                </label>
+                                <label>
+                                    <InputRadio Value="@("Female")" />
+                                    <span>Female</span>
+                                </label>
+                            </InputRadioGroup>
+                        </fieldset>
+
+                        <div class="form-command-row">
+                            <button type="submit" class="primary-action">Save Profile</button>
+                        </div>
+                    </EditForm>
+                </article>
+            </section>
+        </main>
+    </section>
+}
+
+@code {
+    private readonly ProfileForm _form = new();
+    private string _birthDateText = string.Empty;
+    private DateTime? _createdAt;
+    private DateTime? _updatedAt;
+    private int _heightFeet = 5;
+    private int _heightInches = 0;
+    private string? _message;
+    private string _messageClass = "page-message";
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !LoginSession.IsSignedIn)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (firstRender)
+        {
+            LoadProfile();
+            StateHasChanged();
+        }
+    }
+
+    private string DisplayName =>
+        string.IsNullOrWhiteSpace(_form.FirstName) && string.IsNullOrWhiteSpace(_form.LastName)
+            ? "Profile"
+            : $"{_form.FirstName} {_form.LastName}".Trim();
+
+    private string Initials
+    {
+        get
+        {
+            var first = string.IsNullOrWhiteSpace(_form.FirstName) ? string.Empty : _form.FirstName.Trim()[0].ToString();
+            var last = string.IsNullOrWhiteSpace(_form.LastName) ? string.Empty : _form.LastName.Trim()[0].ToString();
+            return string.IsNullOrWhiteSpace(first + last) ? "DV" : (first + last).ToUpperInvariant();
+        }
+    }
+
+    private string ProfileDetails
+    {
+        get
+        {
+            var parts = new List<string>();
+
+            if (_form.BirthDate.HasValue)
+                parts.Add(_form.BirthDate.Value.ToString("M/d/yyyy"));
+
+            if (!string.IsNullOrWhiteSpace(_form.Gender))
+                parts.Add(_form.Gender);
+
+            if (SelectedHeightFt.HasValue)
+                parts.Add($"{_heightFeet} ft {_heightInches} in ({SelectedHeightFt.Value:0.00} ft)");
+
+            return parts.Count == 0 ? "No profile details entered yet." : string.Join(" | ", parts);
+        }
+    }
+
+    private string AuditText
+    {
+        get
+        {
+            if (_updatedAt.HasValue)
+                return $"Updated at: {_updatedAt.Value:g}";
+
+            if (_createdAt.HasValue)
+                return $"Created at: {_createdAt.Value:g}";
+
+            return string.Empty;
+        }
+    }
+
+    private void LoadProfile()
+    {
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            return;
+        }
+
+        try
+        {
+            var person = PersonService.GetPersonById(LoginSession.PersonId.Value);
+            if (person is null)
+            {
+                ShowError("Profile could not be found.");
+                return;
+            }
+
+            _form.FirstName = person.FirstName;
+            _form.LastName = person.LastName;
+            _form.BirthDate = person.BirthDate;
+            _form.Gender = person.Gender;
+            _birthDateText = person.BirthDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+            _createdAt = person.CreatedAt;
+            _updatedAt = person.UpdatedAt;
+            SetHeightSelectors(person.HeightFt);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void SetBirthDate(ChangeEventArgs args)
+    {
+        _birthDateText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void SaveProfile()
+    {
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            return;
+        }
+
+        DateTime? birthDate = null;
+        if (!string.IsNullOrWhiteSpace(_birthDateText))
+        {
+            if (!DateTime.TryParse(_birthDateText, out var parsedBirthDate))
+            {
+                ShowError("Enter a valid birth date.");
+                return;
+            }
+
+            birthDate = parsedBirthDate.Date;
+        }
+
+        try
+        {
+            PersonService.UpdatePerson(
+                LoginSession.PersonId.Value,
+                _form.FirstName!.Trim(),
+                _form.LastName!.Trim(),
+                SelectedHeightFt,
+                birthDate,
+                _form.Gender);
+
+            _form.BirthDate = birthDate;
+            _updatedAt = DateTime.Now;
+            _messageClass = "page-message";
+            _message = "Profile updated.";
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "page-message page-message--error";
+        _message = message;
+    }
+
+    private void SignOut()
+    {
+        LoginSession.SignOut();
+        Navigation.NavigateTo("/");
+    }
+
+    private decimal? SelectedHeightFt => _heightFeet <= 0 ? null : _heightFeet + (_heightInches / 100m);
+
+    private void SetHeightSelectors(decimal? heightFt)
+    {
+        if (!heightFt.HasValue || heightFt.Value <= 0)
+        {
+            _heightFeet = 5;
+            _heightInches = 0;
+            return;
+        }
+
+        var feet = (int)Math.Truncate(heightFt.Value);
+        var inches = (int)Math.Round((heightFt.Value - feet) * 100m);
+
+        if (inches >= 12)
+        {
+            feet += inches / 12;
+            inches %= 12;
+        }
+
+        _heightFeet = Math.Clamp(feet, 3, 8);
+        _heightInches = Math.Clamp(inches, 0, 11);
+    }
+
+    private sealed class ProfileForm
+    {
+        [Required(ErrorMessage = "Enter a first name.")]
+        public string? FirstName { get; set; }
+
+        [Required(ErrorMessage = "Enter a last name.")]
+        public string? LastName { get; set; }
+
+        public DateTime? BirthDate { get; set; }
+
+        public string? Gender { get; set; }
+    }
+}
