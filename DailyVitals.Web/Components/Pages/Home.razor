@@ -57,9 +57,14 @@
 
             <div class="field-group">
                 <label for="password">Password</label>
-                <InputText id="password" type="password" class="form-input" autocomplete="current-password" @bind-Value="_model.Password" />
+                <InputText id="password" type="@PasswordInputType" class="form-input" autocomplete="current-password" @bind-Value="_model.Password" />
                 <ValidationMessage For="() => _model.Password" />
             </div>
+
+            <label class="checkbox-row show-password-row">
+                <InputCheckbox @bind-Value="_showPassword" />
+                <span>Show Password</span>
+            </label>
 
             <div class="form-options">
                 <label class="checkbox-row">
@@ -87,14 +92,22 @@
     };
 
     private string? _message;
+    private bool _showPassword;
 
-    protected override void OnAfterRender(bool firstRender)
+    private string PasswordInputType => _showPassword ? "text" : "password";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && LoginSession.IsSignedIn)
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (LoginSession.IsSignedIn)
             Navigation.NavigateTo("/dashboard", replace: true);
     }
 
-    private void SignIn()
+    private async Task SignIn()
     {
         if (!LoginService.IsConfigured)
         {
@@ -116,7 +129,7 @@
         }
 
         _message = null;
-        LoginSession.SignIn(loginUser.UserName, loginUser.PersonId);
+        await LoginSession.SignInAsync(loginUser.UserName, loginUser.PersonId, _model.RememberMe);
         Navigation.NavigateTo("/dashboard", replace: true);
     }
 

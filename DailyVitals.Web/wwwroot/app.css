@@ -205,6 +205,10 @@ h1 {
     color: #384846;
 }
 
+.show-password-row {
+    margin-top: -4px;
+}
+
 .login-message {
     border-radius: 8px;
     padding: 11px 12px;
@@ -599,7 +603,9 @@ h1 {
 .trend-panel,
 .attention-panel,
 .nutrition-panel,
-.activity-panel {
+.activity-panel,
+.exercise-trend-panel,
+.exercise-month-panel {
     padding: 20px;
 }
 
@@ -692,6 +698,11 @@ h1 {
     grid-row: span 2;
 }
 
+.exercise-trend-panel,
+.exercise-month-panel {
+    grid-column: 1 / -1;
+}
+
 .progress-stack {
     display: grid;
     gap: 16px;
@@ -717,6 +728,50 @@ h1 {
     height: 100%;
     border-radius: inherit;
     background: #2f756e;
+}
+
+.nutrition-target-caption {
+    margin: 14px 0 12px;
+    color: #5d6a68;
+}
+
+.nutrition-target-table {
+    display: grid;
+    overflow: hidden;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+}
+
+.nutrition-target-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) repeat(3, minmax(120px, 0.9fr));
+    border-top: 1px solid #e4ecea;
+}
+
+.nutrition-target-row:first-child {
+    border-top: 0;
+}
+
+.nutrition-target-row > span,
+.nutrition-target-row > strong {
+    padding: 10px 12px;
+    text-align: left;
+}
+
+.nutrition-target-head {
+    background: #f1f6f4;
+    color: #384846;
+    font-size: 0.86rem;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.remaining-positive {
+    color: #287b42;
+}
+
+.remaining-negative {
+    color: #b3262e;
 }
 
 .activity-row {
@@ -779,6 +834,11 @@ h1 {
     gap: 12px;
 }
 
+.glucose-number-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.45fr);
+}
+
 .weight-number-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 120px;
@@ -823,6 +883,156 @@ h1 {
 .nutrition-table-wrap {
     margin-top: 14px;
     max-height: 480px;
+}
+
+.kidney-lab-entry-grid {
+    grid-template-columns: minmax(460px, 0.48fr) minmax(0, 0.52fr);
+}
+
+.kidney-lab-number-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.kidney-lab-table-wrap {
+    max-height: 560px;
+}
+
+.kidney-lab-trend-panel {
+    grid-column: 2;
+    padding: 20px;
+}
+
+.line-chart {
+    display: grid;
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.line-chart svg {
+    width: 100%;
+    height: 230px;
+    border-radius: 8px;
+    background: #f4f7f6;
+}
+
+.line-chart polyline {
+    fill: none;
+    stroke: #2f756e;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.5;
+    vector-effect: non-scaling-stroke;
+}
+
+.line-chart-labels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 8px;
+}
+
+.line-chart-labels span {
+    display: grid;
+    gap: 2px;
+    color: #5d6a68;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.exercise-line-chart {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.exercise-line-chart svg {
+    width: 100%;
+    height: 250px;
+    border-radius: 8px;
+    background: #f4f7f6;
+}
+
+.exercise-line-chart polyline {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.3;
+    vector-effect: non-scaling-stroke;
+}
+
+.session-line {
+    stroke: #f28a22;
+}
+
+.average-line {
+    stroke: #3f88bd;
+}
+
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    color: #5d6a68;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.chart-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.chart-legend i {
+    width: 16px;
+    height: 4px;
+    border-radius: 999px;
+}
+
+.legend-orange {
+    background: #f28a22;
+}
+
+.legend-blue {
+    background: #3f88bd;
+}
+
+.monthly-bar-chart {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: 18px;
+    height: 300px;
+    margin-top: 18px;
+    padding: 8px 0 0;
+}
+
+.monthly-bar-column {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 7px;
+    min-width: 0;
+    color: #5d6a68;
+    font-size: 0.84rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.monthly-bar-track {
+    position: relative;
+    align-self: stretch;
+    border-radius: 8px;
+    background: #f1f5f3;
+    overflow: hidden;
+}
+
+.monthly-bar-fill {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 8px 8px 0 0;
+    background: #2f8a56;
 }
 
 .advanced-toggle-row {

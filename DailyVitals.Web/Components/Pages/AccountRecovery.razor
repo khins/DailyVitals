@@ -106,9 +106,14 @@
     private string? _message;
     private string _messageClass = "login-message";
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && LoginSession.IsSignedIn)
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (LoginSession.IsSignedIn)
             Navigation.NavigateTo("/dashboard", replace: true);
     }
 

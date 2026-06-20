@@ -1,0 +1,685 @@
+@page "/labs"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyVitals.Data.Services
+@using DailyVitals.Domain.Models
+@using DailyVitals.Web.Services
+@inject KidneyLabResultService KidneyLabService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Kidney Labs | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
+            </div>
+
+            <nav class="rail-nav">
+                <a href="dashboard">Dashboard</a>
+                <a href="blood-pressure">Blood Pressure</a>
+                <a href="blood-glucose">Glucose</a>
+                <a href="weight">Weight</a>
+                <a href="exercise">Exercise</a>
+                <a href="nutrition">Nutrition</a>
+                <a class="is-active" href="labs">Kidney Labs</a>
+            </nav>
+
+            <a class="rail-profile" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Kidney Labs</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Person</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                    <button type="button" class="primary-action" @onclick="BeginNewResult">New Lab</button>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <section class="@LabBandClass" aria-label="Kidney lab summary">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>@LabSummaryTitle</strong>
+                    <p>@LabSummaryText</p>
+                </div>
+                <div>
+                    <span>Latest panel</span>
+                    <strong>@LatestPanelText</strong>
+                </div>
+            </section>
+
+            <section class="entry-grid kidney-lab-entry-grid">
+                <article class="dashboard-card entry-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>@(_editingId.HasValue ? "Edit Panel" : "New Panel")</span>
+                            <h2>Monthly Kidney Lab Panel</h2>
+                        </div>
+                    </div>
+
+                    <EditForm Model="_form" FormName="kidney-labs-form" OnValidSubmit="SaveResult" class="bp-form">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-row">
+                            <label for="result-month">Result Month</label>
+                            <input id="result-month" class="form-input" type="month" value="@_resultMonthText" @onchange="SetResultMonth" />
+                        </div>
+
+                        <div class="kidney-lab-number-grid">
+                            <div class="field-group">
+                                <label for="albumin">Albumin</label>
+                                <InputNumber id="albumin" class="form-input" @bind-Value="_form.Albumin" />
+                                <ValidationMessage For="() => _form.Albumin" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="npcr">nPCR</label>
+                                <InputNumber id="npcr" class="form-input" @bind-Value="_form.NPCR" />
+                                <ValidationMessage For="() => _form.NPCR" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="potassium">Potassium</label>
+                                <InputNumber id="potassium" class="form-input" @bind-Value="_form.Potassium" />
+                                <ValidationMessage For="() => _form.Potassium" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="wktv">wKt/V</label>
+                                <InputNumber id="wktv" class="form-input" @bind-Value="_form.WKtV" />
+                                <ValidationMessage For="() => _form.WKtV" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="calcium">Calcium</label>
+                                <InputNumber id="calcium" class="form-input" @bind-Value="_form.Calcium" />
+                                <ValidationMessage For="() => _form.Calcium" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="phosphorus">Phosphorus</label>
+                                <InputNumber id="phosphorus" class="form-input" @bind-Value="_form.Phosphorus" />
+                                <ValidationMessage For="() => _form.Phosphorus" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="ipth">iPTH</label>
+                                <InputNumber id="ipth" class="form-input" @bind-Value="_form.IPTH" />
+                                <ValidationMessage For="() => _form.IPTH" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="hemoglobin">Hemoglobin</label>
+                                <InputNumber id="hemoglobin" class="form-input" @bind-Value="_form.Hemoglobin" />
+                                <ValidationMessage For="() => _form.Hemoglobin" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="glucose">Glucose</label>
+                                <InputNumber id="glucose" class="form-input" @bind-Value="_form.Glucose" />
+                                <ValidationMessage For="() => _form.Glucose" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="cholesterol">Cholesterol</label>
+                                <InputNumber id="cholesterol" class="form-input" @bind-Value="_form.Cholesterol" />
+                                <ValidationMessage For="() => _form.Cholesterol" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="triglycerides">Triglycerides</label>
+                                <InputNumber id="triglycerides" class="form-input" @bind-Value="_form.Triglycerides" />
+                                <ValidationMessage For="() => _form.Triglycerides" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="bun">BUN</label>
+                                <InputNumber id="bun" class="form-input" @bind-Value="_form.BUN" />
+                                <ValidationMessage For="() => _form.BUN" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="creatinine">Creatinine</label>
+                                <InputNumber id="creatinine" class="form-input" @bind-Value="_form.Creatinine" />
+                                <ValidationMessage For="() => _form.Creatinine" />
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="notes">Notes</label>
+                            <InputTextArea id="notes" class="form-input notes-input" @bind-Value="_form.Notes" />
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(AuditText))
+                        {
+                            <p class="audit-text">@AuditText</p>
+                        }
+
+                        <div class="form-command-row">
+                            <button type="button" class="secondary-link" @onclick="BeginNewResult">New</button>
+                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="submit" class="primary-action">Save</button>
+                        </div>
+                    </EditForm>
+                </article>
+
+                <article class="dashboard-card history-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>History</span>
+                            <h2>Monthly Panels</h2>
+                        </div>
+                        <strong>@_history.Count entries</strong>
+                    </div>
+
+                    @if (_history.Count == 0)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>No lab panels yet</h2>
+                            <p>Save a monthly kidney lab panel to start this person's history.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="data-table-wrap kidney-lab-table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Albumin</th>
+                                        <th>nPCR</th>
+                                        <th>K</th>
+                                        <th>wKt/V</th>
+                                        <th>Ca</th>
+                                        <th>Phos</th>
+                                        <th>Hgb</th>
+                                        <th>Cr</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var result in _history)
+                                    {
+                                        <tr class="@(result.KidneyLabResultId == _editingId ? "is-selected" : null)" @onclick="() => SelectResult(result)">
+                                            <td>@result.DisplayMonth</td>
+                                            <td>@result.Albumin.ToString("0.##")</td>
+                                            <td>@result.NPCR.ToString("0.##")</td>
+                                            <td>@result.Potassium.ToString("0.##")</td>
+                                            <td>@result.WKtV.ToString("0.##")</td>
+                                            <td>@result.Calcium.ToString("0.##")</td>
+                                            <td>@result.Phosphorus.ToString("0.##")</td>
+                                            <td>@result.Hemoglobin.ToString("0.##")</td>
+                                            <td>@result.Creatinine.ToString("0.##")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </article>
+
+                <article class="dashboard-card kidney-lab-trend-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Trend</span>
+                            <h2>Phosphorus</h2>
+                        </div>
+                        <strong>@PhosphorusTrendSummary</strong>
+                    </div>
+
+                    @if (PhosphorusTrendPoints.Count < 2)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>More data needed</h2>
+                            <p>Add at least two monthly panels to chart phosphorus trend.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="line-chart" aria-label="Monthly phosphorus trend">
+                            <svg viewBox="0 0 100 48" preserveAspectRatio="none" role="img">
+                                <polyline points="@PhosphorusTrendPolyline" />
+                            </svg>
+
+                            <div class="line-chart-labels">
+                                @foreach (var point in PhosphorusTrendPoints)
+                                {
+                                    <span>
+                                        <strong>@point.Value.ToString("0.##")</strong>
+                                        @point.Label
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </article>
+            </section>
+        </main>
+    </section>
+}
+
+@code {
+    private readonly KidneyLabForm _form = new();
+    private readonly List<KidneyLabResult> _history = [];
+    private long? _editingId;
+    private DateTime? _createdAt;
+    private DateTime? _updatedAt;
+    private string _resultMonthText = ToMonthText(DateTime.Now);
+    private string? _message;
+    private string _messageClass = "page-message";
+
+    protected override void OnInitialized()
+    {
+        ResetForm();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (!LoginSession.IsSignedIn)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            StateHasChanged();
+            return;
+        }
+
+        LoadHistory();
+        StateHasChanged();
+    }
+
+    private KidneyLabResult? LatestResult => _history.FirstOrDefault();
+
+    private string LabSummaryTitle => LatestResult is null
+        ? "Ready for first panel"
+        : $"{_history.Count} monthly panels";
+
+    private string LabSummaryText => LatestResult is null
+        ? "Enter monthly kidney labs to compare month-to-month trends."
+        : $"Latest phosphorus {LatestResult.Phosphorus:0.##}, potassium {LatestResult.Potassium:0.##}, hemoglobin {LatestResult.Hemoglobin:0.##}.";
+
+    private string LatestPanelText => LatestResult is null
+        ? "None yet"
+        : LatestResult.DisplayMonth;
+
+    private IReadOnlyList<LabTrendPoint> PhosphorusTrendPoints =>
+        _history
+            .OrderBy(x => x.ResultMonth)
+            .Select(x => new LabTrendPoint(x.ResultMonth.ToString("MMM"), x.Phosphorus))
+            .ToList();
+
+    private string PhosphorusTrendPolyline
+    {
+        get
+        {
+            var points = PhosphorusTrendPoints;
+            if (points.Count == 0)
+                return string.Empty;
+
+            var min = points.Min(x => x.Value);
+            var max = points.Max(x => x.Value);
+            var range = max - min;
+            if (range <= 0)
+                range = 1;
+
+            return string.Join(
+                " ",
+                points.Select((point, index) =>
+                {
+                    var x = points.Count == 1 ? 50 : index * 100m / (points.Count - 1);
+                    var y = 42m - ((point.Value - min) / range * 36m);
+                    return $"{x:0.##},{y:0.##}";
+                }));
+        }
+    }
+
+    private string PhosphorusTrendSummary
+    {
+        get
+        {
+            var points = PhosphorusTrendPoints;
+            if (points.Count < 2)
+                return "Pending";
+
+            var change = points[^1].Value - points[0].Value;
+            if (change == 0)
+                return "Flat";
+
+            return change > 0
+                ? $"+{change:0.##}"
+                : $"{change:0.##}";
+        }
+    }
+
+    private string LabBandClass => LatestResult is null
+        ? "status-band"
+        : "status-band status-band--ok";
+
+    private string AuditText
+    {
+        get
+        {
+            if (_updatedAt.HasValue)
+                return $"Updated at: {_updatedAt.Value:g}";
+
+            if (_createdAt.HasValue)
+                return $"Created at: {_createdAt.Value:g}";
+
+            return string.Empty;
+        }
+    }
+
+    private void LoadHistory()
+    {
+        _history.Clear();
+
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _history.AddRange(KidneyLabService.GetHistory(LoginSession.PersonId.Value));
+    }
+
+    private void SelectResult(KidneyLabResult result)
+    {
+        _editingId = result.KidneyLabResultId;
+        _resultMonthText = ToMonthText(result.ResultMonth);
+        _form.Albumin = result.Albumin;
+        _form.NPCR = result.NPCR;
+        _form.Potassium = result.Potassium;
+        _form.WKtV = result.WKtV;
+        _form.Calcium = result.Calcium;
+        _form.Phosphorus = result.Phosphorus;
+        _form.IPTH = result.IPTH;
+        _form.Hemoglobin = result.Hemoglobin;
+        _form.Glucose = result.Glucose;
+        _form.Cholesterol = result.Cholesterol;
+        _form.Triglycerides = result.Triglycerides;
+        _form.BUN = result.BUN;
+        _form.Creatinine = result.Creatinine;
+        _form.Notes = result.Notes ?? string.Empty;
+        _createdAt = result.CreatedAt;
+        _updatedAt = result.UpdatedAt;
+        _message = null;
+    }
+
+    private void BeginNewResult()
+    {
+        ResetForm();
+        _message = null;
+    }
+
+    private void SetResultMonth(ChangeEventArgs args)
+    {
+        _resultMonthText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void ResetForm()
+    {
+        _editingId = null;
+        _resultMonthText = ToMonthText(DateTime.Now);
+        _form.Albumin = null;
+        _form.NPCR = null;
+        _form.Potassium = null;
+        _form.WKtV = null;
+        _form.Calcium = null;
+        _form.Phosphorus = null;
+        _form.IPTH = null;
+        _form.Hemoglobin = null;
+        _form.Glucose = null;
+        _form.Cholesterol = null;
+        _form.Triglycerides = null;
+        _form.BUN = null;
+        _form.Creatinine = null;
+        _form.Notes = "Monthly kidney lab panel";
+        _createdAt = null;
+        _updatedAt = null;
+    }
+
+    private void SaveResult()
+    {
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            return;
+        }
+
+        if (!TryGetResultMonth(out var resultMonth))
+            return;
+
+        if (!FormHasAllValues())
+        {
+            ShowError("Enter all kidney lab values before saving.");
+            return;
+        }
+
+        var normalizedMonth = NormalizeMonth(resultMonth);
+        var duplicateMonth = _history.Any(x =>
+            x.KidneyLabResultId != (_editingId ?? 0) &&
+            NormalizeMonth(x.ResultMonth) == normalizedMonth);
+
+        if (duplicateMonth)
+        {
+            ShowError($"A kidney lab result already exists for {normalizedMonth:MMM yyyy}. Select it from history to update it.");
+            return;
+        }
+
+        var result = BuildResult(LoginSession.PersonId.Value, normalizedMonth);
+
+        try
+        {
+            if (_editingId.HasValue)
+            {
+                result.KidneyLabResultId = _editingId.Value;
+                var updated = KidneyLabService.UpdateForPerson(result, LoginSession.UserName ?? string.Empty);
+
+                if (!updated)
+                {
+                    ShowError("The selected kidney lab result could not be updated.");
+                    return;
+                }
+
+                ShowSuccess("Kidney lab panel updated.");
+            }
+            else
+            {
+                _editingId = KidneyLabService.Insert(result, LoginSession.UserName ?? string.Empty);
+                ShowSuccess("Kidney lab panel saved.");
+            }
+
+            LoadHistory();
+
+            var selected = _history.FirstOrDefault(x => x.KidneyLabResultId == _editingId);
+            if (selected is not null)
+                SelectResult(selected);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void DeleteSelected()
+    {
+        if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
+            return;
+
+        try
+        {
+            var deleted = KidneyLabService.DeleteForPerson(
+                LoginSession.PersonId.Value,
+                _editingId.Value);
+
+            if (!deleted)
+            {
+                ShowError("The selected kidney lab result could not be deleted.");
+                return;
+            }
+
+            LoadHistory();
+            ResetForm();
+            ShowSuccess("Kidney lab panel deleted.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private KidneyLabResult BuildResult(long personId, DateTime resultMonth) => new()
+    {
+        PersonId = personId,
+        ResultMonth = resultMonth,
+        Albumin = _form.Albumin!.Value,
+        NPCR = _form.NPCR!.Value,
+        Potassium = _form.Potassium!.Value,
+        WKtV = _form.WKtV!.Value,
+        Calcium = _form.Calcium!.Value,
+        Phosphorus = _form.Phosphorus!.Value,
+        IPTH = _form.IPTH!.Value,
+        Hemoglobin = _form.Hemoglobin!.Value,
+        Glucose = _form.Glucose!.Value,
+        Cholesterol = _form.Cholesterol!.Value,
+        Triglycerides = _form.Triglycerides!.Value,
+        BUN = _form.BUN!.Value,
+        Creatinine = _form.Creatinine!.Value,
+        Notes = _form.Notes
+    };
+
+    private bool FormHasAllValues() =>
+        _form.Albumin.HasValue &&
+        _form.NPCR.HasValue &&
+        _form.Potassium.HasValue &&
+        _form.WKtV.HasValue &&
+        _form.Calcium.HasValue &&
+        _form.Phosphorus.HasValue &&
+        _form.IPTH.HasValue &&
+        _form.Hemoglobin.HasValue &&
+        _form.Glucose.HasValue &&
+        _form.Cholesterol.HasValue &&
+        _form.Triglycerides.HasValue &&
+        _form.BUN.HasValue &&
+        _form.Creatinine.HasValue;
+
+    private bool TryGetResultMonth(out DateTime resultMonth)
+    {
+        if (DateTime.TryParse($"{_resultMonthText}-01", out resultMonth))
+        {
+            resultMonth = NormalizeMonth(resultMonth);
+            return true;
+        }
+
+        ShowError("Enter a valid result month.");
+        return false;
+    }
+
+    private void ShowSuccess(string message)
+    {
+        _messageClass = "page-message";
+        _message = message;
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "page-message page-message--error";
+        _message = message;
+    }
+
+    private async Task SignOut()
+    {
+        await LoginSession.SignOutAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    private static DateTime NormalizeMonth(DateTime value) => new(value.Year, value.Month, 1);
+
+    private static string ToMonthText(DateTime value) => value.ToString("yyyy-MM");
+
+    private sealed class KidneyLabForm
+    {
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? Albumin { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? NPCR { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? Potassium { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? WKtV { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? Calcium { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? Phosphorus { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? IPTH { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? Hemoglobin { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? Glucose { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? Cholesterol { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? Triglycerides { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? BUN { get; set; }
+
+        [Required]
+        [Range(typeof(decimal), "0", "100000")]
+        public decimal? Creatinine { get; set; }
+
+        public string? Notes { get; set; }
+    }
+
+    private sealed record LabTrendPoint(string Label, decimal Value);
+}

@@ -20,6 +20,8 @@ namespace DailyVitals.Domain.Models
         public decimal Triglycerides { get; set; }
         public decimal BUN { get; set; }
         public decimal Creatinine { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
         public string? Notes { get; set; }
 
         public string DisplayMonth => ResultMonth.ToString("MMM yyyy");

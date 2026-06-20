@@ -242,27 +242,29 @@
         ResetForm();
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !LoginSession.IsSignedIn)
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (!LoginSession.IsSignedIn)
         {
             Navigation.NavigateTo("/");
             return;
         }
 
-        if (firstRender && !LoginSession.PersonId.HasValue)
+        if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");
             StateHasChanged();
             return;
         }
 
-        if (firstRender)
-        {
-            LoadExerciseTypes();
-            LoadHistory();
-            StateHasChanged();
-        }
+        LoadExerciseTypes();
+        LoadHistory();
+        StateHasChanged();
     }
 
     private string ExerciseSummary
@@ -571,9 +573,9 @@
         _message = message;
     }
 
-    private void SignOut()
+    private async Task SignOut()
     {
-        LoginSession.SignOut();
+        await LoginSession.SignOutAsync();
         Navigation.NavigateTo("/");
     }
 

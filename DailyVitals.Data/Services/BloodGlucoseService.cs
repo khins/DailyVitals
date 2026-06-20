@@ -159,6 +159,24 @@ namespace DailyVitals.Data.Services
             cmd.ExecuteNonQuery();
         }
 
+        public bool DeleteBloodGlucoseForPerson(long personId, long glucoseId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureBloodGlucoseColumns(conn);
+
+            const string sql = @"
+                DELETE FROM public.blood_glucose
+                WHERE glucose_id = @glucose_id
+                  AND person_id = @person_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("glucose_id", glucoseId);
+            cmd.Parameters.AddWithValue("person_id", personId);
+
+            return cmd.ExecuteNonQuery() == 1;
+        }
+
         public BloodGlucoseReading? GetLatestForPerson(long personId)
         {
             using var conn = DbConnectionFactory.Create();

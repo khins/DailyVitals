@@ -13,6 +13,7 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureKidneyLabResultColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_insert_kidney_lab_result(" +
@@ -34,6 +35,7 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureKidneyLabResultColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_update_kidney_lab_result(" +
@@ -48,10 +50,86 @@ namespace DailyVitals.Data.Services
             cmd.ExecuteNonQuery();
         }
 
+        public bool UpdateForPerson(KidneyLabResult result, string enteredBy)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureKidneyLabResultColumns(conn);
+
+            const string sql = @"
+                WITH updated AS (
+                    UPDATE public.kidney_lab_result
+                    SET result_month = date_trunc('month', @p_result_month)::date,
+                        albumin = @p_albumin,
+                        npcr = @p_npcr,
+                        potassium = @p_potassium,
+                        wktv = @p_wktv,
+                        calcium = @p_calcium,
+                        phosphorus = @p_phosphorus,
+                        ipth = @p_ipth,
+                        hemoglobin = @p_hemoglobin,
+                        glucose = @p_glucose,
+                        cholesterol = @p_cholesterol,
+                        triglycerides = @p_triglycerides,
+                        bun = @p_bun,
+                        creatinine = @p_creatinine,
+                        notes = @p_notes,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE kidney_lab_result_id = @p_kidney_lab_result_id
+                      AND person_id = @p_person_id
+                    RETURNING kidney_lab_result_id
+                ),
+                logged AS (
+                    INSERT INTO public.data_entry_log (
+                        table_name,
+                        record_id,
+                        action_type,
+                        entered_by,
+                        change_details
+                    )
+                    SELECT
+                        'kidney_lab_result',
+                        kidney_lab_result_id,
+                        'UPDATE',
+                        @p_entered_by,
+                        jsonb_build_object(
+                            'result_month', @p_result_month,
+                            'albumin', @p_albumin,
+                            'npcr', @p_npcr,
+                            'potassium', @p_potassium,
+                            'wktv', @p_wktv,
+                            'calcium', @p_calcium,
+                            'phosphorus', @p_phosphorus,
+                            'ipth', @p_ipth,
+                            'hemoglobin', @p_hemoglobin,
+                            'glucose', @p_glucose,
+                            'cholesterol', @p_cholesterol,
+                            'triglycerides', @p_triglycerides,
+                            'bun', @p_bun,
+                            'creatinine', @p_creatinine,
+                            'notes', @p_notes
+                        )
+                    FROM updated
+                    RETURNING 1
+                )
+                SELECT kidney_lab_result_id
+                FROM updated;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("p_kidney_lab_result_id", result.KidneyLabResultId);
+            cmd.Parameters.AddWithValue("p_person_id", result.PersonId);
+            AddValueParameters(cmd, result);
+            cmd.Parameters.AddWithValue("p_entered_by", enteredBy);
+
+            var updatedId = cmd.ExecuteScalar();
+            return updatedId is not null && updatedId != DBNull.Value;
+        }
+
         public void Delete(long kidneyLabResultId, string enteredBy)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureKidneyLabResultColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_delete_kidney_lab_result(@p_kidney_lab_result_id, @p_entered_by)",
@@ -62,12 +140,31 @@ namespace DailyVitals.Data.Services
             cmd.ExecuteNonQuery();
         }
 
+        public bool DeleteForPerson(long personId, long kidneyLabResultId)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureKidneyLabResultColumns(conn);
+
+            const string sql = @"
+                DELETE FROM public.kidney_lab_result
+                WHERE person_id = @person_id
+                  AND kidney_lab_result_id = @kidney_lab_result_id;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            cmd.Parameters.AddWithValue("kidney_lab_result_id", kidneyLabResultId);
+
+            return cmd.ExecuteNonQuery() == 1;
+        }
+
         public List<KidneyLabResult> GetHistory(long personId)
         {
             var list = new List<KidneyLabResult>();
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            EnsureKidneyLabResultColumns(conn);
 
             const string sql = @"
                 SELECT kidney_lab_result_id,
@@ -86,7 +183,9 @@ namespace DailyVitals.Data.Services
                        triglycerides,
                        bun,
                        creatinine,
-                       notes
+                       notes,
+                       created_at,
+                       updated_at
                 FROM kidney_lab_result
                 WHERE person_id = @person_id
                 ORDER BY result_month DESC;";
@@ -115,7 +214,9 @@ namespace DailyVitals.Data.Services
                     Triglycerides = reader.GetDecimal(13),
                     BUN = reader.GetDecimal(14),
                     Creatinine = reader.GetDecimal(15),
-                    Notes = reader.IsDBNull(16) ? null : reader.GetString(16)
+                    Notes = reader.IsDBNull(16) ? null : reader.GetString(16),
+                    CreatedAt = reader.GetDateTime(17),
+                    UpdatedAt = reader.IsDBNull(18) ? null : reader.GetDateTime(18)
                 });
             }
 
@@ -154,5 +255,19 @@ namespace DailyVitals.Data.Services
 
         private static DateTime NormalizeMonth(DateTime value) =>
             new(value.Year, value.Month, 1);
+
+        private static void EnsureKidneyLabResultColumns(NpgsqlConnection conn)
+        {
+            const string sql = @"
+                ALTER TABLE public.kidney_lab_result
+                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
+
+                UPDATE public.kidney_lab_result
+                SET updated_at = created_at
+                WHERE updated_at IS NULL;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.ExecuteNonQuery();
+        }
     }
 }

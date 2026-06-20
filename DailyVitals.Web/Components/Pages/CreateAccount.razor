@@ -127,9 +127,14 @@
     private string? _message;
     private string _messageClass = "login-message";
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && LoginSession.IsSignedIn)
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (LoginSession.IsSignedIn)
             Navigation.NavigateTo("/dashboard", replace: true);
     }
 
@@ -138,7 +143,7 @@
         _birthDateText = args.Value?.ToString() ?? string.Empty;
     }
 
-    private void SubmitAccount()
+    private async Task SubmitAccount()
     {
         if (!string.Equals(_model.Password, _model.ConfirmPassword, StringComparison.Ordinal))
         {
@@ -188,7 +193,7 @@
                 _model.UserName!.Trim(),
                 _model.Password!);
 
-            LoginSession.SignIn(loginUser.UserName, loginUser.PersonId);
+            await LoginSession.SignInAsync(loginUser.UserName, loginUser.PersonId, rememberDevice: true);
             Navigation.NavigateTo("/dashboard", replace: true);
         }
         catch (Exception ex)
