@@ -5,10 +5,12 @@
 @using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
 @inject BloodPressureService BloodPressureService
+@inject BloodGlucoseService BloodGlucoseService
 @inject WeightService WeightService
 @inject ExerciseService ExerciseService
 @inject FoodPhosphorusIntakeService FoodService
 @inject NutritionGoalService NutritionGoalService
+@inject KidneyLabResultService KidneyLabService
 @inject NavigationManager Navigation
 @inject LocalLoginSession LoginSession
 
@@ -153,28 +155,30 @@
                     <div class="card-heading">
                         <div>
                             <span>Nutrition</span>
-                            <h2>Today</h2>
+                            <h2>Daily Targets</h2>
                         </div>
-                        <strong>@TodayNutritionPercentText</strong>
+                        <strong>@TodayNutritionEffectiveText</strong>
                     </div>
 
-                    <div class="progress-stack">
-                        <div>
-                            <span>Phosphorus</span>
-                            <strong>@TodayPhosphorusText</strong>
+                    <p class="nutrition-target-caption">@TodayNutritionSummaryText</p>
+
+                    <div class="nutrition-target-table" role="table" aria-label="Daily nutrition targets">
+                        <div class="nutrition-target-row nutrition-target-head" role="row">
+                            <span role="columnheader">Nutrient</span>
+                            <span role="columnheader">Consumed</span>
+                            <span role="columnheader">Daily Target</span>
+                            <span role="columnheader">Remaining</span>
                         </div>
-                        <div class="progress-track">
-                            <span class="progress-fill" style="width:@TodayNutritionProgressWidth"></span>
-                        </div>
-                        <p>@TodayNutritionSummaryText</p>
-                        <div>
-                            <span>Calories</span>
-                            <strong>@TodayCaloriesText</strong>
-                        </div>
-                        <div>
-                            <span>Sodium</span>
-                            <strong>@TodaySodiumText</strong>
-                        </div>
+
+                        @foreach (var target in DailyNutritionTargets)
+                        {
+                            <div class="nutrition-target-row" role="row">
+                                <span role="cell">@target.Nutrient</span>
+                                <span role="cell">@target.Consumed</span>
+                                <span role="cell">@target.Target</span>
+                                <strong class="@target.RemainingClass" role="cell">@target.Remaining</strong>
+                            </div>
+                        }
                     </div>
                 </article>
 
@@ -209,6 +213,71 @@
                         </div>
                     }
                 </article>
+
+                <article class="dashboard-card exercise-trend-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Exercise</span>
+                            <h2>Calories Burned Per Session</h2>
+                        </div>
+                        <strong>@ExerciseTrendSummary</strong>
+                    </div>
+
+                    @if (ExerciseSessionTrendPoints.Count < 2)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>More exercise data needed</h2>
+                            <p>Add at least two exercise sessions to chart session calories.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="exercise-line-chart" aria-label="Calories burned per exercise session">
+                            <div class="chart-legend">
+                                <span><i class="legend-orange"></i>Session calories</span>
+                                <span><i class="legend-blue"></i>7-session rolling average</span>
+                            </div>
+                            <svg viewBox="0 0 100 48" preserveAspectRatio="none" role="img">
+                                <polyline class="session-line" points="@ExerciseSessionPolyline" />
+                                <polyline class="average-line" points="@ExerciseRollingAveragePolyline" />
+                            </svg>
+                            <strong>@ExerciseTrendFooter</strong>
+                        </div>
+                    }
+                </article>
+
+                <article class="dashboard-card exercise-month-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Exercise</span>
+                            <h2>Total Calories Burned Per Month</h2>
+                        </div>
+                        <strong>@ExerciseTopMonthText</strong>
+                    </div>
+
+                    @if (ExerciseMonthlyTotals.Count == 0)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>No monthly exercise totals</h2>
+                            <p>Save exercise sessions with calories to build monthly totals.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="monthly-bar-chart" aria-label="Total calories burned per month">
+                            @foreach (var month in ExerciseMonthlyTotals)
+                            {
+                                <div class="monthly-bar-column">
+                                    <strong>@month.TotalCalories.ToString("N0")</strong>
+                                    <span class="monthly-bar-track">
+                                        <span class="monthly-bar-fill" style="height:@month.HeightPercent%"></span>
+                                    </span>
+                                    <span>@month.Label</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </article>
             </section>
         </main>
     </section>
@@ -216,39 +285,43 @@
 
 @code {
     private readonly List<BloodPressureReading> _bloodPressureHistory = [];
+    private readonly List<BloodGlucoseReading> _bloodGlucoseHistory = [];
     private readonly List<WeightReading> _weightHistory = [];
     private readonly List<ExerciseSession> _exerciseHistory = [];
     private readonly List<FoodPhosphorusRunningTotal> _nutritionRows = [];
+    private readonly List<KidneyLabResult> _kidneyLabHistory = [];
     private NutritionGoal? _nutritionGoal;
     private string? _message;
     private string _messageClass = "page-message";
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !LoginSession.IsSignedIn)
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (!LoginSession.IsSignedIn)
         {
             Navigation.NavigateTo("/");
             return;
         }
 
-        if (firstRender && !LoginSession.PersonId.HasValue)
+        if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");
             StateHasChanged();
             return;
         }
 
-        if (firstRender)
-        {
-            LoadDashboard();
-            StateHasChanged();
-        }
+        LoadDashboard();
+        StateHasChanged();
     }
 
     private IReadOnlyList<MetricCard> Metrics =>
     [
         BuildBloodPressureMetric(),
-        new("Blood Glucose", "--", "mg/dL", "Next", "status-pill status-info", "Glucose will be wired when the web glucose page is built."),
+        BuildBloodGlucoseMetric(),
         BuildWeightMetric(),
         BuildExerciseMetric()
     ];
@@ -273,13 +346,14 @@
         {
             var sectionsWithData = 0;
             if (_bloodPressureHistory.Count > 0) sectionsWithData++;
+            if (_bloodGlucoseHistory.Count > 0) sectionsWithData++;
             if (_weightHistory.Count > 0) sectionsWithData++;
             if (_exerciseHistory.Count > 0) sectionsWithData++;
             if (TodayNutritionRows.Any()) sectionsWithData++;
 
             return sectionsWithData == 0
                 ? "No entries yet"
-                : $"{sectionsWithData} of 4 sections active";
+                : $"{sectionsWithData} of 5 sections active";
         }
     }
 
@@ -287,7 +361,7 @@
     {
         get
         {
-            if (_bloodPressureHistory.Count == 0 && _weightHistory.Count == 0 && _exerciseHistory.Count == 0)
+            if (!HasDashboardData)
                 return "status-band";
 
             return BloodPressureStatus switch
@@ -303,7 +377,7 @@
     {
         get
         {
-            if (_bloodPressureHistory.Count == 0 && _weightHistory.Count == 0 && _exerciseHistory.Count == 0)
+            if (!HasDashboardData)
                 return "Ready to start tracking";
 
             if (BloodPressureStatus == "High")
@@ -317,8 +391,8 @@
     {
         get
         {
-            if (_bloodPressureHistory.Count == 0 && _weightHistory.Count == 0 && _exerciseHistory.Count == 0)
-                return "Add a blood pressure, weight, or exercise entry to build this person's dashboard.";
+            if (!HasDashboardData)
+                return "Add a blood pressure, glucose, weight, exercise, or nutrition entry to build this person's dashboard.";
 
             var latest = RecentEntries.FirstOrDefault();
             return latest is null
@@ -329,9 +403,18 @@
 
     private BloodPressureReading? LatestBloodPressure => _bloodPressureHistory.FirstOrDefault();
 
+    private BloodGlucoseReading? LatestBloodGlucose => _bloodGlucoseHistory.FirstOrDefault();
+
     private WeightReading? LatestWeight => _weightHistory.FirstOrDefault();
 
     private ExerciseSession? LatestExercise => _exerciseHistory.FirstOrDefault();
+
+    private bool HasDashboardData =>
+        _bloodPressureHistory.Count > 0 ||
+        _bloodGlucoseHistory.Count > 0 ||
+        _weightHistory.Count > 0 ||
+        _exerciseHistory.Count > 0 ||
+        TodayNutritionRows.Any();
 
     private string BloodPressureStatus
     {
@@ -361,21 +444,23 @@
         };
 
     private string AttentionStatus =>
-        AttentionItems.Count == 0 || AttentionItems.Any(x => x.Title == "Tracking")
+        AttentionItems.Count == 0 || AttentionItems.Any(x => x.Title == "All clear")
             ? "All clear"
             : $"{AttentionItems.Count} item{(AttentionItems.Count == 1 ? "" : "s")}";
 
     private string AttentionStatusClass =>
-        AttentionItems.Count == 0 || AttentionItems.Any(x => x.Title == "Tracking")
+        AttentionItems.Count == 0 || AttentionItems.Any(x => x.Title == "All clear")
             ? "status-pill status-ok"
             : "status-pill status-watch";
 
     private void LoadDashboard()
     {
             _bloodPressureHistory.Clear();
+            _bloodGlucoseHistory.Clear();
             _weightHistory.Clear();
             _exerciseHistory.Clear();
             _nutritionRows.Clear();
+            _kidneyLabHistory.Clear();
             _nutritionGoal = null;
 
         if (!LoginSession.PersonId.HasValue)
@@ -385,9 +470,11 @@
         {
             var personId = LoginSession.PersonId.Value;
             _bloodPressureHistory.AddRange(BloodPressureService.GetHistoryForPerson(personId));
+            _bloodGlucoseHistory.AddRange(BloodGlucoseService.GetHistory(personId));
             _weightHistory.AddRange(WeightService.GetHistory(personId));
             _exerciseHistory.AddRange(ExerciseService.GetHistory(personId));
             _nutritionRows.AddRange(FoodService.GetRunningDailyTotals(personId));
+            _kidneyLabHistory.AddRange(KidneyLabService.GetHistory(personId));
             _nutritionGoal = NutritionGoalService.GetActiveGoal(personId, DateTime.Today);
             _message = null;
         }
@@ -410,6 +497,35 @@
             BloodPressureStatus,
             BloodPressureStatusClass,
             $"Latest on {latest.ReadingTime:g}{(latest.Pulse > 0 ? $", pulse {latest.Pulse}" : string.Empty)}");
+    }
+
+    private MetricCard BuildBloodGlucoseMetric()
+    {
+        var latest = LatestBloodGlucose;
+        if (latest is null)
+            return new("Blood Glucose", "--", "mg/dL", "No data", "status-pill status-info", "Add a glucose reading to start tracking.");
+
+        var status = latest.GlucoseValue switch
+        {
+            < 70 => "Low",
+            <= 140 => "In range",
+            _ => "High"
+        };
+
+        var statusClass = status switch
+        {
+            "In range" => "status-pill status-ok",
+            "Low" => "status-pill status-watch",
+            _ => "status-pill status-watch"
+        };
+
+        return new(
+            "Blood Glucose",
+            latest.GlucoseValue.ToString(),
+            "mg/dL",
+            status,
+            statusClass,
+            $"Latest on {latest.ReadingTime:g}");
     }
 
     private MetricCard BuildWeightMetric()
@@ -451,26 +567,81 @@
     private List<AttentionItem> BuildAttentionItems()
     {
         var items = new List<AttentionItem>();
+        var latestBloodPressure = LatestBloodPressure;
+        var latestBloodGlucose = LatestBloodGlucose;
 
-        if (LatestBloodPressure is null)
+        if (latestBloodPressure is not null && BloodPressureStatus == "High")
         {
-            items.Add(new("Blood pressure", "No blood pressure readings have been logged yet.", "attention-marker marker-info"));
+            items.Add(new("Blood pressure", $"Latest reading is {latestBloodPressure.Systolic}/{latestBloodPressure.Diastolic}.", "attention-marker marker-watch"));
         }
-        else if (BloodPressureStatus == "High")
+        else if (latestBloodPressure is not null && BloodPressureStatus == "Elevated")
         {
-            items.Add(new("Blood pressure", $"Latest reading is {LatestBloodPressure.Systolic}/{LatestBloodPressure.Diastolic}.", "attention-marker marker-watch"));
+            items.Add(new("Blood pressure", $"Latest reading is elevated at {latestBloodPressure.Systolic}/{latestBloodPressure.Diastolic}.", "attention-marker marker-info"));
         }
 
-        if (LatestWeight is null)
-            items.Add(new("Weight", "No weight readings have been logged yet.", "attention-marker marker-info"));
+        if (latestBloodGlucose is not null && latestBloodGlucose.GlucoseValue < 70)
+            items.Add(new("Glucose", $"Latest glucose is low at {latestBloodGlucose.GlucoseValue} mg/dL.", "attention-marker marker-watch"));
 
-        var recentExercise = _exerciseHistory.Any(x => x.StartTime.Date >= DateTime.Today.AddDays(-6));
-        if (!recentExercise)
-            items.Add(new("Exercise", "No exercise sessions are logged in the last 7 days.", "attention-marker marker-watch"));
+        if (latestBloodGlucose is not null && latestBloodGlucose.GlucoseValue > 140)
+            items.Add(new("Glucose", $"Latest glucose is high at {latestBloodGlucose.GlucoseValue} mg/dL.", "attention-marker marker-watch"));
+
+        AddNutritionAlerts(items);
+
+        if (LatestWeight is null || LatestWeight.ReadingTime.Date < DateTime.Today.AddDays(-7))
+            items.Add(new("Weight", "No weight reading has been logged in the last 7 days.", "attention-marker marker-info"));
+
+        if (!_exerciseHistory.Any(x => x.StartTime.Date >= DateTime.Today.AddDays(-6)))
+            items.Add(new("Exercise", "No exercise sessions are logged in the last 7 days.", "attention-marker marker-info"));
+
+        if (!_kidneyLabHistory.Any(x => x.ResultMonth.Year == DateTime.Today.Year && x.ResultMonth.Month == DateTime.Today.Month))
+            items.Add(new("Kidney labs", "No kidney lab panel is logged for the current month.", "attention-marker marker-info"));
 
         return items.Count == 0
-            ? [new("Tracking", "BP, weight, and exercise all have recent data.", "attention-marker marker-info")]
+            ? [new("All clear", "No current alerts based on BP, glucose, nutrition targets, activity, weight, or labs.", "attention-marker marker-info")]
             : items;
+    }
+
+    private void AddNutritionAlerts(List<AttentionItem> items)
+    {
+        if (TodayPhosphorusMg > TodayPhosphorusLimitMg)
+        {
+            items.Add(new(
+                "Phosphorus",
+                $"Today is {TodayPhosphorusMg - TodayPhosphorusLimitMg:0} mg over the {TodayPhosphorusLimitMg:N0} mg target.",
+                "attention-marker marker-watch"));
+        }
+
+        if (TodaySodiumMg > TodaySodiumLimitMg)
+        {
+            items.Add(new(
+                "Sodium",
+                $"Today is {TodaySodiumMg - TodaySodiumLimitMg:N0} mg over the {TodaySodiumLimitMg:N0} mg target.",
+                "attention-marker marker-watch"));
+        }
+
+        if (TodayCalories > TodayCalorieLimit)
+        {
+            items.Add(new(
+                "Calories",
+                $"Today is {TodayCalories - TodayCalorieLimit:N0} cal over the {TodayCalorieLimit:N0} cal target.",
+                "attention-marker marker-watch"));
+        }
+
+        if (TodayProteinTargetG.HasValue && TodayProteinG < TodayProteinTargetG.Value)
+        {
+            items.Add(new(
+                "Protein",
+                $"Today is {TodayProteinTargetG.Value - TodayProteinG:0} g below the {TodayProteinTargetG.Value:N0} g target.",
+                "attention-marker marker-info"));
+        }
+
+        if (TodayPotassiumLimitMg.HasValue && TodayPotassiumMg > TodayPotassiumLimitMg.Value)
+        {
+            items.Add(new(
+                "Potassium",
+                $"Today is {TodayPotassiumMg - TodayPotassiumLimitMg.Value:N0} mg over the {TodayPotassiumLimitMg.Value:N0} mg target.",
+                "attention-marker marker-watch"));
+        }
     }
 
     private List<ActivityEntry> BuildRecentEntries()
@@ -482,6 +653,12 @@
             FormatActivityTime(x.ReadingTime),
             "Blood pressure",
             $"{x.Systolic}/{x.Diastolic} mmHg{(x.Pulse > 0 ? $", pulse {x.Pulse}" : string.Empty)}")));
+
+        entries.AddRange(_bloodGlucoseHistory.Take(2).Select(x => new ActivityEntry(
+            x.ReadingTime,
+            FormatActivityTime(x.ReadingTime),
+            "Blood glucose",
+            $"{x.GlucoseValue} mg/dL")));
 
         entries.AddRange(_weightHistory.Take(2).Select(x => new ActivityEntry(
             x.ReadingTime,
@@ -512,40 +689,214 @@
 
     private int TodaySodiumMg => TodayNutritionRows.Sum(x => x.SodiumMg);
 
+    private decimal TodayProteinG => TodayNutritionRows.Sum(x => x.ProteinG);
+
+    private int TodayPotassiumMg => TodayNutritionRows.Sum(x => x.PotassiumMg);
+
     private int TodayPhosphorusLimitMg => _nutritionGoal?.PhosphorusLimitMg ?? 1000;
 
-    private decimal TodayNutritionPercent => Math.Min(100m, TodayPhosphorusLimitMg <= 0 ? 0 : TodayPhosphorusMg / TodayPhosphorusLimitMg * 100m);
+    private int TodaySodiumLimitMg => _nutritionGoal?.SodiumLimitMg ?? 2000;
 
-    private string TodayNutritionProgressWidth => $"{TodayNutritionPercent:0.#}%";
+    private int TodayCalorieLimit => _nutritionGoal?.CalorieLimit ?? 2200;
 
-    private string TodayNutritionPercentText =>
-        TodayNutritionRows.Any()
-            ? $"{TodayNutritionPercent:0.#}%"
-            : "No entries";
+    private int? TodayProteinTargetG => _nutritionGoal?.ProteinTargetG;
 
-    private string TodayPhosphorusText =>
-        TodayNutritionRows.Any()
-            ? $"{TodayPhosphorusMg:0} mg net / {TodayPhosphorusLimitMg:N0} mg target"
-            : "0 mg";
+    private int? TodayPotassiumLimitMg => _nutritionGoal?.PotassiumLimitMg;
 
-    private string TodayCaloriesText =>
-        TodayNutritionRows.Any()
-            ? $"{TodayCalories:N0} cal"
-            : "0 cal";
+    private string TodayNutritionEffectiveText =>
+        _nutritionGoal is null
+            ? "Default targets"
+            : $"Effective {_nutritionGoal.EffectiveDate:M/d/yyyy}";
 
-    private string TodaySodiumText =>
-        TodayNutritionRows.Any()
-            ? $"{TodaySodiumMg:N0} mg"
-            : "0 mg";
+    private IReadOnlyList<DailyNutritionTargetRow> DailyNutritionTargets
+    {
+        get
+        {
+            var rows = new List<DailyNutritionTargetRow>
+            {
+                BuildLimitRow("Phosphorus", TodayPhosphorusMg, TodayPhosphorusLimitMg, "mg", decimals: 0),
+                BuildLimitRow("Sodium", TodaySodiumMg, TodaySodiumLimitMg, "mg", decimals: 0),
+                BuildLimitRow("Calories", TodayCalories, TodayCalorieLimit, "cal", decimals: 0)
+            };
+
+            if (TodayProteinTargetG.HasValue)
+                rows.Add(BuildTargetRow("Protein", TodayProteinG, TodayProteinTargetG.Value, "g", decimals: 0));
+
+            if (TodayPotassiumLimitMg.HasValue)
+                rows.Add(BuildLimitRow("Potassium", TodayPotassiumMg, TodayPotassiumLimitMg.Value, "mg", decimals: 0));
+
+            return rows;
+        }
+    }
 
     private string TodayNutritionSummaryText =>
         TodayNutritionRows.Any()
-            ? $"{TodayRawPhosphorusMg:N0} mg raw phosphorus logged today. Target effective {_nutritionGoal?.EffectiveDate.ToString("M/d/yyyy") ?? "default"}."
+            ? $"Targets for {DateTime.Today:M/d/yyyy}. {TodayRawPhosphorusMg:N0} mg raw phosphorus logged today."
             : "No food entries logged today yet.";
 
-    private void SignOut()
+    private IReadOnlyList<ExerciseTrendPoint> ExerciseSessionTrendPoints =>
+        _exerciseHistory
+            .Where(x => x.CaloriesExpended.HasValue)
+            .OrderBy(x => x.StartTime)
+            .TakeLast(90)
+            .Select(x => new ExerciseTrendPoint(
+                x.StartTime,
+                x.CaloriesExpended!.Value,
+                x.DurationMinutes))
+            .ToList();
+
+    private IReadOnlyList<ExerciseTrendPoint> ExerciseRollingAveragePoints
     {
-        LoginSession.SignOut();
+        get
+        {
+            var points = ExerciseSessionTrendPoints;
+            var rolling = new List<ExerciseTrendPoint>();
+
+            for (var index = 0; index < points.Count; index++)
+            {
+                var window = points
+                    .Skip(Math.Max(0, index - 6))
+                    .Take(Math.Min(7, index + 1));
+                rolling.Add(points[index] with { Calories = window.Average(x => x.Calories) });
+            }
+
+            return rolling;
+        }
+    }
+
+    private string ExerciseSessionPolyline => BuildExercisePolyline(ExerciseSessionTrendPoints);
+
+    private string ExerciseRollingAveragePolyline => BuildExercisePolyline(ExerciseRollingAveragePoints);
+
+    private string ExerciseTrendSummary
+    {
+        get
+        {
+            var points = ExerciseSessionTrendPoints;
+            if (points.Count == 0)
+                return "No data";
+
+            return $"{points.Count} sessions";
+        }
+    }
+
+    private string ExerciseTrendFooter
+    {
+        get
+        {
+            var points = ExerciseSessionTrendPoints;
+            if (points.Count == 0)
+                return "No exercise calories logged yet.";
+
+            var latest = points[^1];
+            var totalCalories = points.Sum(x => x.Calories);
+            var averageCalories = points.Average(x => x.Calories);
+            var highCalories = points.Max(x => x.Calories);
+            var totalMinutes = _exerciseHistory.Sum(x => x.DurationMinutes);
+
+            return $"{points.Count} sessions, {averageCalories:0} avg calories, {latest.Calories:0} latest, {highCalories:0} high, {totalCalories:N0} total, Total Exercise Time: {FormatDuration(totalMinutes)}";
+        }
+    }
+
+    private IReadOnlyList<ExerciseMonthTotal> ExerciseMonthlyTotals
+    {
+        get
+        {
+            var totals = _exerciseHistory
+                .Where(x => x.CaloriesExpended.HasValue)
+                .GroupBy(x => new DateTime(x.StartTime.Year, x.StartTime.Month, 1))
+                .OrderBy(x => x.Key)
+                .TakeLast(6)
+                .Select(x => new ExerciseMonthTotal(
+                    x.Key.ToString("MMM yy"),
+                    x.Sum(session => session.CaloriesExpended ?? 0),
+                    0))
+                .ToList();
+
+            var max = totals.Count == 0 ? 0 : totals.Max(x => x.TotalCalories);
+            if (max <= 0)
+                return totals;
+
+            return totals
+                .Select(x => x with { HeightPercent = Math.Max(6, (int)Math.Round(x.TotalCalories / max * 100)) })
+                .ToList();
+        }
+    }
+
+    private string ExerciseTopMonthText
+    {
+        get
+        {
+            var top = ExerciseMonthlyTotals
+                .OrderByDescending(x => x.TotalCalories)
+                .FirstOrDefault();
+
+            return top is null
+                ? "No data"
+                : $"Top: {top.Label}";
+        }
+    }
+
+    private static string BuildExercisePolyline(IReadOnlyList<ExerciseTrendPoint> points)
+    {
+        if (points.Count == 0)
+            return string.Empty;
+
+        var max = points.Max(x => x.Calories);
+        var min = points.Min(x => x.Calories);
+        var range = max - min;
+        if (range <= 0)
+            range = 1;
+
+        return string.Join(
+            " ",
+            points.Select((point, index) =>
+            {
+                var x = points.Count == 1 ? 50 : index * 100m / (points.Count - 1);
+                var y = 42m - ((point.Calories - min) / range * 36m);
+                return $"{x:0.##},{y:0.##}";
+            }));
+    }
+
+    private static string FormatDuration(decimal minutes)
+    {
+        var totalMinutes = (int)Math.Round(minutes);
+        var hours = totalMinutes / 60;
+        var remainingMinutes = totalMinutes % 60;
+        return $"{hours} hr {remainingMinutes} min";
+    }
+
+    private static DailyNutritionTargetRow BuildLimitRow(string nutrient, decimal consumed, decimal target, string unit, int decimals)
+    {
+        var remaining = target - consumed;
+        return new(
+            nutrient,
+            FormatNutritionValue(consumed, unit, decimals),
+            FormatNutritionValue(target, unit, decimals),
+            FormatNutritionValue(remaining, unit, decimals),
+            remaining < 0 ? "remaining-negative" : "remaining-positive");
+    }
+
+    private static DailyNutritionTargetRow BuildTargetRow(string nutrient, decimal consumed, decimal target, string unit, int decimals)
+    {
+        var remaining = target - consumed;
+        return new(
+            nutrient,
+            FormatNutritionValue(consumed, unit, decimals),
+            FormatNutritionValue(target, unit, decimals),
+            FormatNutritionValue(remaining, unit, decimals),
+            remaining > 0 ? "remaining-negative" : "remaining-positive");
+    }
+
+    private static string FormatNutritionValue(decimal value, string unit, int decimals)
+    {
+        var format = decimals == 0 ? "N0" : $"N{decimals}";
+        return $"{value.ToString(format)} {unit}";
+    }
+
+    private async Task SignOut()
+    {
+        await LoginSession.SignOutAsync();
         Navigation.NavigateTo("/");
     }
 
@@ -585,4 +936,15 @@
     private sealed record AttentionItem(string Title, string Description, string MarkerClass);
 
     private sealed record ActivityEntry(DateTime SortTime, string Time, string Title, string Detail);
+
+    private sealed record DailyNutritionTargetRow(
+        string Nutrient,
+        string Consumed,
+        string Target,
+        string Remaining,
+        string RemainingClass);
+
+    private sealed record ExerciseTrendPoint(DateTime StartTime, decimal Calories, decimal DurationMinutes);
+
+    private sealed record ExerciseMonthTotal(string Label, decimal TotalCalories, int HeightPercent);
 }
