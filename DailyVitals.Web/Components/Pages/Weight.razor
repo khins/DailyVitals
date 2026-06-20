@@ -28,7 +28,10 @@
                 <a class="is-active" href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
                 <a href="nutrition">Nutrition</a>
-                <a href="labs">Kidney Labs</a>
+                @if (_showKidneyLabs)
+                {
+                    <a href="labs">Kidney Labs</a>
+                }
             </nav>
 
             <a class="rail-profile" href="profile" aria-label="Profile">
@@ -181,6 +184,7 @@
     private readonly List<WeightReading> _history = [];
     private long? _editingId;
     private decimal? _heightFt;
+    private bool _showKidneyLabs = true;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
@@ -212,9 +216,18 @@
             return;
         }
 
+        LoadPersonPreferences();
         LoadPersonHeight();
         LoadHistory();
         StateHasChanged();
+    }
+
+    private void LoadPersonPreferences()
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
     }
 
     private string BmiText => CurrentBmi?.ToString("0.0") ?? "--";

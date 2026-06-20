@@ -209,6 +209,28 @@ h1 {
     margin-top: -4px;
 }
 
+.password-action-row {
+    display: block;
+    margin-top: -4px;
+}
+
+.password-action-row .show-password-row {
+    margin-top: 0;
+}
+
+.recovery-link-row {
+    display: flex;
+    justify-content: flex-start;
+    gap: 18px;
+    margin-top: -8px;
+    font-weight: 700;
+}
+
+.remember-device-row {
+    justify-content: flex-start;
+    margin-top: 20px;
+}
+
 .login-message {
     border-radius: 8px;
     padding: 11px 12px;
@@ -1235,6 +1257,124 @@ h1 {
     color: #5d6a68;
 }
 
+.profile-gender-options {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    column-gap: 16px;
+}
+
+.profile-gender-options legend {
+    min-width: 84px;
+}
+
+.profile-radio-options {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.profile-preferences-panel {
+    display: grid;
+    gap: 16px;
+    margin-top: 4px;
+    border-top: 1px solid #e4ecea;
+    padding-top: 18px;
+}
+
+.profile-toggle-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.nutrition-goal-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.profile-disclaimer {
+    margin: 0;
+    border-left: 4px solid #d39b2d;
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: #fff8e8;
+    color: #5d4b22;
+    font-weight: 700;
+}
+
+.profile-toast {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    margin-right: auto;
+    border: 1px solid #a7dac0;
+    border-radius: 8px;
+    padding: 9px 11px;
+    background: #e9f8ef;
+    color: #173f2d;
+    box-shadow: 0 12px 28px rgba(34, 56, 55, 0.12);
+    font-weight: 700;
+}
+
+.profile-toast-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #35b765;
+    color: #ffffff;
+    font-size: 0.82rem;
+}
+
+.profile-toast button {
+    border: 0;
+    background: transparent;
+    color: #45615b;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.toggle-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    padding: 13px;
+    background: #f8fbfa;
+    cursor: pointer;
+}
+
+.toggle-card:hover {
+    border-color: #9ab8b3;
+    background: #f2f8f6;
+}
+
+.toggle-card input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: #173f4a;
+}
+
+.toggle-card strong {
+    display: block;
+    color: #243331;
+}
+
+.toggle-card small {
+    display: block;
+    margin-top: 4px;
+    color: #64716e;
+    line-height: 1.35;
+}
+
 #blazor-error-ui {
     display: none;
 }
@@ -1322,7 +1462,9 @@ h1 {
 
     .bp-number-grid,
     .weight-number-grid,
-    .exercise-number-grid {
+    .exercise-number-grid,
+    .profile-toggle-grid,
+    .nutrition-goal-fields {
         grid-template-columns: 1fr;
     }
 

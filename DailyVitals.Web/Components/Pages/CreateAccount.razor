@@ -63,32 +63,7 @@
                     <InputText id="last-name" class="form-input" autocomplete="family-name" @bind-Value="_model.LastName" />
                     <ValidationMessage For="() => _model.LastName" />
                 </div>
-
-                <div class="field-group">
-                    <label for="birth-date">Birth Date</label>
-                    <input id="birth-date" class="form-input" type="date" value="@_birthDateText" @onchange="SetBirthDate" />
-                </div>
-
-                <div class="field-group">
-                    <label for="height-ft">Height (ft)</label>
-                    <InputNumber id="height-ft" class="form-input" @bind-Value="_model.HeightFt" />
-                    <ValidationMessage For="() => _model.HeightFt" />
-                </div>
             </div>
-
-            <fieldset class="gender-options">
-                <legend>Gender</legend>
-                <InputRadioGroup @bind-Value="_model.Gender">
-                    <label>
-                        <InputRadio Value="@("Male")" />
-                        <span>Male</span>
-                    </label>
-                    <label>
-                        <InputRadio Value="@("Female")" />
-                        <span>Female</span>
-                    </label>
-                </InputRadioGroup>
-            </fieldset>
 
             <div class="field-group">
                 <label for="account-user-name">Email</label>
@@ -99,16 +74,21 @@
             <div class="account-form-grid">
                 <div class="field-group">
                     <label for="account-password">Password</label>
-                    <InputText id="account-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.Password" />
+                    <InputText id="account-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.Password" />
                     <ValidationMessage For="() => _model.Password" />
                 </div>
 
                 <div class="field-group">
                     <label for="confirm-password">Confirm Password</label>
-                    <InputText id="confirm-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
+                    <InputText id="confirm-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
                     <ValidationMessage For="() => _model.ConfirmPassword" />
                 </div>
             </div>
+
+            <label class="checkbox-row show-password-row">
+                <InputCheckbox @bind-Value="_showPassword" />
+                <span>Show Password</span>
+            </label>
 
             @if (!string.IsNullOrWhiteSpace(_message))
             {
@@ -123,9 +103,11 @@
 
 @code {
     private readonly CreateAccountModel _model = new();
-    private string _birthDateText = string.Empty;
     private string? _message;
     private string _messageClass = "login-message";
+    private bool _showPassword;
+
+    private string PasswordInputType => _showPassword ? "text" : "password";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -136,11 +118,6 @@
 
         if (LoginSession.IsSignedIn)
             Navigation.NavigateTo("/dashboard", replace: true);
-    }
-
-    private void SetBirthDate(ChangeEventArgs args)
-    {
-        _birthDateText = args.Value?.ToString() ?? string.Empty;
     }
 
     private async Task SubmitAccount()
@@ -157,36 +134,14 @@
             return;
         }
 
-        if (!DateTime.TryParse(_birthDateText, out var parsedBirthDate))
-        {
-            ShowError("Enter a valid birth date.");
-            return;
-        }
-
-        if (!_model.HeightFt.HasValue)
-        {
-            ShowError("Enter height in feet.");
-            return;
-        }
-
-        if (PersonService.PersonExists(
-            _model.FirstName ?? string.Empty,
-            _model.LastName ?? string.Empty,
-            parsedBirthDate.Date,
-            _model.HeightFt.Value))
-        {
-            ShowError("A person with this name, birth date, and height already exists.");
-            return;
-        }
-
         try
         {
             var personId = PersonService.InsertPerson(
                 _model.FirstName!.Trim(),
                 _model.LastName!.Trim(),
-                _model.HeightFt,
-                parsedBirthDate.Date,
-                _model.Gender);
+                null,
+                null,
+                null);
 
             var loginUser = LoginUserService.CreateLoginUser(
                 personId,
@@ -215,12 +170,6 @@
 
         [Required(ErrorMessage = "Enter a last name.")]
         public string? LastName { get; set; }
-
-        [Range(typeof(decimal), "1", "9", ErrorMessage = "Enter height as feet, such as 6.08.")]
-        public decimal? HeightFt { get; set; }
-
-        [Required(ErrorMessage = "Choose a gender.")]
-        public string? Gender { get; set; }
 
         [Required(ErrorMessage = "Enter an email.")]
         [EmailAddress(ErrorMessage = "Enter a valid email address.")]

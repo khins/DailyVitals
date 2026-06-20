@@ -6,6 +6,7 @@
 @using DailyVitals.Web.Services
 @inject FoodPhosphorusIntakeService FoodService
 @inject FoodPhosphorusEstimateService EstimateService
+@inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 
@@ -27,7 +28,10 @@
                 <a href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
                 <a class="is-active" href="nutrition">Nutrition</a>
-                <a href="labs">Kidney Labs</a>
+                @if (_showKidneyLabs)
+                {
+                    <a href="labs">Kidney Labs</a>
+                }
             </nav>
 
             <a class="rail-profile" href="profile" aria-label="Profile">
@@ -247,6 +251,7 @@
     private string? _lookupTip;
     private int _selectedDayTotal;
     private bool _isEstimating;
+    private bool _showKidneyLabs = true;
 
     protected override void OnInitialized()
     {
@@ -273,9 +278,18 @@
             return;
         }
 
+        LoadPersonPreferences();
         LoadHistory();
         RefreshSelectedDayTotal();
         StateHasChanged();
+    }
+
+    private void LoadPersonPreferences()
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
     }
 
     private List<FoodPhosphorusIntake> FilteredHistory

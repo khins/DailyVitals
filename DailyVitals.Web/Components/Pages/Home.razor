@@ -61,17 +61,23 @@
                 <ValidationMessage For="() => _model.Password" />
             </div>
 
-            <label class="checkbox-row show-password-row">
-                <InputCheckbox @bind-Value="_showPassword" />
-                <span>Show Password</span>
-            </label>
+            <div class="password-action-row">
+                <label class="checkbox-row show-password-row">
+                    <InputCheckbox @bind-Value="_showPassword" />
+                    <span>Show Password</span>
+                </label>
+            </div>
 
-            <div class="form-options">
+            <div class="recovery-link-row">
+                <a href="account-recovery">Forgot Email?</a>
+                <a href="account-recovery">Forgot Password?</a>
+            </div>
+
+            <div class="form-options remember-device-row">
                 <label class="checkbox-row">
                     <InputCheckbox @bind-Value="_model.RememberMe" />
                     <span>Remember this device</span>
                 </label>
-                <a href="account-recovery">Forgot password?</a>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(_message))
