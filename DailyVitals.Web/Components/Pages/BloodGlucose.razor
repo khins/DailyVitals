@@ -5,6 +5,7 @@
 @using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
 @inject BloodGlucoseService BloodGlucoseService
+@inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 
@@ -26,7 +27,10 @@
                 <a href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
                 <a href="nutrition">Nutrition</a>
-                <a href="labs">Kidney Labs</a>
+                @if (_showKidneyLabs)
+                {
+                    <a href="labs">Kidney Labs</a>
+                }
             </nav>
 
             <a class="rail-profile" href="profile" aria-label="Profile">
@@ -165,6 +169,7 @@
     private long? _editingId;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
+    private bool _showKidneyLabs = true;
     private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
     private string _messageClass = "page-message";
@@ -194,8 +199,17 @@
             return;
         }
 
+        LoadPersonPreferences();
         LoadHistory();
         StateHasChanged();
+    }
+
+    private void LoadPersonPreferences()
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
     }
 
     private string SeverityText

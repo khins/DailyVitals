@@ -24,6 +24,10 @@ namespace DailyVitals.Data.Services
                     height_ft,
                     birth_date,
                     gender,
+                    is_diabetic,
+                    glucose_target_mg_dl,
+                    track_kidney_labs,
+                    track_weight_loss,
                     created_at,
                     updated_at
                 FROM person
@@ -43,8 +47,12 @@ namespace DailyVitals.Data.Services
                     HeightFt = reader.IsDBNull(3) ? null : reader.GetDecimal(3),
                     BirthDate = reader.IsDBNull(4) ? null : reader.GetDateTime(4),
                     Gender = reader.IsDBNull(5) ? null : reader.GetString(5),
-                    CreatedAt = reader.GetDateTime(6),
-                    UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
+                    IsDiabetic = reader.GetBoolean(6),
+                    GlucoseTargetMgDl = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                    TrackKidneyLabs = reader.GetBoolean(8),
+                    TrackWeightLoss = reader.GetBoolean(9),
+                    CreatedAt = reader.GetDateTime(10),
+                    UpdatedAt = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
                 });
             }
 
@@ -70,6 +78,10 @@ namespace DailyVitals.Data.Services
                     height_ft,
                     birth_date,
                     gender,
+                    is_diabetic,
+                    glucose_target_mg_dl,
+                    track_kidney_labs,
+                    track_weight_loss,
                     created_at,
                     updated_at
                 FROM public.person
@@ -91,8 +103,12 @@ namespace DailyVitals.Data.Services
                 HeightFt = reader.IsDBNull(3) ? null : reader.GetDecimal(3),
                 BirthDate = reader.IsDBNull(4) ? null : reader.GetDateTime(4),
                 Gender = reader.IsDBNull(5) ? null : reader.GetString(5),
-                CreatedAt = reader.GetDateTime(6),
-                UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
+                IsDiabetic = reader.GetBoolean(6),
+                GlucoseTargetMgDl = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                TrackKidneyLabs = reader.GetBoolean(8),
+                TrackWeightLoss = reader.GetBoolean(9),
+                CreatedAt = reader.GetDateTime(10),
+                UpdatedAt = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
             };
         }
 
@@ -107,6 +123,32 @@ namespace DailyVitals.Data.Services
             EnsurePersonColumns(conn);
 
             return PersonExists(conn, firstName, lastName, birthDate, heightFt);
+        }
+
+        public bool PersonExists(
+            string firstName,
+            string lastName,
+            DateTime birthDate)
+        {
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsurePersonColumns(conn);
+
+            const string sql = @"
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM public.person
+                    WHERE lower(TRIM(first_name)) = lower(TRIM(@first_name))
+                      AND lower(TRIM(last_name)) = lower(TRIM(@last_name))
+                      AND birth_date = @birth_date
+                );";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("first_name", firstName);
+            cmd.Parameters.AddWithValue("last_name", lastName);
+            cmd.Parameters.AddWithValue("birth_date", birthDate.Date);
+
+            return cmd.ExecuteScalar() is true;
         }
 
         private static bool PersonExists(
@@ -191,7 +233,11 @@ namespace DailyVitals.Data.Services
             string lastName,
             decimal? heightFt,
             DateTime? birthDate,
-            string? gender)
+            string? gender,
+            bool isDiabetic = false,
+            int? glucoseTargetMgDl = null,
+            bool trackKidneyLabs = true,
+            bool trackWeightLoss = true)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
@@ -204,6 +250,10 @@ namespace DailyVitals.Data.Services
                     height_ft = @height_ft,
                     birth_date = @birth_date,
                     gender = NULLIF(TRIM(@gender), ''),
+                    is_diabetic = @is_diabetic,
+                    glucose_target_mg_dl = @glucose_target_mg_dl,
+                    track_kidney_labs = @track_kidney_labs,
+                    track_weight_loss = @track_weight_loss,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE person_id = @person_id;";
 
@@ -214,6 +264,10 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("height_ft", (object?)heightFt ?? DBNull.Value);
             cmd.Parameters.AddWithValue("birth_date", (object?)birthDate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("gender", (object?)gender ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("is_diabetic", isDiabetic);
+            cmd.Parameters.AddWithValue("glucose_target_mg_dl", (object?)glucoseTargetMgDl ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("track_kidney_labs", trackKidneyLabs);
+            cmd.Parameters.AddWithValue("track_weight_loss", trackWeightLoss);
             cmd.ExecuteNonQuery();
         }
 
@@ -286,6 +340,10 @@ namespace DailyVitals.Data.Services
                     ADD COLUMN IF NOT EXISTS height_ft numeric(5, 2) NULL,
                     ADD COLUMN IF NOT EXISTS birth_date date NULL,
                     ADD COLUMN IF NOT EXISTS gender text NULL,
+                    ADD COLUMN IF NOT EXISTS is_diabetic boolean NOT NULL DEFAULT false,
+                    ADD COLUMN IF NOT EXISTS glucose_target_mg_dl int4 NULL,
+                    ADD COLUMN IF NOT EXISTS track_kidney_labs boolean NOT NULL DEFAULT true,
+                    ADD COLUMN IF NOT EXISTS track_weight_loss boolean NOT NULL DEFAULT true,
                     ADD COLUMN IF NOT EXISTS created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
 

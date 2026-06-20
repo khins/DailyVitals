@@ -11,6 +11,8 @@
 @inject FoodPhosphorusIntakeService FoodService
 @inject NutritionGoalService NutritionGoalService
 @inject KidneyLabResultService KidneyLabService
+@inject PersonService PersonService
+@inject VitalThresholdService VitalThresholdService
 @inject NavigationManager Navigation
 @inject LocalLoginSession LoginSession
 
@@ -32,7 +34,10 @@
                 <a href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
                 <a href="nutrition">Nutrition</a>
-                <a href="labs">Kidney Labs</a>
+                @if (ShowKidneyLabs)
+                {
+                    <a href="labs">Kidney Labs</a>
+                }
             </nav>
 
             <a class="rail-profile" href="profile" aria-label="Profile">
@@ -290,7 +295,10 @@
     private readonly List<ExerciseSession> _exerciseHistory = [];
     private readonly List<FoodPhosphorusRunningTotal> _nutritionRows = [];
     private readonly List<KidneyLabResult> _kidneyLabHistory = [];
+    private Person? _person;
     private NutritionGoal? _nutritionGoal;
+    private int _systolicAlertMax = 130;
+    private int _diastolicAlertMax = 80;
     private string? _message;
     private string _messageClass = "page-message";
 
@@ -339,6 +347,10 @@
     private IReadOnlyList<AttentionItem> AttentionItems => BuildAttentionItems();
 
     private IReadOnlyList<ActivityEntry> RecentEntries => BuildRecentEntries();
+
+    private bool ShowKidneyLabs => _person?.TrackKidneyLabs ?? true;
+
+    private bool ShowGlucoseAlerts => _person?.IsDiabetic ?? true;
 
     private string DashboardDataSummary
     {
@@ -424,7 +436,7 @@
             if (latest is null)
                 return "No data";
 
-            if (latest.Systolic >= 130 || latest.Diastolic >= 80)
+            if (latest.Systolic > _systolicAlertMax || latest.Diastolic > _diastolicAlertMax)
                 return "High";
 
             if (latest.Systolic >= 120 && latest.Diastolic < 80)
@@ -462,6 +474,9 @@
             _nutritionRows.Clear();
             _kidneyLabHistory.Clear();
             _nutritionGoal = null;
+            _person = null;
+            _systolicAlertMax = 130;
+            _diastolicAlertMax = 80;
 
         if (!LoginSession.PersonId.HasValue)
             return;
@@ -469,12 +484,15 @@
         try
         {
             var personId = LoginSession.PersonId.Value;
+            _person = PersonService.GetPersonById(personId);
+            LoadBloodPressureThresholds(personId);
             _bloodPressureHistory.AddRange(BloodPressureService.GetHistoryForPerson(personId));
             _bloodGlucoseHistory.AddRange(BloodGlucoseService.GetHistory(personId));
             _weightHistory.AddRange(WeightService.GetHistory(personId));
             _exerciseHistory.AddRange(ExerciseService.GetHistory(personId));
             _nutritionRows.AddRange(FoodService.GetRunningDailyTotals(personId));
-            _kidneyLabHistory.AddRange(KidneyLabService.GetHistory(personId));
+            if (ShowKidneyLabs)
+                _kidneyLabHistory.AddRange(KidneyLabService.GetHistory(personId));
             _nutritionGoal = NutritionGoalService.GetActiveGoal(personId, DateTime.Today);
             _message = null;
         }
@@ -482,6 +500,20 @@
         {
             ShowError($"Dashboard data could not be loaded: {ex.Message}");
         }
+    }
+
+    private void LoadBloodPressureThresholds(long personId)
+    {
+        var systolic = VitalThresholdService.GetActiveThreshold(personId, VitalThresholdService.BloodPressureSystolic);
+        var diastolic = VitalThresholdService.GetActiveThreshold(personId, VitalThresholdService.BloodPressureDiastolic);
+
+        _systolicAlertMax = systolic?.MaxValue.HasValue == true
+            ? Convert.ToInt32(systolic.MaxValue.Value)
+            : 130;
+
+        _diastolicAlertMax = diastolic?.MaxValue.HasValue == true
+            ? Convert.ToInt32(diastolic.MaxValue.Value)
+            : 80;
     }
 
     private MetricCard BuildBloodPressureMetric()
@@ -572,18 +604,19 @@
 
         if (latestBloodPressure is not null && BloodPressureStatus == "High")
         {
-            items.Add(new("Blood pressure", $"Latest reading is {latestBloodPressure.Systolic}/{latestBloodPressure.Diastolic}.", "attention-marker marker-watch"));
+            items.Add(new("Blood pressure", $"Latest reading is {latestBloodPressure.Systolic}/{latestBloodPressure.Diastolic}, above the {_systolicAlertMax}/{_diastolicAlertMax} alert target.", "attention-marker marker-watch"));
         }
         else if (latestBloodPressure is not null && BloodPressureStatus == "Elevated")
         {
             items.Add(new("Blood pressure", $"Latest reading is elevated at {latestBloodPressure.Systolic}/{latestBloodPressure.Diastolic}.", "attention-marker marker-info"));
         }
 
-        if (latestBloodGlucose is not null && latestBloodGlucose.GlucoseValue < 70)
+        if (ShowGlucoseAlerts && latestBloodGlucose is not null && latestBloodGlucose.GlucoseValue < 70)
             items.Add(new("Glucose", $"Latest glucose is low at {latestBloodGlucose.GlucoseValue} mg/dL.", "attention-marker marker-watch"));
 
-        if (latestBloodGlucose is not null && latestBloodGlucose.GlucoseValue > 140)
-            items.Add(new("Glucose", $"Latest glucose is high at {latestBloodGlucose.GlucoseValue} mg/dL.", "attention-marker marker-watch"));
+        var glucoseTarget = _person?.GlucoseTargetMgDl ?? 140;
+        if (ShowGlucoseAlerts && latestBloodGlucose is not null && latestBloodGlucose.GlucoseValue > glucoseTarget)
+            items.Add(new("Glucose", $"Latest glucose is {latestBloodGlucose.GlucoseValue} mg/dL, above the {glucoseTarget} mg/dL target.", "attention-marker marker-watch"));
 
         AddNutritionAlerts(items);
 
@@ -593,11 +626,11 @@
         if (!_exerciseHistory.Any(x => x.StartTime.Date >= DateTime.Today.AddDays(-6)))
             items.Add(new("Exercise", "No exercise sessions are logged in the last 7 days.", "attention-marker marker-info"));
 
-        if (!_kidneyLabHistory.Any(x => x.ResultMonth.Year == DateTime.Today.Year && x.ResultMonth.Month == DateTime.Today.Month))
+        if (ShowKidneyLabs && !_kidneyLabHistory.Any(x => x.ResultMonth.Year == DateTime.Today.Year && x.ResultMonth.Month == DateTime.Today.Month))
             items.Add(new("Kidney labs", "No kidney lab panel is logged for the current month.", "attention-marker marker-info"));
 
         return items.Count == 0
-            ? [new("All clear", "No current alerts based on BP, glucose, nutrition targets, activity, weight, or labs.", "attention-marker marker-info")]
+            ? [new("All clear", $"No current alerts based on BP, {(ShowGlucoseAlerts ? "glucose, " : string.Empty)}nutrition targets, activity, weight{(ShowKidneyLabs ? ", or labs" : string.Empty)}.", "attention-marker marker-info")]
             : items;
     }
 

@@ -5,6 +5,8 @@
 @using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
 @inject BloodPressureService BloodPressureService
+@inject VitalThresholdService VitalThresholdService
+@inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 
@@ -26,7 +28,10 @@
                 <a href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
                 <a href="nutrition">Nutrition</a>
-                <a href="labs">Kidney Labs</a>
+                @if (_showKidneyLabs)
+                {
+                    <a href="labs">Kidney Labs</a>
+                }
             </nav>
 
             <a class="rail-profile" href="profile" aria-label="Profile">
@@ -181,6 +186,9 @@
     private long? _editingId;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
+    private int _systolicAlertMax = 130;
+    private int _diastolicAlertMax = 80;
+    private bool _showKidneyLabs = true;
     private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
     private string _messageClass = "page-message";
@@ -211,8 +219,17 @@
             return;
         }
 
+        LoadPersonPreferences();
         LoadHistory();
         StateHasChanged();
+    }
+
+    private void LoadPersonPreferences()
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
     }
 
     private string SeverityText
@@ -222,21 +239,17 @@
             if (!_form.Systolic.HasValue || !_form.Diastolic.HasValue)
                 return "Ready";
 
-            if (_form.Systolic < 120 && _form.Diastolic < 80)
-                return "Normal";
+            if (_form.Systolic > _systolicAlertMax || _form.Diastolic > _diastolicAlertMax)
+                return "High";
 
-            if (_form.Systolic < 130 && _form.Diastolic < 80)
-                return "Elevated";
-
-            return "High";
+            return "In range";
         }
     }
 
     private string SeverityBandClass =>
         SeverityText switch
         {
-            "Normal" => "status-band status-band--ok",
-            "Elevated" => "status-band status-band--watch",
+            "In range" => "status-band status-band--ok",
             "High" => "status-band status-band--high",
             _ => "status-band"
         };
@@ -244,9 +257,8 @@
     private string SeveritySummary =>
         SeverityText switch
         {
-            "Normal" => "This reading is inside the normal tracking range.",
-            "Elevated" => "This reading is elevated and worth watching.",
-            "High" => "This reading is high compared with the normal range.",
+            "In range" => $"This reading is within the profile alert targets of {_systolicAlertMax}/{_diastolicAlertMax}.",
+            "High" => $"This reading is above the profile alert targets of {_systolicAlertMax}/{_diastolicAlertMax}.",
             _ => "Enter systolic and diastolic values to classify the reading."
         };
 
@@ -276,7 +288,22 @@
         if (!LoginSession.PersonId.HasValue)
             return;
 
+        LoadThresholds(LoginSession.PersonId.Value);
         _history.AddRange(BloodPressureService.GetHistoryForPerson(LoginSession.PersonId.Value));
+    }
+
+    private void LoadThresholds(long personId)
+    {
+        var systolic = VitalThresholdService.GetActiveThreshold(personId, VitalThresholdService.BloodPressureSystolic);
+        var diastolic = VitalThresholdService.GetActiveThreshold(personId, VitalThresholdService.BloodPressureDiastolic);
+
+        _systolicAlertMax = systolic?.MaxValue.HasValue == true
+            ? Convert.ToInt32(systolic.MaxValue.Value)
+            : 130;
+
+        _diastolicAlertMax = diastolic?.MaxValue.HasValue == true
+            ? Convert.ToInt32(diastolic.MaxValue.Value)
+            : 80;
     }
 
     private void SelectReading(BloodPressureReading reading)

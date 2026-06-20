@@ -2,8 +2,11 @@
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using DailyVitals.Data.Services
+@using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
 @inject PersonService PersonService
+@inject NutritionGoalService NutritionGoalService
+@inject VitalThresholdService VitalThresholdService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 
@@ -25,7 +28,10 @@
                 <a href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
                 <a href="nutrition">Nutrition</a>
-                <a href="labs">Kidney Labs</a>
+                @if (_form.TrackKidneyLabs)
+                {
+                    <a href="labs">Kidney Labs</a>
+                }
             </nav>
 
             <a class="rail-profile is-active" href="profile" aria-label="Profile">
@@ -51,7 +57,7 @@
                 </div>
             </header>
 
-            @if (!string.IsNullOrWhiteSpace(_message))
+            @if (!string.IsNullOrWhiteSpace(_message) && _messageClass.Contains("error", StringComparison.OrdinalIgnoreCase))
             {
                 <div class="@_messageClass" role="status">@_message</div>
             }
@@ -115,21 +121,125 @@
                             </div>
                         </div>
 
-                        <fieldset class="gender-options">
+                        <fieldset class="gender-options profile-gender-options">
                             <legend>Gender</legend>
                             <InputRadioGroup @bind-Value="_form.Gender">
-                                <label>
-                                    <InputRadio Value="@("Male")" />
-                                    <span>Male</span>
-                                </label>
-                                <label>
-                                    <InputRadio Value="@("Female")" />
-                                    <span>Female</span>
-                                </label>
+                                <div class="profile-radio-options">
+                                    <label>
+                                        <InputRadio Value="@("Male")" />
+                                        <span>Male</span>
+                                    </label>
+                                    <label>
+                                        <InputRadio Value="@("Female")" />
+                                        <span>Female</span>
+                                    </label>
+                                </div>
                             </InputRadioGroup>
                         </fieldset>
 
+                        <section class="profile-preferences-panel" aria-label="Profile preferences">
+                            <div class="card-heading">
+                                <div>
+                                    <span>Additional Attributes</span>
+                                    <h2>Tracking Preferences</h2>
+                                </div>
+                            </div>
+
+                            <div class="profile-toggle-grid">
+                                <label class="toggle-card">
+                                    <InputCheckbox @bind-Value="_form.IsDiabetic" />
+                                    <span>
+                                        <strong>Diabetic</strong>
+                                        <small>Enable glucose-focused dashboard alerts.</small>
+                                    </span>
+                                </label>
+
+                                <label class="toggle-card">
+                                    <InputCheckbox @bind-Value="_form.TrackKidneyLabs" />
+                                    <span>
+                                        <strong>Kidney program</strong>
+                                        <small>Show kidney lab tracking and monthly lab alerts.</small>
+                                    </span>
+                                </label>
+
+                                <label class="toggle-card">
+                                    <InputCheckbox @bind-Value="_form.TrackWeightLoss" />
+                                    <span>
+                                        <strong>Weight-loss focus</strong>
+                                        <small>Keep weight trend tracking prominent for this person.</small>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="nutrition-goal-fields">
+                                <div class="field-group">
+                                    <label for="goal-effective-date">Goal Effective Date</label>
+                                    <input id="goal-effective-date" class="form-input" type="date" value="@_goalEffectiveDateText" @onchange="SetGoalEffectiveDate" />
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="phosphorus-limit">Phosphorus Limit (mg)</label>
+                                    <InputNumber id="phosphorus-limit" class="form-input" @bind-Value="_form.PhosphorusLimitMg" />
+                                    <ValidationMessage For="() => _form.PhosphorusLimitMg" />
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="sodium-limit">Sodium Limit (mg)</label>
+                                    <InputNumber id="sodium-limit" class="form-input" @bind-Value="_form.SodiumLimitMg" />
+                                    <ValidationMessage For="() => _form.SodiumLimitMg" />
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="calorie-limit">Calorie Limit</label>
+                                    <InputNumber id="calorie-limit" class="form-input" @bind-Value="_form.CalorieLimit" />
+                                    <ValidationMessage For="() => _form.CalorieLimit" />
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="protein-target">Protein Target (g)</label>
+                                    <InputNumber id="protein-target" class="form-input" @bind-Value="_form.ProteinTargetG" />
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="potassium-limit">Potassium Limit (mg)</label>
+                                    <InputNumber id="potassium-limit" class="form-input" @bind-Value="_form.PotassiumLimitMg" />
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="fluid-limit">Fluid Limit (ml)</label>
+                                    <InputNumber id="fluid-limit" class="form-input" @bind-Value="_form.FluidLimitMl" />
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="glucose-target">Glucose Target (mg/dL)</label>
+                                    <InputNumber id="glucose-target" class="form-input" @bind-Value="_form.GlucoseTargetMgDl" />
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="systolic-threshold">Systolic Alert Max</label>
+                                    <InputNumber id="systolic-threshold" class="form-input" @bind-Value="_form.SystolicThresholdMax" />
+                                </div>
+
+                                <div class="field-group">
+                                    <label for="diastolic-threshold">Diastolic Alert Max</label>
+                                    <InputNumber id="diastolic-threshold" class="form-input" @bind-Value="_form.DiastolicThresholdMax" />
+                                </div>
+                            </div>
+
+                            <p class="profile-disclaimer">
+                                These targets are for informational tracking only and should not be used for medical diagnosis.
+                            </p>
+                        </section>
+
                         <div class="form-command-row">
+                            @if (!string.IsNullOrWhiteSpace(_profileToast))
+                            {
+                                <div class="profile-toast" role="status">
+                                    <span class="profile-toast-icon" aria-hidden="true">✓</span>
+                                    <span>@_profileToast</span>
+                                    <button type="button" aria-label="Dismiss profile update message" @onclick="DismissProfileToast">×</button>
+                                </div>
+                            }
                             <button type="submit" class="primary-action">Save Profile</button>
                         </div>
                     </EditForm>
@@ -142,12 +252,15 @@
 @code {
     private readonly ProfileForm _form = new();
     private string _birthDateText = string.Empty;
+    private string _goalEffectiveDateText = DateTime.Today.ToString("yyyy-MM-dd");
+    private long? _nutritionGoalId;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private int _heightFeet = 5;
     private int _heightInches = 0;
     private string? _message;
     private string _messageClass = "page-message";
+    private string? _profileToast;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -203,6 +316,15 @@
             if (SelectedHeightFt.HasValue)
                 parts.Add($"{_heightFeet} ft {_heightInches} in ({SelectedHeightFt.Value:0.00} ft)");
 
+            if (_form.IsDiabetic)
+                parts.Add("Diabetic");
+
+            if (_form.TrackKidneyLabs)
+                parts.Add("Kidney labs on");
+
+            if (_form.TrackWeightLoss)
+                parts.Add("Weight focus");
+
             return parts.Count == 0 ? "No profile details entered yet." : string.Join(" | ", parts);
         }
     }
@@ -242,10 +364,16 @@
             _form.LastName = person.LastName;
             _form.BirthDate = person.BirthDate;
             _form.Gender = person.Gender;
+            _form.IsDiabetic = person.IsDiabetic;
+            _form.GlucoseTargetMgDl = person.GlucoseTargetMgDl;
+            _form.TrackKidneyLabs = person.TrackKidneyLabs;
+            _form.TrackWeightLoss = person.TrackWeightLoss;
             _birthDateText = person.BirthDate?.ToString("yyyy-MM-dd") ?? string.Empty;
             _createdAt = person.CreatedAt;
             _updatedAt = person.UpdatedAt;
             SetHeightSelectors(person.HeightFt);
+            LoadNutritionGoal(person.PersonId);
+            LoadBloodPressureThresholds(person.PersonId);
         }
         catch (Exception ex)
         {
@@ -253,9 +381,41 @@
         }
     }
 
+    private void LoadNutritionGoal(long personId)
+    {
+        var goal = NutritionGoalService.GetActiveGoal(personId, DateTime.Today);
+        _nutritionGoalId = goal?.NutritionGoalId;
+        _goalEffectiveDateText = (goal?.EffectiveDate ?? DateTime.Today).ToString("yyyy-MM-dd");
+        _form.PhosphorusLimitMg = goal?.PhosphorusLimitMg ?? 1000;
+        _form.SodiumLimitMg = goal?.SodiumLimitMg ?? 2000;
+        _form.CalorieLimit = goal?.CalorieLimit ?? 2200;
+        _form.ProteinTargetG = goal?.ProteinTargetG;
+        _form.PotassiumLimitMg = goal?.PotassiumLimitMg;
+        _form.FluidLimitMl = goal?.FluidLimitMl;
+    }
+
+    private void LoadBloodPressureThresholds(long personId)
+    {
+        var systolic = VitalThresholdService.GetActiveThreshold(personId, VitalThresholdService.BloodPressureSystolic);
+        var diastolic = VitalThresholdService.GetActiveThreshold(personId, VitalThresholdService.BloodPressureDiastolic);
+
+        _form.SystolicThresholdMax = systolic?.MaxValue.HasValue == true
+            ? Convert.ToInt32(systolic.MaxValue.Value)
+            : 130;
+
+        _form.DiastolicThresholdMax = diastolic?.MaxValue.HasValue == true
+            ? Convert.ToInt32(diastolic.MaxValue.Value)
+            : 80;
+    }
+
     private void SetBirthDate(ChangeEventArgs args)
     {
         _birthDateText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void SetGoalEffectiveDate(ChangeEventArgs args)
+    {
+        _goalEffectiveDateText = args.Value?.ToString() ?? string.Empty;
     }
 
     private void SaveProfile()
@@ -280,18 +440,54 @@
 
         try
         {
+            if (!DateTime.TryParse(_goalEffectiveDateText, out var goalEffectiveDate))
+            {
+                ShowError("Enter a valid nutrition goal effective date.");
+                return;
+            }
+
             PersonService.UpdatePerson(
                 LoginSession.PersonId.Value,
                 _form.FirstName!.Trim(),
                 _form.LastName!.Trim(),
                 SelectedHeightFt,
                 birthDate,
-                _form.Gender);
+                _form.Gender,
+                _form.IsDiabetic,
+                _form.GlucoseTargetMgDl,
+                _form.TrackKidneyLabs,
+                _form.TrackWeightLoss);
+
+            _nutritionGoalId = NutritionGoalService.SaveGoal(new NutritionGoal
+            {
+                NutritionGoalId = _nutritionGoalId ?? 0,
+                PersonId = LoginSession.PersonId.Value,
+                SodiumLimitMg = _form.SodiumLimitMg!.Value,
+                PhosphorusLimitMg = _form.PhosphorusLimitMg!.Value,
+                CalorieLimit = _form.CalorieLimit!.Value,
+                EffectiveDate = goalEffectiveDate.Date,
+                ProteinTargetG = _form.ProteinTargetG,
+                PotassiumLimitMg = _form.PotassiumLimitMg,
+                FluidLimitMl = _form.FluidLimitMl
+            });
+
+            VitalThresholdService.SavePersonThreshold(
+                LoginSession.PersonId.Value,
+                VitalThresholdService.BloodPressureSystolic,
+                minValue: null,
+                maxValue: _form.SystolicThresholdMax);
+
+            VitalThresholdService.SavePersonThreshold(
+                LoginSession.PersonId.Value,
+                VitalThresholdService.BloodPressureDiastolic,
+                minValue: null,
+                maxValue: _form.DiastolicThresholdMax);
 
             _form.BirthDate = birthDate;
             _updatedAt = DateTime.Now;
             _messageClass = "page-message";
-            _message = "Profile updated.";
+            _message = null;
+            _profileToast = "Profile and nutrition targets updated.";
         }
         catch (Exception ex)
         {
@@ -303,6 +499,12 @@
     {
         _messageClass = "page-message page-message--error";
         _message = message;
+        _profileToast = null;
+    }
+
+    private void DismissProfileToast()
+    {
+        _profileToast = null;
     }
 
     private async Task SignOut()
@@ -346,5 +548,35 @@
         public DateTime? BirthDate { get; set; }
 
         public string? Gender { get; set; }
+
+        public bool IsDiabetic { get; set; }
+
+        public int? GlucoseTargetMgDl { get; set; }
+
+        public bool TrackKidneyLabs { get; set; } = true;
+
+        public bool TrackWeightLoss { get; set; } = true;
+
+        [Required(ErrorMessage = "Enter a phosphorus limit.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Phosphorus limit must be greater than zero.")]
+        public int? PhosphorusLimitMg { get; set; } = 1000;
+
+        [Required(ErrorMessage = "Enter a sodium limit.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Sodium limit must be greater than zero.")]
+        public int? SodiumLimitMg { get; set; } = 2000;
+
+        [Required(ErrorMessage = "Enter a calorie limit.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Calorie limit must be greater than zero.")]
+        public int? CalorieLimit { get; set; } = 2200;
+
+        public int? ProteinTargetG { get; set; }
+
+        public int? PotassiumLimitMg { get; set; }
+
+        public int? FluidLimitMl { get; set; }
+
+        public int? SystolicThresholdMax { get; set; } = 130;
+
+        public int? DiastolicThresholdMax { get; set; } = 80;
     }
 }

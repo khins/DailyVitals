@@ -10,6 +10,10 @@ namespace DailyVitals.Domain.Models
         public decimal? HeightFt { get; set; }
         public DateTime? BirthDate { get; set; }
         public string? Gender { get; set; }
+        public bool IsDiabetic { get; set; }
+        public int? GlucoseTargetMgDl { get; set; }
+        public bool TrackKidneyLabs { get; set; } = true;
+        public bool TrackWeightLoss { get; set; } = true;
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 

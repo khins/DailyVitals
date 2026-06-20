@@ -8,6 +8,7 @@
 @using DailyVitals.Web.Services
 @inject ExerciseService ExerciseService
 @inject WeightService WeightService
+@inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 
@@ -29,7 +30,10 @@
                 <a href="weight">Weight</a>
                 <a class="is-active" href="exercise">Exercise</a>
                 <a href="nutrition">Nutrition</a>
-                <a href="labs">Kidney Labs</a>
+                @if (_showKidneyLabs)
+                {
+                    <a href="labs">Kidney Labs</a>
+                }
             </nav>
 
             <a class="rail-profile" href="profile" aria-label="Profile">
@@ -229,9 +233,11 @@
     private readonly List<ExerciseSession> _history = [];
     private readonly List<ExerciseType> _exerciseTypes = [];
     private long? _editingId;
+    private DateTime? _editingStartDate;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private bool _showAdvancedCalories;
+    private bool _showKidneyLabs = true;
     private string? _caloriesTip;
     private string _startTimeText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
@@ -262,9 +268,18 @@
             return;
         }
 
+        LoadPersonPreferences();
         LoadExerciseTypes();
         LoadHistory();
         StateHasChanged();
+    }
+
+    private void LoadPersonPreferences()
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
     }
 
     private string ExerciseSummary
@@ -337,6 +352,7 @@
     private void SelectSession(ExerciseSession session)
     {
         _editingId = session.ExerciseSessionId;
+        _editingStartDate = session.StartTime.Date;
         _form.ExerciseTypeId = session.ExerciseTypeId;
         _form.OtherExerciseName = string.Empty;
         _form.DurationMinutes = session.DurationMinutes;
@@ -366,6 +382,7 @@
     private void ResetForm()
     {
         _editingId = null;
+        _editingStartDate = null;
         _form.ExerciseTypeId = null;
         _form.OtherExerciseName = string.Empty;
         _form.DurationMinutes = null;
@@ -429,10 +446,14 @@
 
         try
         {
-            if (_editingId.HasValue)
+            var shouldUpdateSelectedSession = _editingId.HasValue
+                && _editingStartDate.HasValue
+                && _editingStartDate.Value == startTime.Date;
+
+            if (shouldUpdateSelectedSession)
             {
                 var updated = ExerciseService.UpdateExerciseSessionForPerson(
-                    _editingId.Value,
+                    _editingId.GetValueOrDefault(),
                     personId,
                     exerciseTypeId.Value,
                     startTime,
@@ -462,7 +483,11 @@
                     notes,
                     LoginSession.UserName ?? string.Empty);
 
-                ShowSuccess("Exercise session saved.");
+                ShowSuccess(_editingId.HasValue
+                    ? "Exercise session saved as a new date."
+                    : "Exercise session saved.");
+                _editingId = null;
+                _editingStartDate = null;
             }
 
             LoadHistory();

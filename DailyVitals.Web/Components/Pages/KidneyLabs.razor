@@ -5,6 +5,7 @@
 @using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
 @inject KidneyLabResultService KidneyLabService
+@inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 
@@ -311,6 +312,12 @@
         {
             ShowError("This login is not linked to a person record yet.");
             StateHasChanged();
+            return;
+        }
+
+        if (PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs == false)
+        {
+            Navigation.NavigateTo("/dashboard");
             return;
         }
 
