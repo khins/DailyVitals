@@ -52,7 +52,7 @@
 
             <div class="field-group">
                 <label for="recovery-user-name">Email</label>
-                <InputText id="recovery-user-name" type="email" class="form-input" autocomplete="email" @bind-Value="_model.UserName" />
+                <InputText id="recovery-user-name" name="username" type="email" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
                 <ValidationMessage For="() => _model.UserName" />
             </div>
 
@@ -78,13 +78,13 @@
             <div class="account-form-grid">
                 <div class="field-group">
                     <label for="new-password">New Password</label>
-                    <InputText id="new-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.NewPassword" />
+                    <InputText id="new-password" name="new-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.NewPassword" />
                     <ValidationMessage For="() => _model.NewPassword" />
                 </div>
 
                 <div class="field-group">
                     <label for="confirm-new-password">Confirm Password</label>
-                    <InputText id="confirm-new-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
+                    <InputText id="confirm-new-password" name="confirm-password" type="password" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
                     <ValidationMessage For="() => _model.ConfirmPassword" />
                 </div>
             </div>

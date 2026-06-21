@@ -12,8 +12,8 @@ namespace DailyVitals.Domain.Models
         public string? Gender { get; set; }
         public bool IsDiabetic { get; set; }
         public int? GlucoseTargetMgDl { get; set; }
-        public bool TrackKidneyLabs { get; set; } = true;
-        public bool TrackWeightLoss { get; set; } = true;
+        public bool TrackKidneyLabs { get; set; }
+        public bool TrackWeightLoss { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 

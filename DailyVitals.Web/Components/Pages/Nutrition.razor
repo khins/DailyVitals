@@ -526,7 +526,9 @@
             }
 
             RefreshSelectedDayTotal();
-            ShowSuccess(shouldInsert ? "Food entry saved." : "Food entry updated.");
+            ShowSuccess(shouldInsert
+                ? "Food entry saved. Nutrition values are estimates only and are not intended to be exact results."
+                : "Food entry updated. Nutrition values are estimates only and are not intended to be exact results.");
         }
         catch (Exception ex)
         {

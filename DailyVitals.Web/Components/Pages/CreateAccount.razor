@@ -67,20 +67,20 @@
 
             <div class="field-group">
                 <label for="account-user-name">Email</label>
-                <InputText id="account-user-name" type="email" class="form-input" autocomplete="email" @bind-Value="_model.UserName" />
+                <InputText id="account-user-name" name="username" type="email" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
                 <ValidationMessage For="() => _model.UserName" />
             </div>
 
             <div class="account-form-grid">
                 <div class="field-group">
                     <label for="account-password">Password</label>
-                    <InputText id="account-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.Password" />
+                    <InputText id="account-password" name="new-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.Password" />
                     <ValidationMessage For="() => _model.Password" />
                 </div>
 
                 <div class="field-group">
                     <label for="confirm-password">Confirm Password</label>
-                    <InputText id="confirm-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
+                    <InputText id="confirm-password" name="confirm-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
                     <ValidationMessage For="() => _model.ConfirmPassword" />
                 </div>
             </div>
@@ -92,10 +92,20 @@
 
             @if (!string.IsNullOrWhiteSpace(_message))
             {
-                <div class="@_messageClass" role="status">@_message</div>
+                <div class="@_messageClass" role="status">
+                    @if (_accountCreated)
+                    {
+                        <span class="profile-toast-icon" aria-hidden="true">✓</span>
+                    }
+                    <span>@_message</span>
+                </div>
             }
 
-            <button type="submit" class="primary-button">Create Account</button>
+            <button type="submit" class="primary-button" disabled="@_accountCreated">Create Account</button>
+            @if (_accountCreated)
+            {
+                <a class="form-link" href="profile">Visit Profile</a>
+            }
             <a class="form-link" href="/">Back to sign in</a>
         </EditForm>
     </div>
@@ -106,6 +116,7 @@
     private string? _message;
     private string _messageClass = "login-message";
     private bool _showPassword;
+    private bool _accountCreated;
 
     private string PasswordInputType => _showPassword ? "text" : "password";
 
@@ -149,7 +160,9 @@
                 _model.Password!);
 
             await LoginSession.SignInAsync(loginUser.UserName, loginUser.PersonId, rememberDevice: true);
-            Navigation.NavigateTo("/dashboard", replace: true);
+            _accountCreated = true;
+            _messageClass = "login-message login-message--success-with-icon";
+            _message = "Account successfully created. Visit Profile to adjust tracking attributes and health targets.";
         }
         catch (Exception ex)
         {
@@ -159,6 +172,7 @@
 
     private void ShowError(string message)
     {
+        _accountCreated = false;
         _messageClass = "login-message login-message--error";
         _message = message;
     }

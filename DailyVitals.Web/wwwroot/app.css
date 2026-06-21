@@ -42,6 +42,9 @@ select {
     align-items: center;
     justify-content: center;
     padding: 48px;
+    background:
+        linear-gradient(115deg, rgba(14, 73, 87, 0.18), rgba(27, 44, 48, 0.08)),
+        url("images/active-vitals-auth.png") center / min(88vw, 900px) auto no-repeat;
 }
 
 .vitals-card {
@@ -53,6 +56,10 @@ select {
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
     color: #ffffff;
     backdrop-filter: blur(16px);
+}
+
+.login-visual .vitals-card {
+    visibility: hidden;
 }
 
 .vitals-card__header,
@@ -238,6 +245,16 @@ h1 {
     color: #25553b;
 }
 
+.login-message--success-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #a7dac0;
+    background: #e9f8ef;
+    color: #173f2d;
+    font-weight: 700;
+}
+
 .login-message--error {
     background: #f8dddd;
     color: #8f2329;
@@ -280,6 +297,10 @@ h1 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
+}
+
+.form-grid-span-all {
+    grid-column: 1 / -1;
 }
 
 .gender-options {
@@ -515,6 +536,21 @@ h1 {
     grid-template-columns: auto auto;
     column-gap: 10px;
     align-items: center;
+}
+
+.bmi-status-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bmi-help-button {
+    width: 24px;
+    height: 24px;
+    border-color: transparent;
+    background: transparent;
+    color: #184652;
+    font-size: 0.9rem;
 }
 
 .status-band p {
@@ -1217,6 +1253,111 @@ h1 {
     min-width: 220px;
 }
 
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(23, 33, 31, 0.46);
+}
+
+.info-modal {
+    width: min(760px, 100%);
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    padding: 22px;
+    background: #ffffff;
+    box-shadow: 0 22px 70px rgba(23, 33, 31, 0.26);
+}
+
+.info-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.info-modal-header span {
+    color: #5c6a66;
+    font-size: 0.84rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.info-modal-header h2 {
+    margin: 4px 0 0;
+}
+
+.modal-close-button {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    background: #f6f9f8;
+    color: #243331;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.modal-close-button:hover,
+.modal-close-button:focus-visible {
+    border-color: #184652;
+    outline: none;
+}
+
+.info-modal-note {
+    margin-bottom: 16px;
+    color: #53635f;
+    line-height: 1.45;
+}
+
+.bmi-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.bmi-chart-column {
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.bmi-chart-column h3 {
+    margin: 0;
+    padding: 12px 14px;
+    background: #eef5f3;
+    color: #243331;
+}
+
+.bmi-reference-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.bmi-reference-table th,
+.bmi-reference-table td {
+    border-top: 1px solid #e4ecea;
+    padding: 11px 14px;
+    text-align: left;
+}
+
+.bmi-reference-table th {
+    color: #384846;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+}
+
 .compact-empty {
     margin-top: 18px;
     padding: 24px;
@@ -1451,6 +1592,10 @@ h1 {
 
     .status-band > div:last-child {
         text-align: left;
+    }
+
+    .bmi-chart-grid {
+        grid-template-columns: 1fr;
     }
 
     .metric-card-grid,

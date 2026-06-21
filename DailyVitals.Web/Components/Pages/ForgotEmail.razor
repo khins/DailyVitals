@@ -1,0 +1,160 @@
+@page "/forgot-email"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyVitals.Data.Services
+@using DailyVitals.Web.Services
+@inject LoginUserService LoginUserService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Forgot Email | DailyVitals</PageTitle>
+
+<section class="login-page account-page">
+    <div class="login-visual" aria-hidden="true">
+        <div class="vitals-card">
+            <div class="vitals-card__header">
+                <span>Account Recovery</span>
+                <strong>Find email</strong>
+            </div>
+            <div class="pulse-line"></div>
+            <div class="metric-grid">
+                <div>
+                    <span>Step 1</span>
+                    <strong>Person</strong>
+                </div>
+                <div>
+                    <span>Step 2</span>
+                    <strong>Verify</strong>
+                </div>
+                <div>
+                    <span>Result</span>
+                    <strong>Email</strong>
+                </div>
+                <div>
+                    <span>Next</span>
+                    <strong>Sign in</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-panel account-panel">
+        <div class="brand-row">
+            <div class="brand-mark" aria-hidden="true">DV</div>
+            <div>
+                <p class="eyebrow">DailyVitals Web</p>
+                <h1>Forgot Email</h1>
+            </div>
+        </div>
+
+        <EditForm Model="_model" FormName="forgot-email-form" OnValidSubmit="FindEmail" class="login-form account-form">
+            <DataAnnotationsValidator />
+
+            <div class="account-form-grid">
+                <div class="field-group">
+                    <label for="forgot-email-first-name">First Name</label>
+                    <InputText id="forgot-email-first-name" class="form-input" autocomplete="given-name" @bind-Value="_model.FirstName" />
+                    <ValidationMessage For="() => _model.FirstName" />
+                </div>
+
+                <div class="field-group">
+                    <label for="forgot-email-last-name">Last Name</label>
+                    <InputText id="forgot-email-last-name" class="form-input" autocomplete="family-name" @bind-Value="_model.LastName" />
+                    <ValidationMessage For="() => _model.LastName" />
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label for="forgot-email-birth-date">Birth Date</label>
+                <input id="forgot-email-birth-date" class="form-input" type="date" value="@_birthDateText" @onchange="SetBirthDate" />
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">
+                    @if (_isSuccessful)
+                    {
+                        <span class="profile-toast-icon" aria-hidden="true">✓</span>
+                    }
+                    <span>@_message</span>
+                </div>
+            }
+
+            <button type="submit" class="primary-button">Find Email</button>
+            <a class="form-link" href="/">Back to sign in</a>
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    private readonly ForgotEmailModel _model = new();
+    private string _birthDateText = string.Empty;
+    private string? _message;
+    private string _messageClass = "login-message";
+    private bool _isSuccessful;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (LoginSession.IsSignedIn)
+            Navigation.NavigateTo("/dashboard", replace: true);
+    }
+
+    private void SetBirthDate(ChangeEventArgs args)
+    {
+        _birthDateText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void FindEmail()
+    {
+        if (!DateTime.TryParse(_birthDateText, out var birthDate))
+        {
+            ShowError("Enter the birth date for this person.");
+            return;
+        }
+
+        try
+        {
+            var found = LoginUserService.TryFindEmailByPersonDetails(
+                _model.FirstName!.Trim(),
+                _model.LastName!.Trim(),
+                birthDate.Date,
+                out var email,
+                out var failureReason);
+
+            if (!found)
+            {
+                ShowError(failureReason);
+                return;
+            }
+
+            _isSuccessful = true;
+            _messageClass = "login-message login-message--success-with-icon";
+            _message = $"Your sign-in email is {email}. Return to sign in to continue.";
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        _isSuccessful = false;
+        _messageClass = "login-message login-message--error";
+        _message = message;
+    }
+
+    private sealed class ForgotEmailModel
+    {
+        [Required(ErrorMessage = "Enter the first name.")]
+        public string? FirstName { get; set; }
+
+        [Required(ErrorMessage = "Enter the last name.")]
+        public string? LastName { get; set; }
+    }
+}

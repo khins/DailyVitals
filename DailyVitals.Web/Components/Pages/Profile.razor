@@ -5,6 +5,7 @@
 @using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
 @inject PersonService PersonService
+@inject LoginUserService LoginUserService
 @inject NutritionGoalService NutritionGoalService
 @inject VitalThresholdService VitalThresholdService
 @inject LocalLoginSession LoginSession
@@ -95,6 +96,12 @@
                                 <label for="profile-last-name">Last Name</label>
                                 <InputText id="profile-last-name" class="form-input" @bind-Value="_form.LastName" />
                                 <ValidationMessage For="() => _form.LastName" />
+                            </div>
+
+                            <div class="field-group form-grid-span-all">
+                                <label for="profile-user-name">Email</label>
+                                <InputText id="profile-user-name" type="email" class="form-input" autocomplete="email" @bind-Value="_form.UserName" />
+                                <ValidationMessage For="() => _form.UserName" />
                             </div>
 
                             <div class="field-group">
@@ -362,10 +369,11 @@
 
             _form.FirstName = person.FirstName;
             _form.LastName = person.LastName;
+            _form.UserName = LoginSession.UserName;
             _form.BirthDate = person.BirthDate;
             _form.Gender = person.Gender;
             _form.IsDiabetic = person.IsDiabetic;
-            _form.GlucoseTargetMgDl = person.GlucoseTargetMgDl;
+            _form.GlucoseTargetMgDl = person.GlucoseTargetMgDl ?? 100;
             _form.TrackKidneyLabs = person.TrackKidneyLabs;
             _form.TrackWeightLoss = person.TrackWeightLoss;
             _birthDateText = person.BirthDate?.ToString("yyyy-MM-dd") ?? string.Empty;
@@ -389,9 +397,9 @@
         _form.PhosphorusLimitMg = goal?.PhosphorusLimitMg ?? 1000;
         _form.SodiumLimitMg = goal?.SodiumLimitMg ?? 2000;
         _form.CalorieLimit = goal?.CalorieLimit ?? 2200;
-        _form.ProteinTargetG = goal?.ProteinTargetG;
-        _form.PotassiumLimitMg = goal?.PotassiumLimitMg;
-        _form.FluidLimitMl = goal?.FluidLimitMl;
+        _form.ProteinTargetG = goal?.ProteinTargetG ?? 100;
+        _form.PotassiumLimitMg = goal?.PotassiumLimitMg ?? 2500;
+        _form.FluidLimitMl = goal?.FluidLimitMl ?? 2500;
     }
 
     private void LoadBloodPressureThresholds(long personId)
@@ -418,7 +426,7 @@
         _goalEffectiveDateText = args.Value?.ToString() ?? string.Empty;
     }
 
-    private void SaveProfile()
+    private async Task SaveProfile()
     {
         if (!LoginSession.PersonId.HasValue)
         {
@@ -426,17 +434,19 @@
             return;
         }
 
-        DateTime? birthDate = null;
-        if (!string.IsNullOrWhiteSpace(_birthDateText))
+        if (string.IsNullOrWhiteSpace(_birthDateText))
         {
-            if (!DateTime.TryParse(_birthDateText, out var parsedBirthDate))
-            {
-                ShowError("Enter a valid birth date.");
-                return;
-            }
-
-            birthDate = parsedBirthDate.Date;
+            ShowError("Birth date is required for account recovery.");
+            return;
         }
+
+        if (!DateTime.TryParse(_birthDateText, out var parsedBirthDate))
+        {
+            ShowError("Enter a valid birth date.");
+            return;
+        }
+
+        var birthDate = parsedBirthDate.Date;
 
         try
         {
@@ -457,6 +467,14 @@
                 _form.GlucoseTargetMgDl,
                 _form.TrackKidneyLabs,
                 _form.TrackWeightLoss);
+
+            var trimmedUserName = _form.UserName!.Trim();
+            if (!string.Equals(trimmedUserName, LoginSession.UserName, StringComparison.OrdinalIgnoreCase))
+            {
+                LoginUserService.UpdateUserNameForPerson(LoginSession.PersonId.Value, trimmedUserName);
+                await LoginSession.UpdateUserNameAsync(trimmedUserName);
+                _form.UserName = trimmedUserName;
+            }
 
             _nutritionGoalId = NutritionGoalService.SaveGoal(new NutritionGoal
             {
@@ -545,17 +563,21 @@
         [Required(ErrorMessage = "Enter a last name.")]
         public string? LastName { get; set; }
 
+        [Required(ErrorMessage = "Enter an email.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+        public string? UserName { get; set; }
+
         public DateTime? BirthDate { get; set; }
 
         public string? Gender { get; set; }
 
         public bool IsDiabetic { get; set; }
 
-        public int? GlucoseTargetMgDl { get; set; }
+        public int? GlucoseTargetMgDl { get; set; } = 100;
 
-        public bool TrackKidneyLabs { get; set; } = true;
+        public bool TrackKidneyLabs { get; set; }
 
-        public bool TrackWeightLoss { get; set; } = true;
+        public bool TrackWeightLoss { get; set; }
 
         [Required(ErrorMessage = "Enter a phosphorus limit.")]
         [Range(1, int.MaxValue, ErrorMessage = "Phosphorus limit must be greater than zero.")]
@@ -569,11 +591,11 @@
         [Range(1, int.MaxValue, ErrorMessage = "Calorie limit must be greater than zero.")]
         public int? CalorieLimit { get; set; } = 2200;
 
-        public int? ProteinTargetG { get; set; }
+        public int? ProteinTargetG { get; set; } = 100;
 
-        public int? PotassiumLimitMg { get; set; }
+        public int? PotassiumLimitMg { get; set; } = 2500;
 
-        public int? FluidLimitMl { get; set; }
+        public int? FluidLimitMl { get; set; } = 2500;
 
         public int? SystolicThresholdMax { get; set; } = 130;
 

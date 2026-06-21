@@ -51,13 +51,13 @@
 
             <div class="field-group">
                 <label for="user-name">Email</label>
-                <InputText id="user-name" type="email" class="form-input" autocomplete="email" @bind-Value="_model.UserName" />
+                <InputText id="user-name" name="username" type="email" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
                 <ValidationMessage For="() => _model.UserName" />
             </div>
 
             <div class="field-group">
                 <label for="password">Password</label>
-                <InputText id="password" type="@PasswordInputType" class="form-input" autocomplete="current-password" @bind-Value="_model.Password" />
+                <InputText id="password" name="password" type="@PasswordInputType" class="form-input" autocomplete="current-password" @bind-Value="_model.Password" />
                 <ValidationMessage For="() => _model.Password" />
             </div>
 
@@ -69,7 +69,7 @@
             </div>
 
             <div class="recovery-link-row">
-                <a href="account-recovery">Forgot Email?</a>
+                <a href="forgot-email">Forgot Email?</a>
                 <a href="account-recovery">Forgot Password?</a>
             </div>
 
