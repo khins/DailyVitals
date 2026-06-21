@@ -35,6 +35,21 @@ public sealed class LocalLoginSession
         await InvokeBrowserStorageAsync(() => _jsRuntime.InvokeVoidAsync(storageName, StorageKey, storedSession).AsTask());
     }
 
+    public async Task UpdateUserNameAsync(string userName)
+    {
+        if (!IsSignedIn)
+            return;
+
+        var storedSession = JsonSerializer.Serialize(new StoredLoginSession(userName, PersonId));
+        var useLocalStorage = await ReadBrowserStorageAsync("localStorage.getItem") is not null;
+
+        UserName = userName;
+        await ClearBrowserStorageAsync();
+
+        var storageName = useLocalStorage ? "localStorage.setItem" : "sessionStorage.setItem";
+        await InvokeBrowserStorageAsync(() => _jsRuntime.InvokeVoidAsync(storageName, StorageKey, storedSession).AsTask());
+    }
+
     public async Task RestoreAsync()
     {
         if (IsSignedIn)

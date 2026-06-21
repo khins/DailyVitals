@@ -148,6 +148,50 @@ namespace DailyVitals.Data.Services
             };
         }
 
+        public void UpdateUserNameForPerson(long personId, string userName)
+        {
+            if (personId <= 0)
+                throw new InvalidOperationException("Person is required.");
+
+            if (string.IsNullOrWhiteSpace(userName))
+                throw new InvalidOperationException("Email is required.");
+
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureLoginUserTable(conn);
+
+            const string duplicateSql = @"
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM public.login_user
+                    WHERE lower(user_name) = lower(@user_name)
+                      AND COALESCE(person_id, 0) <> @person_id
+                );";
+
+            using (var duplicateCmd = new NpgsqlCommand(duplicateSql, conn))
+            {
+                duplicateCmd.Parameters.AddWithValue("user_name", userName.Trim());
+                duplicateCmd.Parameters.AddWithValue("person_id", personId);
+
+                if (duplicateCmd.ExecuteScalar() is true)
+                    throw new InvalidOperationException("That email is already in use.");
+            }
+
+            const string updateSql = @"
+                UPDATE public.login_user
+                SET user_name = TRIM(@user_name),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE person_id = @person_id
+                  AND is_active = true;";
+
+            using var cmd = new NpgsqlCommand(updateSql, conn);
+            cmd.Parameters.AddWithValue("user_name", userName.Trim());
+            cmd.Parameters.AddWithValue("person_id", personId);
+
+            if (cmd.ExecuteNonQuery() == 0)
+                throw new InvalidOperationException("No active login was found for this profile.");
+        }
+
         public bool UserNameExists(string userName)
         {
             if (string.IsNullOrWhiteSpace(userName))
@@ -174,6 +218,54 @@ namespace DailyVitals.Data.Services
                 birthDate,
                 newPassword,
                 out _);
+        }
+
+        public bool TryFindEmailByPersonDetails(
+            string firstName,
+            string lastName,
+            DateTime birthDate,
+            out string email,
+            out string failureReason)
+        {
+            email = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(firstName) ||
+                string.IsNullOrWhiteSpace(lastName))
+            {
+                failureReason = "Enter first name, last name, and birth date.";
+                return false;
+            }
+
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureLoginUserTable(conn);
+
+            const string sql = @"
+                SELECT lu.user_name
+                FROM public.login_user lu
+                JOIN public.person p ON p.person_id = lu.person_id
+                WHERE lower(TRIM(p.first_name)) = lower(TRIM(@first_name))
+                  AND lower(TRIM(p.last_name)) = lower(TRIM(@last_name))
+                  AND p.birth_date::date = @birth_date
+                  AND lu.is_active = true
+                ORDER BY lu.login_user_id
+                LIMIT 1;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("first_name", firstName.Trim());
+            cmd.Parameters.AddWithValue("last_name", lastName.Trim());
+            cmd.Parameters.AddWithValue("birth_date", birthDate.Date);
+
+            var result = cmd.ExecuteScalar();
+            if (result is string userName && !string.IsNullOrWhiteSpace(userName))
+            {
+                email = userName;
+                failureReason = string.Empty;
+                return true;
+            }
+
+            failureReason = "Account details could not be verified.";
+            return false;
         }
 
         public bool TryResetPassword(

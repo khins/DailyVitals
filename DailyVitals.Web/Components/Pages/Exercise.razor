@@ -334,9 +334,6 @@
     {
         _exerciseTypes.Clear();
         _exerciseTypes.AddRange(ExerciseService.GetExerciseTypes());
-
-        if (!_form.ExerciseTypeId.HasValue && _exerciseTypes.Count > 0)
-            _form.ExerciseTypeId = _exerciseTypes[0].ExerciseTypeId;
     }
 
     private void LoadHistory()
@@ -369,8 +366,6 @@
     private void BeginNewSession()
     {
         ResetForm();
-        if (_exerciseTypes.Count > 0)
-            _form.ExerciseTypeId = _exerciseTypes[0].ExerciseTypeId;
         _message = null;
     }
 
@@ -608,7 +603,7 @@
 
     private sealed class ExerciseForm
     {
-        [Required]
+        [Required(ErrorMessage = "Select an exercise.")]
         public long? ExerciseTypeId { get; set; }
 
         public string OtherExerciseName { get; set; } = string.Empty;

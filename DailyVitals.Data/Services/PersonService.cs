@@ -202,14 +202,20 @@ namespace DailyVitals.Data.Services
                     last_name,
                     height_ft,
                     birth_date,
-                    gender
+                    gender,
+                    is_diabetic,
+                    track_kidney_labs,
+                    track_weight_loss
                 )
                 VALUES (
                     TRIM(@first_name),
                     TRIM(@last_name),
                     @height_ft,
                     @birth_date,
-                    NULLIF(TRIM(@gender), '')
+                    NULLIF(TRIM(@gender), ''),
+                    false,
+                    false,
+                    false
                 )
                 RETURNING person_id;";
 
@@ -236,8 +242,8 @@ namespace DailyVitals.Data.Services
             string? gender,
             bool isDiabetic = false,
             int? glucoseTargetMgDl = null,
-            bool trackKidneyLabs = true,
-            bool trackWeightLoss = true)
+            bool trackKidneyLabs = false,
+            bool trackWeightLoss = false)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
@@ -342,8 +348,8 @@ namespace DailyVitals.Data.Services
                     ADD COLUMN IF NOT EXISTS gender text NULL,
                     ADD COLUMN IF NOT EXISTS is_diabetic boolean NOT NULL DEFAULT false,
                     ADD COLUMN IF NOT EXISTS glucose_target_mg_dl int4 NULL,
-                    ADD COLUMN IF NOT EXISTS track_kidney_labs boolean NOT NULL DEFAULT true,
-                    ADD COLUMN IF NOT EXISTS track_weight_loss boolean NOT NULL DEFAULT true,
+                    ADD COLUMN IF NOT EXISTS track_kidney_labs boolean NOT NULL DEFAULT false,
+                    ADD COLUMN IF NOT EXISTS track_weight_loss boolean NOT NULL DEFAULT false,
                     ADD COLUMN IF NOT EXISTS created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
 

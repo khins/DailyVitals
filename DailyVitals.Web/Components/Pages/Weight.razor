@@ -66,7 +66,10 @@
             <section class="@BmiBandClass" aria-label="Current BMI status">
                 <div>
                     <span class="status-dot"></span>
-                    <strong>@BmiStatusText</strong>
+                    <span class="bmi-status-heading">
+                        <strong>@BmiStatusText</strong>
+                        <button type="button" class="help-icon-button bmi-help-button" title="Show BMI reference chart" aria-label="Show BMI reference chart" @onclick="ShowBmiHelp">?</button>
+                    </span>
                     <p>@HeightDisplay</p>
                 </div>
                 <div>
@@ -177,14 +180,86 @@
             </section>
         </main>
     </section>
+
+    @if (_showBmiHelp)
+    {
+        <div class="modal-backdrop" role="presentation" @onclick="HideBmiHelp">
+            <section class="info-modal bmi-info-modal" role="dialog" aria-modal="true" aria-labelledby="bmi-help-title" @onclick:stopPropagation="true">
+                <div class="info-modal-header">
+                    <div>
+                        <span>Informational Reference</span>
+                        <h2 id="bmi-help-title">Adult BMI Categories</h2>
+                    </div>
+                    <button type="button" class="modal-close-button" aria-label="Close BMI reference chart" @onclick="HideBmiHelp">×</button>
+                </div>
+
+                <p class="info-modal-note">
+                    BMI is a screening estimate based on height and weight. It does not diagnose health status or account for muscle mass, fluid changes, or individual medical context.
+                </p>
+
+                <div class="bmi-chart-grid">
+                    <div class="bmi-chart-column">
+                        <h3>Men</h3>
+                        <table class="bmi-reference-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>BMI</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in BmiReferenceRows)
+                                {
+                                    <tr>
+                                        <td>@item.Category</td>
+                                        <td>@item.Range</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bmi-chart-column">
+                        <h3>Women</h3>
+                        <table class="bmi-reference-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>BMI</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in BmiReferenceRows)
+                                {
+                                    <tr>
+                                        <td>@item.Category</td>
+                                        <td>@item.Range</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    }
 }
 
 @code {
+    private static readonly BmiReferenceRow[] BmiReferenceRows =
+    [
+        new("Underweight", "Below 18.5"),
+        new("Normal", "18.5 to 24.9"),
+        new("Overweight", "25.0 to 29.9"),
+        new("Obese", "30.0 and above")
+    ];
+
     private readonly WeightForm _form = new();
     private readonly List<WeightReading> _history = [];
     private long? _editingId;
     private decimal? _heightFt;
     private bool _showKidneyLabs = true;
+    private bool _showBmiHelp;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
@@ -378,13 +453,14 @@
         if (!TryGetReadingTime(out var readingTime))
             return;
 
-        if (!_form.WeightValue.HasValue || _form.WeightValue.Value <= 0)
+        if (!IsWeightInValidRange())
         {
-            ShowError("Enter a valid weight.");
+            ShowError(WeightRangeMessage);
             return;
         }
 
         var personId = LoginSession.PersonId.Value;
+        var weightValue = _form.WeightValue.GetValueOrDefault();
         var notes = _form.Notes ?? string.Empty;
 
         try
@@ -394,7 +470,7 @@
                 var updated = WeightService.UpdateWeightForPerson(
                     personId,
                     _editingId.Value,
-                    _form.WeightValue.Value,
+                    weightValue,
                     _form.WeightUnit,
                     readingTime,
                     notes,
@@ -412,7 +488,7 @@
             {
                 var insertedId = WeightService.InsertWeight(
                     personId,
-                    _form.WeightValue.Value,
+                    weightValue,
                     _form.WeightUnit,
                     _heightFt.Value,
                     readingTime,
@@ -483,6 +559,16 @@
         _message = message;
     }
 
+    private void ShowBmiHelp()
+    {
+        _showBmiHelp = true;
+    }
+
+    private void HideBmiHelp()
+    {
+        _showBmiHelp = false;
+    }
+
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
@@ -513,14 +599,28 @@
         return $"{feet} ft {inches} in";
     }
 
+    private bool IsWeightInValidRange()
+    {
+        if (!_form.WeightValue.HasValue)
+            return false;
+
+        return string.Equals(_form.WeightUnit, "kg", StringComparison.OrdinalIgnoreCase)
+            ? _form.WeightValue.Value is >= 3.0m and <= 500.0m
+            : _form.WeightValue.Value is >= 6.6m and <= 1102.3m;
+    }
+
+    private const string WeightRangeMessage = "Range: 6.6 to 1102.3 lbs. Or 3.0 to 500.0 kg.";
+
     private sealed class WeightForm
     {
         [Required]
-        [Range(typeof(decimal), "1", "1500")]
+        [Range(typeof(decimal), "3.0", "1102.3", ErrorMessage = WeightRangeMessage)]
         public decimal? WeightValue { get; set; }
 
         public string WeightUnit { get; set; } = "lb";
 
         public string? Notes { get; set; }
     }
+
+    private sealed record BmiReferenceRow(string Category, string Range);
 }
