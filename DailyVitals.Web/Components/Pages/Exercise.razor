@@ -61,7 +61,7 @@
                 </div>
             </header>
 
-            @if (!string.IsNullOrWhiteSpace(_message))
+            @if (!string.IsNullOrWhiteSpace(_message) && !ShowInlineFormMessage)
             {
                 <div class="@_messageClass" role="status">@_message</div>
             }
@@ -173,6 +173,10 @@
                             <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
+                        @if (ShowInlineFormMessage)
+                        {
+                            <div class="@($"{_messageClass} exercise-inline-message")" role="status">@_message</div>
+                        }
                     </EditForm>
                 </article>
 
@@ -243,6 +247,7 @@
     private string _startTimeText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
     private string _messageClass = "page-message";
+    private bool ShowInlineFormMessage => !string.IsNullOrWhiteSpace(_message);
 
     protected override void OnInitialized()
     {

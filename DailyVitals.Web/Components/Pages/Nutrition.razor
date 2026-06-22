@@ -27,7 +27,47 @@
                 <a href="blood-glucose">Glucose</a>
                 <a href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
-                <a class="is-active" href="nutrition">Nutrition</a>
+                <button type="button" class="rail-nav-toggle is-active" aria-expanded="@_isNutritionMenuOpen" @onclick="ToggleNutritionMenu">
+                    <span>Nutrition</span>
+                    <span aria-hidden="true">@(_isNutritionMenuOpen ? "-" : "+")</span>
+                </button>
+                @if (_isNutritionMenuOpen)
+                {
+                    <div class="rail-subnav" aria-label="Nutrition sections">
+                        <button type="button" class="@GetSectionButtonClass(NutritionSection.TodaysTotals)" @onclick="() => SetActiveSection(NutritionSection.TodaysTotals)">Today's Totals</button>
+                        <button type="button" class="@GetSectionButtonClass(NutritionSection.AddFood)" @onclick="BeginNewEntry">Add Food</button>
+                        <button type="button" class="@GetSectionButtonClass(NutritionSection.TodaysFoods)" @onclick="() => SetActiveSection(NutritionSection.TodaysFoods)">Today's Foods</button>
+                        <button type="button" class="@GetSectionButtonClass(NutritionSection.LastSevenDays)" @onclick="() => SetActiveSection(NutritionSection.LastSevenDays)">Last 7 Days</button>
+                        <button type="button" class="@GetSectionButtonClass(NutritionSection.History)" @onclick="() => SetActiveSection(NutritionSection.History)">Nutrition History</button>
+                    </div>
+                    @if (_activeSection == NutritionSection.History)
+                    {
+                        <div class="rail-subpanel" aria-label="Nutrition history range">
+                            <button type="button"
+                                    class="rail-subpanel-heading"
+                                    aria-expanded="@_isHistoryRangeOpen"
+                                    @onclick="ToggleHistoryRange">
+                                <span>Range</span>
+                                <span aria-hidden="true">@(_isHistoryRangeOpen ? "^" : "v")</span>
+                            </button>
+                            @if (_isHistoryRangeOpen)
+                            {
+                                <label class="rail-range-option">
+                                    <input type="radio" name="nutrition-history-range" checked="@(_historyRangeMonths == 3)" @onchange="() => SetHistoryRange(3)" />
+                                    <span>Past 3 Months (@GetHistoryRangeCount(3))</span>
+                                </label>
+                                <label class="@GetHistoryRangeOptionClass(6)" title="@GetHistoryRangeOptionTitle(6)">
+                                    <input type="radio" name="nutrition-history-range" checked="@(_historyRangeMonths == 6)" disabled="@(!IsHistoryRangeAvailable(6))" @onchange="() => SetHistoryRange(6)" />
+                                    <span>Past 6 Months (@GetHistoryRangeCount(6))</span>
+                                </label>
+                                <label class="@GetHistoryRangeOptionClass(12)" title="@GetHistoryRangeOptionTitle(12)">
+                                    <input type="radio" name="nutrition-history-range" checked="@(_historyRangeMonths == 12)" disabled="@(!IsHistoryRangeAvailable(12))" @onchange="() => SetHistoryRange(12)" />
+                                    <span>Past 12 Months (@GetHistoryRangeCount(12))</span>
+                                </label>
+                            }
+                        </div>
+                    }
+                }
                 @if (_showKidneyLabs)
                 {
                     <a href="renal-foods">Renal Friendly Foods</a>
@@ -55,29 +95,80 @@
                         <span>Person</span>
                         <strong>@LoginSession.UserName</strong>
                     </div>
-                    <button type="button" class="primary-action" @onclick="BeginNewEntry">New Food</button>
+                    <button type="button" class="primary-action" @onclick="BeginNewEntry">Add Food</button>
                 </div>
             </header>
 
-            @if (!string.IsNullOrWhiteSpace(_message))
+            @if (!string.IsNullOrWhiteSpace(_message) && !ShowInlineFormMessage)
             {
                 <div class="@_messageClass" role="status">@_message</div>
             }
 
-            <section class="status-band" aria-label="Selected day nutrition summary">
+            <section class="status-band" aria-label="Today nutrition summary">
                 <div>
                     <span class="status-dot"></span>
-                    <strong>Selected day total: @_selectedDayTotal mg phosphorus</strong>
-                    <p>@SelectedDayText</p>
+                    <strong>Today: @TodaySummary.PhosphorusMg mg phosphorus</strong>
+                    <p>@TodaySummary.Entries food @(TodaySummary.Entries == 1 ? "entry" : "entries") logged for @DateTime.Today.ToString("M/d/yyyy").</p>
                 </div>
                 <div>
-                    <span>Entries</span>
-                    <strong>@_history.Count</strong>
+                    <span>Calories</span>
+                    <strong>@TodaySummary.Calories</strong>
                 </div>
             </section>
 
-            <section class="entry-grid nutrition-entry-grid">
-                <article class="dashboard-card entry-panel">
+            @if (_activeSection == NutritionSection.TodaysTotals)
+            {
+                <section class="nutrition-section-grid">
+                    <article class="dashboard-card nutrition-overview-panel">
+                        <div class="card-heading">
+                            <div>
+                                <span>Today's Totals</span>
+                                <h2>@DateTime.Today.ToString("MMMM d, yyyy")</h2>
+                            </div>
+                            <strong>@TodaySummary.Entries entries</strong>
+                        </div>
+
+                        <div class="nutrition-total-grid">
+                            <div>
+                                <span>Phosphorus</span>
+                                <strong>@TodaySummary.PhosphorusMg mg</strong>
+                            </div>
+                            <div>
+                                <span>Calories</span>
+                                <strong>@TodaySummary.Calories cal</strong>
+                            </div>
+                            <div>
+                                <span>Sodium</span>
+                                <strong>@TodaySummary.SodiumMg mg</strong>
+                            </div>
+                            <div>
+                                <span>Protein</span>
+                                <strong>@TodaySummary.ProteinG.ToString("0.#") g</strong>
+                            </div>
+                            <div>
+                                <span>Potassium</span>
+                                <strong>@TodaySummary.PotassiumMg mg</strong>
+                            </div>
+                            @if (_showKidneyLabs)
+                            {
+                                <div>
+                                    <span>Binders</span>
+                                    <strong>@TodaySummary.Binders</strong>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="form-command-row nutrition-section-actions">
+                            <button type="button" class="primary-action" @onclick="BeginNewEntry">Add Food</button>
+                            <button type="button" class="secondary-link" @onclick="() => SetActiveSection(NutritionSection.TodaysFoods)">Review Today's Foods</button>
+                        </div>
+                    </article>
+                </section>
+            }
+            else if (_activeSection == NutritionSection.AddFood)
+            {
+                <section class="entry-grid nutrition-entry-grid">
+                    <article class="dashboard-card entry-panel">
                     <div class="card-heading">
                         <div>
                             <span>@(_editingId.HasValue ? "Edit Food" : "New Food")</span>
@@ -176,13 +267,94 @@
                             <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
+                        @if (ShowInlineFormMessage)
+                        {
+                            <div class="@($"{_messageClass} nutrition-inline-message")" role="status">@_message</div>
+                        }
                     </EditForm>
                 </article>
-
+                </section>
+            }
+            else if (_activeSection == NutritionSection.TodaysFoods)
+            {
                 <article class="dashboard-card history-panel">
                     <div class="card-heading">
                         <div>
-                            <span>History</span>
+                            <span>Today's Foods</span>
+                            <h2>@DateTime.Today.ToString("MMMM d, yyyy")</h2>
+                        </div>
+                        <strong>@TodayEntries.Count entries</strong>
+                    </div>
+
+                    @if (TodayEntries.Count == 0)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>No foods logged today</h2>
+                            <p>Add food to start today's nutrition tracking.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @RenderFoodTable(TodayEntries, includeServing: true, includeActions: true)
+                    }
+                </article>
+            }
+            else if (_activeSection == NutritionSection.LastSevenDays)
+            {
+                <article class="dashboard-card history-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Last 7 Days</span>
+                            <h2>Daily Nutrition Summary</h2>
+                        </div>
+                        <strong>@LastSevenDaySummaries.Sum(x => x.Entries) entries</strong>
+                    </div>
+
+                    <div class="data-table-wrap nutrition-table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Entries</th>
+                                    <th>Phos</th>
+                                    <th>Calories</th>
+                                    <th>Sodium</th>
+                                    <th>Protein</th>
+                                    <th>Potassium</th>
+                                    @if (_showKidneyLabs)
+                                    {
+                                        <th>Binders</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var day in LastSevenDaySummaries)
+                                {
+                                    <tr>
+                                        <td>@day.Date.ToString("M/d/yyyy")</td>
+                                        <td>@day.Entries</td>
+                                        <td>@day.PhosphorusMg</td>
+                                        <td>@day.Calories</td>
+                                        <td>@day.SodiumMg</td>
+                                        <td>@day.ProteinG.ToString("0.#")</td>
+                                        <td>@day.PotassiumMg</td>
+                                        @if (_showKidneyLabs)
+                                        {
+                                            <td>@day.Binders</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            }
+            else
+            {
+                <article class="dashboard-card history-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Nutrition History</span>
                             <h2>Food Entries</h2>
                         </div>
                         <div class="history-heading-actions">
@@ -208,40 +380,11 @@
                     }
                     else
                     {
-                        <div class="data-table-wrap nutrition-table-wrap">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Food Item</th>
-                                        <th>Phos</th>
-                                        <th>Calories</th>
-                                        <th>Sodium</th>
-                                        <th>Protein</th>
-                                        <th>Potassium</th>
-                                        <th>Binders</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var item in FilteredHistory)
-                                    {
-                                        <tr class="@(item.FoodPhosphorusIntakeId == _editingId ? "is-selected" : null)" @onclick="() => SelectEntry(item)">
-                                            <td>@item.ConsumedAt.ToString("M/d/yyyy")</td>
-                                            <td>@item.FoodName</td>
-                                            <td>@item.PhosphorusMg</td>
-                                            <td>@item.Calories</td>
-                                            <td>@item.SodiumMg</td>
-                                            <td>@(item.ProteinG?.ToString("0.##"))</td>
-                                            <td>@item.PotassiumMg</td>
-                                            <td>@item.Binders</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                        @RenderFoodTable(PagedHistory, includeServing: false, includeActions: true)
+                        @RenderHistoryPager()
                     }
                 </article>
-            </section>
+            }
 
             @if (_showHistoryModal)
             {
@@ -279,10 +422,11 @@
                                             <th>Binders</th>
                                         }
                                         <th>Serving</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var item in FilteredHistory)
+                                    @foreach (var item in PagedHistory)
                                     {
                                         <tr class="@(item.FoodPhosphorusIntakeId == _editingId ? "is-selected" : null)" @onclick="() => SelectEntryFromHistoryModal(item)">
                                             <td>@item.ConsumedAt.ToString("M/d/yyyy")</td>
@@ -297,11 +441,16 @@
                                                 <td>@item.Binders</td>
                                             }
                                             <td>@DisplayValue(item.ServingDescription)</td>
+                                            <td>
+                                                <button type="button" class="secondary-link compact-action" @onclick="() => DeleteEntry(item)" @onclick:stopPropagation="true">Delete</button>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
                         </div>
+
+                        @RenderHistoryPager()
                     </article>
                 </div>
             }
@@ -327,6 +476,12 @@
     private bool _showKidneyLabs = true;
     private bool _draftApplied;
     private bool _showHistoryModal;
+    private bool _isNutritionMenuOpen = true;
+    private bool _isHistoryRangeOpen = true;
+    private NutritionSection _activeSection = NutritionSection.TodaysTotals;
+    private int _historyPage = 1;
+    private int _historyRangeMonths = 3;
+    private const int HistoryPageSize = 20;
 
     [SupplyParameterFromQuery(Name = "draftFood")]
     public string? DraftFoodName { get; set; }
@@ -400,6 +555,7 @@
         _form.ProteinG = DraftProteinG;
         _foodNotes = DraftFoodNotes ?? string.Empty;
         _form.SourceNotes = "Selected from the renal friendly foods catalog.";
+        _activeSection = NutritionSection.AddFood;
         ShowSuccess("Renal friendly food loaded as a new nutrition entry. Review the values before saving.");
     }
 
@@ -415,14 +571,47 @@
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(_searchText))
-                return _history;
+            var historyStart = DateTime.Today.AddMonths(-_historyRangeMonths);
+            var rangeHistory = _history.Where(x => x.ConsumedAt.Date >= historyStart).ToList();
 
-            return _history
+            if (string.IsNullOrWhiteSpace(_searchText))
+                return rangeHistory;
+
+            return rangeHistory
                 .Where(x => x.FoodName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
     }
+
+    private List<FoodPhosphorusIntake> PagedHistory =>
+        FilteredHistory
+            .Skip((_historyPage - 1) * HistoryPageSize)
+            .Take(HistoryPageSize)
+            .ToList();
+
+    private int HistoryPageCount =>
+        Math.Max(1, (int)Math.Ceiling(FilteredHistory.Count / (double)HistoryPageSize));
+
+    private bool ShowInlineFormMessage =>
+        _activeSection == NutritionSection.AddFood && !string.IsNullOrWhiteSpace(_message);
+
+    private List<FoodPhosphorusIntake> TodayEntries =>
+        _history
+            .Where(x => x.ConsumedAt.Date == DateTime.Today)
+            .OrderByDescending(x => x.ConsumedAt)
+            .ToList();
+
+    private NutritionDaySummary TodaySummary => BuildDaySummary(DateTime.Today, TodayEntries);
+
+    private List<NutritionDaySummary> LastSevenDaySummaries =>
+        Enumerable.Range(0, 7)
+            .Select(offset =>
+            {
+                var date = DateTime.Today.AddDays(-offset);
+                var entries = _history.Where(x => x.ConsumedAt.Date == date).ToList();
+                return BuildDaySummary(date, entries);
+            })
+            .ToList();
 
     private string SelectedDayText => TryGetConsumedAt(out var consumedAt)
         ? $"Tracking {consumedAt:M/d/yyyy} for phosphorus entries."
@@ -452,10 +641,12 @@
             return;
 
         _history.AddRange(FoodService.GetHistory(LoginSession.PersonId.Value));
+        EnsureSelectedHistoryRangeIsAvailable();
     }
 
     private void SelectEntry(FoodPhosphorusIntake item)
     {
+        _activeSection = NutritionSection.AddFood;
         _editingId = item.FoodPhosphorusIntakeId;
         _editingConsumedAt = item.ConsumedAt;
         _form.FoodName = item.FoodName;
@@ -495,10 +686,99 @@
 
     private void BeginNewEntry()
     {
+        _isNutritionMenuOpen = true;
+        _activeSection = NutritionSection.AddFood;
         ResetForm();
         _message = null;
         RefreshSelectedDayTotal();
     }
+
+    private void SetActiveSection(NutritionSection section)
+    {
+        _isNutritionMenuOpen = true;
+        _activeSection = section;
+        if (section == NutritionSection.History)
+            _historyPage = 1;
+    }
+
+    private void ToggleNutritionMenu()
+    {
+        _isNutritionMenuOpen = !_isNutritionMenuOpen;
+    }
+
+    private void ToggleHistoryRange()
+    {
+        _isHistoryRangeOpen = !_isHistoryRangeOpen;
+    }
+
+    private void PreviousHistoryPage()
+    {
+        if (_historyPage > 1)
+            _historyPage--;
+    }
+
+    private void NextHistoryPage()
+    {
+        if (_historyPage < HistoryPageCount)
+            _historyPage++;
+    }
+
+    private string GetSectionButtonClass(NutritionSection section) =>
+        _activeSection == section
+            ? "rail-subnav-button is-active"
+            : "rail-subnav-button";
+
+    private void SetHistoryRange(int months)
+    {
+        if (!IsHistoryRangeAvailable(months))
+            return;
+
+        _historyRangeMonths = months is 6 or 12 ? months : 3;
+        _historyPage = 1;
+    }
+
+    private void EnsureSelectedHistoryRangeIsAvailable()
+    {
+        if (!IsHistoryRangeAvailable(_historyRangeMonths))
+        {
+            _historyRangeMonths = 3;
+            _historyPage = 1;
+        }
+    }
+
+    private bool IsHistoryRangeAvailable(int months)
+    {
+        return months switch
+        {
+            3 => true,
+            6 => HasEntriesOlderThan(3),
+            12 => HasEntriesOlderThan(6),
+            _ => false
+        };
+    }
+
+    private bool HasEntriesOlderThan(int months)
+    {
+        var cutoff = DateTime.Today.AddMonths(-months);
+        return _history.Any(x => x.ConsumedAt.Date < cutoff);
+    }
+
+    private int GetHistoryRangeCount(int months)
+    {
+        var rangeMonths = months is 6 or 12 ? months : 3;
+        var cutoff = DateTime.Today.AddMonths(-rangeMonths);
+        return _history.Count(x => x.ConsumedAt.Date >= cutoff);
+    }
+
+    private string GetHistoryRangeOptionClass(int months) =>
+        IsHistoryRangeAvailable(months)
+            ? "rail-range-option"
+            : "rail-range-option is-disabled";
+
+    private string GetHistoryRangeOptionTitle(int months) =>
+        IsHistoryRangeAvailable(months)
+            ? string.Empty
+            : $"No food entries are older than {months / 2} months.";
 
     private void SetConsumedAt(ChangeEventArgs args)
     {
@@ -509,6 +789,7 @@
     private void SetSearchText(ChangeEventArgs args)
     {
         _searchText = args.Value?.ToString() ?? string.Empty;
+        _historyPage = 1;
     }
 
     private void ResetForm()
@@ -682,9 +963,22 @@
         if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
             return;
 
+        DeleteEntryById(_editingId.Value);
+    }
+
+    private void DeleteEntry(FoodPhosphorusIntake item)
+    {
+        DeleteEntryById(item.FoodPhosphorusIntakeId);
+    }
+
+    private void DeleteEntryById(long foodPhosphorusIntakeId)
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
         try
         {
-            var deleted = FoodService.DeleteForPerson(LoginSession.PersonId.Value, _editingId.Value);
+            var deleted = FoodService.DeleteForPerson(LoginSession.PersonId.Value, foodPhosphorusIntakeId);
             if (!deleted)
             {
                 ShowError("The selected food entry could not be deleted.");
@@ -692,7 +986,8 @@
             }
 
             LoadHistory();
-            ResetForm();
+            if (_editingId == foodPhosphorusIntakeId)
+                ResetForm();
             RefreshSelectedDayTotal();
             ShowSuccess("Food entry deleted.");
         }
@@ -754,6 +1049,102 @@
 
     private static string DisplayValue(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "--" : value;
+
+    private static NutritionDaySummary BuildDaySummary(DateTime date, IReadOnlyList<FoodPhosphorusIntake> entries) =>
+        new()
+        {
+            Date = date,
+            Entries = entries.Count,
+            PhosphorusMg = entries.Sum(x => x.PhosphorusMg),
+            Calories = entries.Sum(x => x.Calories ?? 0),
+            SodiumMg = entries.Sum(x => x.SodiumMg ?? 0),
+            ProteinG = entries.Sum(x => x.ProteinG ?? 0),
+            PotassiumMg = entries.Sum(x => x.PotassiumMg ?? 0),
+            Binders = entries.Sum(x => x.Binders)
+        };
+
+    private RenderFragment RenderFoodTable(IReadOnlyList<FoodPhosphorusIntake> entries, bool includeServing, bool includeActions) => @<div class="data-table-wrap nutrition-table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Food Item</th>
+                    <th>Phos</th>
+                    <th>Calories</th>
+                    <th>Sodium</th>
+                    <th>Protein</th>
+                    <th>Potassium</th>
+                    @if (_showKidneyLabs)
+                    {
+                        <th>Binders</th>
+                    }
+                    @if (includeServing)
+                    {
+                        <th>Serving</th>
+                    }
+                    @if (includeActions)
+                    {
+                        <th>Actions</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in entries)
+                {
+                    <tr class="@(item.FoodPhosphorusIntakeId == _editingId ? "is-selected" : null)" @onclick="() => SelectEntry(item)">
+                        <td>@item.ConsumedAt.ToString("M/d/yyyy h:mm tt")</td>
+                        <td>@item.FoodName</td>
+                        <td>@item.PhosphorusMg</td>
+                        <td>@item.Calories</td>
+                        <td>@item.SodiumMg</td>
+                        <td>@(item.ProteinG?.ToString("0.##"))</td>
+                        <td>@item.PotassiumMg</td>
+                        @if (_showKidneyLabs)
+                        {
+                            <td>@item.Binders</td>
+                        }
+                        @if (includeServing)
+                        {
+                            <td>@DisplayValue(item.ServingDescription)</td>
+                        }
+                        @if (includeActions)
+                        {
+                            <td>
+                                <button type="button" class="secondary-link compact-action" @onclick="() => DeleteEntry(item)" @onclick:stopPropagation="true">Delete</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>;
+
+    private RenderFragment RenderHistoryPager() => @<div class="table-pager">
+        <button type="button" class="secondary-link compact-action" @onclick="PreviousHistoryPage" disabled="@(_historyPage <= 1)">Previous</button>
+        <span>Page @_historyPage of @HistoryPageCount</span>
+        <button type="button" class="secondary-link compact-action" @onclick="NextHistoryPage" disabled="@(_historyPage >= HistoryPageCount)">Next</button>
+    </div>;
+
+    private enum NutritionSection
+    {
+        TodaysTotals,
+        AddFood,
+        TodaysFoods,
+        LastSevenDays,
+        History
+    }
+
+    private sealed class NutritionDaySummary
+    {
+        public DateTime Date { get; set; }
+        public int Entries { get; set; }
+        public int PhosphorusMg { get; set; }
+        public int Calories { get; set; }
+        public int SodiumMg { get; set; }
+        public decimal ProteinG { get; set; }
+        public int PotassiumMg { get; set; }
+        public int Binders { get; set; }
+    }
 
     private sealed class NutritionForm
     {
