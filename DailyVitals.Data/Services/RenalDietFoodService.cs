@@ -9,6 +9,60 @@ namespace DailyVitals.Data.Services
 {
     public class RenalDietFoodService
     {
+        public List<RenalDietFood> GetFoodCatalog()
+        {
+            var list = new List<RenalDietFood>();
+
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+
+            const string sql = @"
+                SELECT
+                    rdf.renal_food_id,
+                    rdf.person_id,
+                    rdf.food_name,
+                    rdf.serving_size,
+                    rdf.calories,
+                    rdf.sodium_mg,
+                    rdf.potassium_mg,
+                    rdf.phosphorus_mg,
+                    rdf.protein_g,
+                    rdf.allowed,
+                    rdf.restriction_notes,
+                    rfc.category_name
+                FROM renal_diet_food rdf
+                LEFT JOIN renal_food_category rfc
+                    ON rfc.category_id = rdf.category_id
+                ORDER BY
+                    rdf.allowed DESC,
+                    rfc.category_name,
+                    rdf.food_name;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(new RenalDietFood
+                {
+                    RenalFoodId = reader.GetInt64(0),
+                    PersonId = reader.IsDBNull(1) ? 0 : reader.GetInt64(1),
+                    FoodName = reader.GetString(2),
+                    ServingSize = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    Calories = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                    SodiumMg = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                    PotassiumMg = reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                    PhosphorusMg = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                    ProteinG = reader.IsDBNull(8) ? null : reader.GetDecimal(8),
+                    Allowed = reader.GetBoolean(9),
+                    RestrictionNotes = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    CategoryName = reader.IsDBNull(11) ? null : reader.GetString(11)
+                });
+            }
+
+            return list;
+        }
+
         public List<RenalMealCombo> GetWeightLossMealCombos(long personId, int maxItems = 2)
         {
             var foods = GetRankedFoods(personId, 12);

@@ -30,6 +30,7 @@
                 <a class="is-active" href="nutrition">Nutrition</a>
                 @if (_showKidneyLabs)
                 {
+                    <a href="renal-foods">Renal Friendly Foods</a>
                     <a href="labs">Kidney Labs</a>
                 }
             </nav>
@@ -144,11 +145,14 @@
                                 <InputNumber id="potassium" class="form-input" @bind-Value="_form.PotassiumMg" />
                             </div>
 
-                            <div class="field-group">
-                                <label for="binders">Binders</label>
-                                <InputNumber id="binders" class="form-input" @bind-Value="_form.Binders" />
-                                <ValidationMessage For="() => _form.Binders" />
-                            </div>
+                            @if (_showKidneyLabs)
+                            {
+                                <div class="field-group">
+                                    <label for="binders">Binders</label>
+                                    <InputNumber id="binders" class="form-input" @bind-Value="_form.Binders" />
+                                    <ValidationMessage For="() => _form.Binders" />
+                                </div>
+                            }
                         </div>
 
                         <div class="field-group">
@@ -181,7 +185,13 @@
                             <span>History</span>
                             <h2>Food Entries</h2>
                         </div>
-                        <strong>@FilteredHistory.Count entries</strong>
+                        <div class="history-heading-actions">
+                            <strong>@FilteredHistory.Count entries</strong>
+                            @if (FilteredHistory.Count > 0)
+                            {
+                                <button type="button" class="secondary-link compact-action" @onclick="OpenHistoryModal">Pop out</button>
+                            }
+                        </div>
                     </div>
 
                     <div class="field-group table-search">
@@ -232,6 +242,69 @@
                     }
                 </article>
             </section>
+
+            @if (_showHistoryModal)
+            {
+                <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nutrition-history-title">
+                    <article class="info-modal nutrition-history-modal">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>History</span>
+                                <h2 id="nutrition-history-title">Food Entries</h2>
+                            </div>
+                            <button type="button" class="modal-close-button" aria-label="Close food entries" @onclick="CloseHistoryModal">x</button>
+                        </div>
+
+                        <div class="nutrition-history-modal-toolbar">
+                            <div class="field-group">
+                                <label for="nutrition-modal-search">Search</label>
+                                <input id="nutrition-modal-search" class="form-input" value="@_searchText" @oninput="SetSearchText" />
+                            </div>
+                            <strong>@FilteredHistory.Count entries</strong>
+                        </div>
+
+                        <div class="data-table-wrap nutrition-history-modal-table">
+                            <table class="data-table nutrition-history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Food Item</th>
+                                        <th>Phos</th>
+                                        <th>Calories</th>
+                                        <th>Sodium</th>
+                                        <th>Protein</th>
+                                        <th>Potassium</th>
+                                        @if (_showKidneyLabs)
+                                        {
+                                            <th>Binders</th>
+                                        }
+                                        <th>Serving</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in FilteredHistory)
+                                    {
+                                        <tr class="@(item.FoodPhosphorusIntakeId == _editingId ? "is-selected" : null)" @onclick="() => SelectEntryFromHistoryModal(item)">
+                                            <td>@item.ConsumedAt.ToString("M/d/yyyy")</td>
+                                            <td>@item.FoodName</td>
+                                            <td>@item.PhosphorusMg</td>
+                                            <td>@item.Calories</td>
+                                            <td>@item.SodiumMg</td>
+                                            <td>@(item.ProteinG?.ToString("0.##"))</td>
+                                            <td>@item.PotassiumMg</td>
+                                            @if (_showKidneyLabs)
+                                            {
+                                                <td>@item.Binders</td>
+                                            }
+                                            <td>@DisplayValue(item.ServingDescription)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                </div>
+            }
         </main>
     </section>
 }
@@ -240,7 +313,7 @@
     private readonly NutritionForm _form = new();
     private readonly List<FoodPhosphorusIntake> _history = [];
     private long? _editingId;
-    private DateTime? _editingConsumedDate;
+    private DateTime? _editingConsumedAt;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private string _consumedAtText = ToDateTimeLocal(DateTime.Now);
@@ -252,6 +325,32 @@
     private int _selectedDayTotal;
     private bool _isEstimating;
     private bool _showKidneyLabs = true;
+    private bool _draftApplied;
+    private bool _showHistoryModal;
+
+    [SupplyParameterFromQuery(Name = "draftFood")]
+    public string? DraftFoodName { get; set; }
+
+    [SupplyParameterFromQuery(Name = "draftServing")]
+    public string? DraftServingDescription { get; set; }
+
+    [SupplyParameterFromQuery(Name = "draftCalories")]
+    public int? DraftCalories { get; set; }
+
+    [SupplyParameterFromQuery(Name = "draftSodium")]
+    public int? DraftSodiumMg { get; set; }
+
+    [SupplyParameterFromQuery(Name = "draftPotassium")]
+    public int? DraftPotassiumMg { get; set; }
+
+    [SupplyParameterFromQuery(Name = "draftPhosphorus")]
+    public int? DraftPhosphorusMg { get; set; }
+
+    [SupplyParameterFromQuery(Name = "draftProtein")]
+    public decimal? DraftProteinG { get; set; }
+
+    [SupplyParameterFromQuery(Name = "draftNotes")]
+    public string? DraftFoodNotes { get; set; }
 
     protected override void OnInitialized()
     {
@@ -280,8 +379,28 @@
 
         LoadPersonPreferences();
         LoadHistory();
+        ApplyDraftFoodFromQuery();
         RefreshSelectedDayTotal();
         StateHasChanged();
+    }
+
+    private void ApplyDraftFoodFromQuery()
+    {
+        if (_draftApplied || string.IsNullOrWhiteSpace(DraftFoodName))
+            return;
+
+        _draftApplied = true;
+        ResetForm();
+        _form.FoodName = DraftFoodName.Trim();
+        _form.ServingDescription = DraftServingDescription ?? string.Empty;
+        _form.Calories = DraftCalories;
+        _form.SodiumMg = DraftSodiumMg;
+        _form.PotassiumMg = DraftPotassiumMg;
+        _form.PhosphorusMg = DraftPhosphorusMg;
+        _form.ProteinG = DraftProteinG;
+        _foodNotes = DraftFoodNotes ?? string.Empty;
+        _form.SourceNotes = "Selected from the renal friendly foods catalog.";
+        ShowSuccess("Renal friendly food loaded as a new nutrition entry. Review the values before saving.");
     }
 
     private void LoadPersonPreferences()
@@ -338,7 +457,7 @@
     private void SelectEntry(FoodPhosphorusIntake item)
     {
         _editingId = item.FoodPhosphorusIntakeId;
-        _editingConsumedDate = item.ConsumedAt.Date;
+        _editingConsumedAt = item.ConsumedAt;
         _form.FoodName = item.FoodName;
         _form.PhosphorusMg = item.PhosphorusMg;
         _form.Calories = item.Calories;
@@ -356,6 +475,22 @@
         _updatedAt = item.UpdatedAt;
         _message = null;
         RefreshSelectedDayTotal();
+    }
+
+    private void SelectEntryFromHistoryModal(FoodPhosphorusIntake item)
+    {
+        SelectEntry(item);
+        CloseHistoryModal();
+    }
+
+    private void OpenHistoryModal()
+    {
+        _showHistoryModal = true;
+    }
+
+    private void CloseHistoryModal()
+    {
+        _showHistoryModal = false;
     }
 
     private void BeginNewEntry()
@@ -379,7 +514,7 @@
     private void ResetForm()
     {
         _editingId = null;
-        _editingConsumedDate = null;
+        _editingConsumedAt = null;
         _form.FoodName = string.Empty;
         _form.PhosphorusMg = null;
         _form.Calories = null;
@@ -465,7 +600,7 @@
         }
 
         var personId = LoginSession.PersonId.Value;
-        var shouldInsert = !_editingId.HasValue || (_editingConsumedDate.HasValue && _editingConsumedDate.Value != consumedAt.Date);
+        var shouldInsert = !_editingId.HasValue || (_editingConsumedAt.HasValue && _editingConsumedAt.Value != consumedAt);
         long? savedId = shouldInsert ? null : _editingId;
 
         try
@@ -616,6 +751,9 @@
     }
 
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
+
+    private static string DisplayValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "--" : value;
 
     private sealed class NutritionForm
     {

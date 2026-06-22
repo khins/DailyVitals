@@ -1,0 +1,339 @@
+@page "/renal-foods"
+@rendermode InteractiveServer
+@using DailyVitals.Data.Services
+@using DailyVitals.Domain.Models
+@using DailyVitals.Web.Services
+@inject RenalDietFoodService RenalDietFoodService
+@inject FoodPhosphorusIntakeService FoodService
+@inject PersonService PersonService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Renal Friendly Foods | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
+            </div>
+
+            <nav class="rail-nav">
+                <a href="dashboard">Dashboard</a>
+                <a href="blood-pressure">Blood Pressure</a>
+                <a href="blood-glucose">Glucose</a>
+                <a href="weight">Weight</a>
+                <a href="exercise">Exercise</a>
+                <a href="nutrition">Nutrition</a>
+                <a class="is-active" href="renal-foods">Renal Friendly Foods</a>
+                <a href="labs">Kidney Labs</a>
+            </nav>
+
+            <a class="rail-profile" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Renal Friendly Foods</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Person</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <section class="status-band status-band--ok" aria-label="Renal friendly food summary">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>@FoodSummaryTitle</strong>
+                    <p>Foods are pulled from the shared renal_diet_food catalog.</p>
+                </div>
+                <div>
+                    <span>Available foods</span>
+                    <strong>@_foods.Count</strong>
+                </div>
+            </section>
+
+            <article class="dashboard-card renal-food-panel">
+                <div class="card-heading">
+                    <div>
+                        <span>Kidney Program</span>
+                        <h2>Renal Friendly Foods</h2>
+                    </div>
+                    <strong>@AllowedSummary</strong>
+                </div>
+
+                @if (_foods.Count == 0)
+                {
+                    <div class="empty-state compact-empty">
+                        <h2>No renal foods found</h2>
+                        <p>Add foods to renal_diet_food to populate this shared catalog.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="renal-food-actions">
+                        <div>
+                            <strong>@_selectedFoodIds.Count selected</strong>
+                            <span>Select multiple foods to add them directly to today's nutrition entries.</span>
+                        </div>
+                        <div>
+                            <button type="button" class="secondary-link" @onclick="ClearSelectedFoods" disabled="@(_selectedFoodIds.Count == 0)">Clear</button>
+                            <button type="button" class="primary-action" @onclick="AddSelectedFoodsToToday" disabled="@(_selectedFoodIds.Count == 0)">Add selected to today</button>
+                        </div>
+                    </div>
+
+                    <div class="renal-food-table-wrap">
+                        <table class="data-table renal-food-table">
+                            <thead>
+                                <tr>
+                                    <th class="renal-food-select-column">Add</th>
+                                    <th>Food</th>
+                                    <th>Category</th>
+                                    <th>Serving</th>
+                                    <th>Calories</th>
+                                    <th>Sodium</th>
+                                    <th>Potassium</th>
+                                    <th>Phosphorus</th>
+                                    <th>Protein</th>
+                                    <th>Status</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var food in _foods)
+                                {
+                                    <tr @onclick="() => UseFood(food)" title="Use this food in a new nutrition entry">
+                                        <td class="renal-food-select-column" @onclick:stopPropagation="true">
+                                            <input type="checkbox"
+                                                   checked="@_selectedFoodIds.Contains(food.RenalFoodId)"
+                                                   @onchange="args => ToggleFoodSelection(food.RenalFoodId, args)" />
+                                        </td>
+                                        <td>
+                                            <strong>@food.FoodName</strong>
+                                        </td>
+                                        <td>@DisplayValue(food.CategoryName)</td>
+                                        <td>@DisplayValue(food.ServingSize)</td>
+                                        <td>@FormatNumber(food.Calories, "cal")</td>
+                                        <td>@FormatNumber(food.SodiumMg, "mg")</td>
+                                        <td>@FormatNumber(food.PotassiumMg, "mg")</td>
+                                        <td>@FormatNumber(food.PhosphorusMg, "mg")</td>
+                                        <td>@FormatProtein(food.ProteinG)</td>
+                                        <td>
+                                            <span class="renal-food-pill @(food.Allowed ? "renal-food-pill--allowed" : "renal-food-pill--restricted")">
+                                                @(food.Allowed ? "Allowed" : "Restricted")
+                                            </span>
+                                        </td>
+                                        <td>@DisplayValue(food.RestrictionNotes)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </article>
+        </main>
+    </section>
+}
+
+@code {
+    private readonly List<RenalDietFood> _foods = [];
+    private readonly HashSet<long> _selectedFoodIds = [];
+    private string? _message;
+    private string _messageClass = "page-message";
+
+    private string FoodSummaryTitle =>
+        _foods.Count == 0
+            ? "No foods configured"
+            : $"{_foods.Count} renal food options";
+
+    private string AllowedSummary =>
+        _foods.Count == 0
+            ? "No data"
+            : $"{_foods.Count(x => x.Allowed)} allowed / {_foods.Count(x => !x.Allowed)} restricted";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (!LoginSession.IsSignedIn)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            StateHasChanged();
+            return;
+        }
+
+        if (PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs == false)
+        {
+            Navigation.NavigateTo("/dashboard", replace: true);
+            return;
+        }
+
+        LoadFoods();
+        StateHasChanged();
+    }
+
+    private void LoadFoods()
+    {
+        _foods.Clear();
+
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        try
+        {
+            _foods.AddRange(RenalDietFoodService.GetFoodCatalog());
+            _selectedFoodIds.RemoveWhere(id => !_foods.Any(food => food.RenalFoodId == id));
+            _message = null;
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "page-message page-message--error";
+        _message = message;
+    }
+
+    private void UseFood(RenalDietFood food)
+    {
+        var query = new Dictionary<string, object?>
+        {
+            ["draftFood"] = food.FoodName,
+            ["draftServing"] = food.ServingSize,
+            ["draftCalories"] = food.Calories,
+            ["draftSodium"] = food.SodiumMg,
+            ["draftPotassium"] = food.PotassiumMg,
+            ["draftPhosphorus"] = food.PhosphorusMg,
+            ["draftProtein"] = food.ProteinG,
+            ["draftNotes"] = food.RestrictionNotes
+        };
+
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters("/nutrition", query));
+    }
+
+    private void ToggleFoodSelection(long renalFoodId, ChangeEventArgs args)
+    {
+        var isChecked = args.Value is bool value && value;
+
+        if (isChecked)
+        {
+            _selectedFoodIds.Add(renalFoodId);
+            return;
+        }
+
+        _selectedFoodIds.Remove(renalFoodId);
+    }
+
+    private void ClearSelectedFoods()
+    {
+        _selectedFoodIds.Clear();
+        _message = null;
+    }
+
+    private void AddSelectedFoodsToToday()
+    {
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            return;
+        }
+
+        var selectedFoods = _foods
+            .Where(food => _selectedFoodIds.Contains(food.RenalFoodId))
+            .ToList();
+
+        if (selectedFoods.Count == 0)
+        {
+            ShowError("Select at least one food to add.");
+            return;
+        }
+
+        try
+        {
+            var consumedAt = DateTime.Now;
+
+            foreach (var food in selectedFoods)
+            {
+                FoodService.Insert(
+                    LoginSession.PersonId.Value,
+                    food.FoodName,
+                    food.PhosphorusMg ?? 0,
+                    food.Calories,
+                    food.SodiumMg,
+                    food.ProteinG,
+                    food.PotassiumMg,
+                    null,
+                    0,
+                    consumedAt,
+                    null,
+                    food.ServingSize,
+                    false,
+                    null,
+                    null,
+                    string.IsNullOrWhiteSpace(food.RestrictionNotes)
+                        ? "Selected from the renal friendly foods catalog."
+                        : food.RestrictionNotes,
+                    LoginSession.UserName ?? string.Empty);
+            }
+
+            var addedCount = selectedFoods.Count;
+            _selectedFoodIds.Clear();
+            ShowSuccess($"{addedCount} renal food {(addedCount == 1 ? "entry" : "entries")} added to today's nutrition log. Review or edit them from Nutrition if needed.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void ShowSuccess(string message)
+    {
+        _messageClass = "page-message";
+        _message = message;
+    }
+
+    private async Task SignOut()
+    {
+        await LoginSession.SignOutAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    private static string DisplayValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "--" : value;
+
+    private static string FormatNumber(int? value, string unit) =>
+        value.HasValue ? $"{value.Value:N0} {unit}" : "--";
+
+    private static string FormatProtein(decimal? value) =>
+        value.HasValue ? $"{value.Value:0.#} g" : "--";
+}

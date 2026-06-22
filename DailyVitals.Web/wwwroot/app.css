@@ -943,6 +943,45 @@ h1 {
     max-height: 480px;
 }
 
+.history-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.compact-action {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 0.84rem;
+}
+
+.nutrition-history-modal {
+    width: min(1180px, calc(100vw - 48px));
+}
+
+.nutrition-history-modal-toolbar {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto;
+    gap: 16px;
+    align-items: end;
+    margin-bottom: 14px;
+}
+
+.nutrition-history-modal-table {
+    max-height: min(620px, calc(100vh - 230px));
+    margin-top: 0;
+}
+
+.nutrition-history-table td:nth-child(2) {
+    min-width: 320px;
+    max-width: 520px;
+    white-space: normal;
+}
+
+.nutrition-history-table td:last-child {
+    min-width: 180px;
+}
+
 .kidney-lab-entry-grid {
     grid-template-columns: minmax(460px, 0.48fr) minmax(0, 0.52fr);
 }
@@ -1067,13 +1106,20 @@ h1 {
 
 .monthly-bar-column {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: 7px;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 5px;
     min-width: 0;
     color: #5d6a68;
     font-size: 0.84rem;
     font-weight: 800;
     text-align: center;
+}
+
+.monthly-bar-column small {
+    min-height: 1.1rem;
+    color: #6a7774;
+    font-size: 0.76rem;
+    font-weight: 700;
 }
 
 .monthly-bar-track {
@@ -1251,6 +1297,85 @@ h1 {
 
 .data-table td:last-child {
     min-width: 220px;
+}
+
+.renal-food-panel {
+    overflow: hidden;
+}
+
+.renal-food-table-wrap {
+    max-height: 640px;
+    margin-top: 18px;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    overflow: auto;
+}
+
+.renal-food-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 18px;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: #f8fbfa;
+}
+
+.renal-food-actions > div:first-child {
+    display: grid;
+    gap: 2px;
+}
+
+.renal-food-actions span {
+    color: #5d6a68;
+    font-size: 0.88rem;
+}
+
+.renal-food-actions > div:last-child {
+    display: flex;
+    gap: 10px;
+}
+
+.renal-food-select-column {
+    width: 58px;
+    min-width: 58px;
+    text-align: center;
+}
+
+.renal-food-select-column input {
+    width: 18px;
+    height: 18px;
+    accent-color: #173f4a;
+    cursor: pointer;
+}
+
+.renal-food-table td:nth-child(2) {
+    min-width: 180px;
+}
+
+.renal-food-table td:last-child {
+    min-width: 260px;
+}
+
+.renal-food-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.renal-food-pill--allowed {
+    background: #dff1e8;
+    color: #17633d;
+}
+
+.renal-food-pill--restricted {
+    background: #f8dddd;
+    color: #8f2329;
 }
 
 .modal-backdrop {

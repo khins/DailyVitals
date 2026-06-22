@@ -36,6 +36,7 @@
                 <a href="nutrition">Nutrition</a>
                 @if (ShowKidneyLabs)
                 {
+                    <a href="renal-foods">Renal Friendly Foods</a>
                     <a href="labs">Kidney Labs</a>
                 }
             </nav>
@@ -273,7 +274,8 @@
                             @foreach (var month in ExerciseMonthlyTotals)
                             {
                                 <div class="monthly-bar-column">
-                                    <strong>@month.TotalCalories.ToString("N0")</strong>
+                                    <strong>@month.TotalCalories.ToString("N0") cal</strong>
+                                    <small>@FormatDuration(month.TotalMinutes)</small>
                                     <span class="monthly-bar-track">
                                         <span class="monthly-bar-fill" style="height:@month.HeightPercent%"></span>
                                     </span>
@@ -843,6 +845,7 @@
                 .Select(x => new ExerciseMonthTotal(
                     x.Key.ToString("MMM yy"),
                     x.Sum(session => session.CaloriesExpended ?? 0),
+                    x.Sum(session => session.DurationMinutes),
                     0))
                 .ToList();
 
@@ -979,5 +982,5 @@
 
     private sealed record ExerciseTrendPoint(DateTime StartTime, decimal Calories, decimal DurationMinutes);
 
-    private sealed record ExerciseMonthTotal(string Label, decimal TotalCalories, int HeightPercent);
+    private sealed record ExerciseMonthTotal(string Label, decimal TotalCalories, decimal TotalMinutes, int HeightPercent);
 }
