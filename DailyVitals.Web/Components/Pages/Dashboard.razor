@@ -342,7 +342,7 @@
             .Reverse()
             .Select(x => new DashboardChartPoint(
                 x.ReadingTime.ToString("ddd"),
-                x.Systolic.ToString(),
+                $"{x.Systolic}/{x.Diastolic}",
                 ScaleBloodPressureHeight(x.Systolic)))
             .ToList();
 
