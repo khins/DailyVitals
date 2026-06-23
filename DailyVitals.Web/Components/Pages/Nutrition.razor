@@ -265,7 +265,7 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewEntry">New</button>
-                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
                         @if (ShowInlineFormMessage)
@@ -443,7 +443,7 @@
                                             }
                                             <td>@DisplayValue(item.ServingDescription)</td>
                                             <td>
-                                                <button type="button" class="secondary-link compact-action" @onclick="() => DeleteEntry(item)" @onclick:stopPropagation="true">Delete</button>
+                                                <button type="button" class="secondary-link compact-action" @onclick="() => RequestDeleteEntry(item)" @onclick:stopPropagation="true">Delete</button>
                                             </td>
                                         </tr>
                                     }
@@ -453,6 +453,29 @@
 
                         @RenderHistoryPager()
                     </article>
+                </div>
+            }
+
+            @if (_pendingDeleteEntry is not null)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
+                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="nutrition-delete-title" @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>Confirm Delete</span>
+                                <h2 id="nutrition-delete-title">Delete this food entry?</h2>
+                            </div>
+                            <button type="button" class="modal-close-button" aria-label="Cancel delete" @onclick="CancelDelete">×</button>
+                        </div>
+
+                        <p class="info-modal-note">This will permanently remove the selected food from your nutrition history.</p>
+                        <p class="confirm-modal-detail">@DeleteEntrySummary</p>
+
+                        <div class="confirm-modal-actions">
+                            <button type="button" class="secondary-link" @onclick="CancelDelete">Cancel</button>
+                            <button type="button" class="danger-action" @onclick="ConfirmDelete">Delete Food</button>
+                        </div>
+                    </section>
                 </div>
             }
         </main>
@@ -477,6 +500,7 @@
     private bool _showKidneyLabs = true;
     private bool _draftApplied;
     private bool _showHistoryModal;
+    private FoodPhosphorusIntake? _pendingDeleteEntry;
     private bool _isNutritionMenuOpen = true;
     private bool _isHistoryRangeOpen = true;
     private NutritionSection _activeSection = NutritionSection.TodaysTotals;
@@ -604,6 +628,11 @@
 
     private NutritionDaySummary TodaySummary => BuildDaySummary(DateTime.Today, TodayEntries);
 
+    private string DeleteEntrySummary =>
+        _pendingDeleteEntry is null
+            ? "No food entry selected."
+            : $"{_pendingDeleteEntry.FoodName}, {_pendingDeleteEntry.ConsumedAt:M/d/yyyy h:mm tt}";
+
     private List<NutritionDaySummary> LastSevenDaySummaries =>
         Enumerable.Range(0, 7)
             .Select(offset =>
@@ -668,6 +697,9 @@
         _message = null;
         RefreshSelectedDayTotal();
     }
+
+    private FoodPhosphorusIntake? FindEntryById(long foodPhosphorusIntakeId) =>
+        _history.FirstOrDefault(x => x.FoodPhosphorusIntakeId == foodPhosphorusIntakeId);
 
     private void SelectEntryFromHistoryModal(FoodPhosphorusIntake item)
     {
@@ -959,17 +991,35 @@
         FoodService.SaveFoodNote(profileId, _foodNotes);
     }
 
-    private void DeleteSelected()
+    private void RequestDeleteSelected()
     {
         if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
             return;
 
-        DeleteEntryById(_editingId.Value);
+        var item = FindEntryById(_editingId.Value);
+        if (item is not null)
+            RequestDeleteEntry(item);
     }
 
-    private void DeleteEntry(FoodPhosphorusIntake item)
+    private void RequestDeleteEntry(FoodPhosphorusIntake item)
     {
-        DeleteEntryById(item.FoodPhosphorusIntakeId);
+        _message = null;
+        _pendingDeleteEntry = item;
+    }
+
+    private void CancelDelete()
+    {
+        _pendingDeleteEntry = null;
+    }
+
+    private void ConfirmDelete()
+    {
+        if (_pendingDeleteEntry is null)
+            return;
+
+        var foodPhosphorusIntakeId = _pendingDeleteEntry.FoodPhosphorusIntakeId;
+        _pendingDeleteEntry = null;
+        DeleteEntryById(foodPhosphorusIntakeId);
     }
 
     private void DeleteEntryById(long foodPhosphorusIntakeId)
@@ -990,6 +1040,7 @@
             if (_editingId == foodPhosphorusIntakeId)
                 ResetForm();
             RefreshSelectedDayTotal();
+            EnsureSelectedHistoryRangeIsAvailable();
             ShowSuccess("Food entry deleted.");
         }
         catch (Exception ex)
@@ -1111,7 +1162,7 @@
                         @if (includeActions)
                         {
                             <td>
-                                <button type="button" class="secondary-link compact-action" @onclick="() => DeleteEntry(item)" @onclick:stopPropagation="true">Delete</button>
+                                <button type="button" class="secondary-link compact-action" @onclick="() => RequestDeleteEntry(item)" @onclick:stopPropagation="true">Delete</button>
                             </td>
                         }
                     </tr>

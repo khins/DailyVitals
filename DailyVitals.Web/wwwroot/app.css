@@ -1257,6 +1257,68 @@ h1 {
     max-height: 340px;
 }
 
+.weight-trend-panel,
+.weight-trend-readings {
+    padding: 20px;
+}
+
+.weight-trend-chart {
+    position: relative;
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.weight-trend-chart svg {
+    width: 100%;
+    height: 340px;
+    border-radius: 8px;
+    background: #f4f7f6;
+}
+
+.weight-trend-line {
+    fill: none;
+    stroke: #121a18;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.6;
+    vector-effect: non-scaling-stroke;
+}
+
+.weight-trend-callout {
+    position: absolute;
+    color: #5d6a68;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.weight-trend-callout--start {
+    top: 18px;
+    left: 14px;
+}
+
+.weight-trend-callout--current {
+    right: 14px;
+    bottom: 18px;
+}
+
+.weight-change-summary {
+    margin: 12px 0 0;
+    font-weight: 900;
+}
+
+.weight-change-summary--good {
+    color: #147a2e;
+}
+
+.weight-change-summary--watch {
+    color: #9b6a00;
+}
+
+.weight-trend-reading-table {
+    max-height: 340px;
+}
+
 .exercise-line-chart {
     display: grid;
     gap: 12px;
@@ -1502,6 +1564,10 @@ h1 {
 }
 
 .blood-pressure-history-table {
+    max-height: 430px;
+}
+
+.weight-history-table {
     max-height: 430px;
 }
 
