@@ -1,6 +1,7 @@
 @page "/blood-pressure"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
 @using DailyVitals.Data.Services
 @using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
@@ -23,7 +24,17 @@
 
             <nav class="rail-nav">
                 <a href="dashboard">Dashboard</a>
-                <a class="is-active" href="blood-pressure">Blood Pressure</a>
+                <button type="button" class="rail-nav-toggle is-active" aria-expanded="@_isBloodPressureMenuOpen" @onclick="ToggleBloodPressureMenu">
+                    <span>Blood Pressure</span>
+                    <span aria-hidden="true">@(_isBloodPressureMenuOpen ? "-" : "+")</span>
+                </button>
+                @if (_isBloodPressureMenuOpen)
+                {
+                    <div class="rail-subnav" aria-label="Blood pressure sections">
+                        <a class="rail-subnav-button is-active" href="blood-pressure">Entry</a>
+                        <a class="rail-subnav-button" href="blood-pressure-trend">Trend</a>
+                    </div>
+                }
                 <a href="blood-glucose">Glucose</a>
                 <a href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
@@ -126,9 +137,18 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewReading">New</button>
-                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_formToast))
+                        {
+                            <div class="profile-toast form-toast" role="status">
+                                <span class="profile-toast-icon" aria-hidden="true">✓</span>
+                                <span>@_formToast</span>
+                                <button type="button" aria-label="Dismiss blood pressure update message" @onclick="DismissFormToast">×</button>
+                            </div>
+                        }
                     </EditForm>
                 </article>
 
@@ -150,7 +170,7 @@
                     }
                     else
                     {
-                        <div class="data-table-wrap">
+                        <div class="data-table-wrap blood-pressure-history-table">
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -162,7 +182,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var reading in _history)
+                                    @foreach (var reading in PagedHistory)
                                     {
                                         <tr class="@(reading.BloodPressureId == _editingId ? "is-selected" : null)" @onclick="() => SelectReading(reading)">
                                             <td>@reading.ReadingTime.ToString("M/d/yyyy h:mm tt")</td>
@@ -175,9 +195,33 @@
                                 </tbody>
                             </table>
                         </div>
+                        @RenderHistoryPager()
                     }
                 </article>
             </section>
+
+            @if (_showDeleteConfirm)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
+                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="bp-delete-title" @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>Confirm Delete</span>
+                                <h2 id="bp-delete-title">Delete this blood pressure reading?</h2>
+                            </div>
+                            <button type="button" class="modal-close-button" aria-label="Cancel delete" @onclick="CancelDelete">×</button>
+                        </div>
+
+                        <p class="info-modal-note">This will permanently remove the selected reading from your blood pressure history.</p>
+                        <p class="confirm-modal-detail">@DeleteReadingSummary</p>
+
+                        <div class="confirm-modal-actions">
+                            <button type="button" class="secondary-link" @onclick="CancelDelete">Cancel</button>
+                            <button type="button" class="danger-action" @onclick="ConfirmDelete">Delete Reading</button>
+                        </div>
+                    </section>
+                </div>
+            }
         </main>
     </section>
 }
@@ -185,15 +229,20 @@
 @code {
     private readonly BloodPressureForm _form = new();
     private readonly List<BloodPressureReading> _history = [];
+    private const int HistoryPageSize = 20;
     private long? _editingId;
+    private int _historyPage = 1;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private int _systolicAlertMax = 130;
     private int _diastolicAlertMax = 80;
     private bool _showKidneyLabs = true;
+    private bool _isBloodPressureMenuOpen = true;
     private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
     private string _messageClass = "page-message";
+    private string? _formToast;
+    private bool _showDeleteConfirm;
 
     protected override void OnInitialized()
     {
@@ -269,6 +318,20 @@
             ? "None yet"
             : $"{_history[0].Systolic}/{_history[0].Diastolic} on {_history[0].ReadingTime:M/d/yyyy}";
 
+    private string DeleteReadingSummary =>
+        _editingId.HasValue
+            ? $"{_form.Systolic}/{_form.Diastolic}, pulse {_form.Pulse}, {_readingTimeText}"
+            : "No reading selected.";
+
+    private List<BloodPressureReading> PagedHistory =>
+        _history
+            .Skip((_historyPage - 1) * HistoryPageSize)
+            .Take(HistoryPageSize)
+            .ToList();
+
+    private int HistoryPageCount =>
+        Math.Max(1, (int)Math.Ceiling(_history.Count / (double)HistoryPageSize));
+
     private string AuditText
     {
         get
@@ -292,6 +355,7 @@
 
         LoadThresholds(LoginSession.PersonId.Value);
         _history.AddRange(BloodPressureService.GetHistoryForPerson(LoginSession.PersonId.Value));
+        EnsureHistoryPageInRange();
     }
 
     private void LoadThresholds(long personId)
@@ -308,7 +372,7 @@
             : 80;
     }
 
-    private void SelectReading(BloodPressureReading reading)
+    private void SelectReading(BloodPressureReading reading, bool clearToast = true)
     {
         _editingId = reading.BloodPressureId;
         _form.Systolic = reading.Systolic;
@@ -319,17 +383,24 @@
         _createdAt = reading.CreatedAt;
         _updatedAt = reading.UpdatedAt;
         _message = null;
+        _showDeleteConfirm = false;
+        if (clearToast)
+            _formToast = null;
     }
 
     private void BeginNewReading()
     {
         ResetForm();
         _message = null;
+        _formToast = null;
+        _showDeleteConfirm = false;
     }
 
     private void SetReadingTime(ChangeEventArgs args)
     {
         _readingTimeText = args.Value?.ToString() ?? string.Empty;
+        if (DateTime.TryParse(_readingTimeText, out var readingTime))
+            SyncSeatedAtNote(readingTime);
     }
 
     private void ResetForm()
@@ -347,6 +418,8 @@
 
     private void SaveReading()
     {
+        _showDeleteConfirm = false;
+
         if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");
@@ -405,6 +478,7 @@
                     LoginSession.UserName ?? string.Empty);
 
                 _editingId = insertedId;
+                _historyPage = 1;
                 ShowSuccess("Blood pressure reading saved.");
             }
 
@@ -412,12 +486,33 @@
 
             var selected = _history.FirstOrDefault(x => x.BloodPressureId == _editingId);
             if (selected is not null)
-                SelectReading(selected);
+                SelectReading(selected, clearToast: false);
         }
         catch (Exception ex)
         {
             ShowError(ex.Message);
         }
+    }
+
+    private void RequestDeleteSelected()
+    {
+        if (!_editingId.HasValue)
+            return;
+
+        _message = null;
+        _formToast = null;
+        _showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirm = false;
+    }
+
+    private void ConfirmDelete()
+    {
+        _showDeleteConfirm = false;
+        DeleteSelected();
     }
 
     private void DeleteSelected()
@@ -459,13 +554,46 @@
     private void ShowSuccess(string message)
     {
         _messageClass = "page-message";
-        _message = message;
+        _message = null;
+        _formToast = message;
     }
 
     private void ShowError(string message)
     {
         _messageClass = "page-message page-message--error";
         _message = message;
+        _formToast = null;
+    }
+
+    private void DismissFormToast()
+    {
+        _formToast = null;
+    }
+
+    private void ToggleBloodPressureMenu()
+    {
+        _isBloodPressureMenuOpen = !_isBloodPressureMenuOpen;
+    }
+
+    private void PreviousHistoryPage()
+    {
+        if (_historyPage > 1)
+            _historyPage--;
+    }
+
+    private void NextHistoryPage()
+    {
+        if (_historyPage < HistoryPageCount)
+            _historyPage++;
+    }
+
+    private void EnsureHistoryPageInRange()
+    {
+        if (_historyPage > HistoryPageCount)
+            _historyPage = HistoryPageCount;
+
+        if (_historyPage < 1)
+            _historyPage = 1;
     }
 
     private async Task SignOut()
@@ -474,7 +602,34 @@
         Navigation.NavigateTo("/");
     }
 
+    private RenderFragment RenderHistoryPager() => @<div class="table-pager">
+        <button type="button" class="secondary-link compact-action" @onclick="PreviousHistoryPage" disabled="@(_historyPage <= 1)">Previous</button>
+        <span>Page @_historyPage of @HistoryPageCount</span>
+        <button type="button" class="secondary-link compact-action" @onclick="NextHistoryPage" disabled="@(_historyPage >= HistoryPageCount)">Next</button>
+    </div>;
+
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
+
+    private void SyncSeatedAtNote(DateTime readingTime)
+    {
+        var seatedText = $"seated at {readingTime:h:mm tt}";
+        var currentNotes = _form.Notes ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(currentNotes))
+        {
+            _form.Notes = $"Morning reading, {seatedText}";
+            return;
+        }
+
+        if (currentNotes.Contains("seated at", StringComparison.OrdinalIgnoreCase))
+        {
+            _form.Notes = Regex.Replace(
+                currentNotes,
+                @"seated at\s+\d{1,2}:\d{2}\s*(AM|PM)",
+                seatedText,
+                RegexOptions.IgnoreCase);
+        }
+    }
 
     private sealed class BloodPressureForm
     {

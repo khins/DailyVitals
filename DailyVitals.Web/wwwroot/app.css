@@ -400,6 +400,12 @@ h1 {
     color: #173f4a;
 }
 
+.rail-subnav a.rail-subnav-button {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
 .rail-subpanel {
     display: grid;
     gap: 8px;
@@ -1183,6 +1189,74 @@ h1 {
     font-weight: 700;
 }
 
+.bp-trend-panel,
+.bp-trend-readings {
+    padding: 20px;
+}
+
+.bp-trend-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 240px)) auto;
+    align-items: end;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.bp-trend-chart {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.bp-trend-chart svg {
+    width: 100%;
+    height: 340px;
+    border-radius: 8px;
+    background: #f4f7f6;
+}
+
+.bp-trend-line {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.6;
+    vector-effect: non-scaling-stroke;
+}
+
+.bp-trend-line--systolic {
+    stroke: #d9272e;
+}
+
+.bp-trend-line--diastolic {
+    stroke: #2459e6;
+}
+
+.bp-systolic-swatch {
+    background: #d9272e;
+}
+
+.bp-diastolic-swatch {
+    background: #2459e6;
+}
+
+.bp-trend-labels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+    gap: 8px;
+}
+
+.bp-trend-labels span {
+    display: grid;
+    gap: 2px;
+    color: #5d6a68;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.bp-trend-reading-table {
+    max-height: 340px;
+}
+
 .exercise-line-chart {
     display: grid;
     gap: 12px;
@@ -1427,6 +1501,10 @@ h1 {
     overflow: auto;
 }
 
+.blood-pressure-history-table {
+    max-height: 430px;
+}
+
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -1609,6 +1687,44 @@ h1 {
     margin-bottom: 16px;
     color: #53635f;
     line-height: 1.45;
+}
+
+.confirm-modal {
+    width: min(520px, 100%);
+}
+
+.confirm-modal-detail {
+    margin: 0;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: #f6f9f8;
+    color: #17211f;
+    font-weight: 800;
+}
+
+.confirm-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.danger-action {
+    min-height: 42px;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 16px;
+    background: #a61f2b;
+    color: #ffffff;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.danger-action:hover,
+.danger-action:focus-visible {
+    background: #861722;
+    outline: none;
 }
 
 .bmi-chart-grid {
@@ -1861,6 +1977,11 @@ h1 {
     cursor: pointer;
     font-size: 1.1rem;
     line-height: 1;
+}
+
+.form-toast {
+    margin-top: 12px;
+    margin-right: 0;
 }
 
 .toggle-card {

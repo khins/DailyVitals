@@ -1,0 +1,357 @@
+@page "/blood-pressure-trend"
+@rendermode InteractiveServer
+@using DailyVitals.Data.Services
+@using DailyVitals.Domain.Models
+@using DailyVitals.Web.Services
+@inject BloodPressureService BloodPressureService
+@inject PersonService PersonService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Blood Pressure Trend | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
+            </div>
+
+            <nav class="rail-nav">
+                <a href="dashboard">Dashboard</a>
+                <button type="button" class="rail-nav-toggle is-active" aria-expanded="@_isBloodPressureMenuOpen" @onclick="ToggleBloodPressureMenu">
+                    <span>Blood Pressure</span>
+                    <span aria-hidden="true">@(_isBloodPressureMenuOpen ? "-" : "+")</span>
+                </button>
+                @if (_isBloodPressureMenuOpen)
+                {
+                    <div class="rail-subnav" aria-label="Blood pressure sections">
+                        <a class="rail-subnav-button" href="blood-pressure">Entry</a>
+                        <a class="rail-subnav-button is-active" href="blood-pressure-trend">Trend</a>
+                    </div>
+                }
+                <a href="blood-glucose">Glucose</a>
+                <a href="weight">Weight</a>
+                <a href="exercise">Exercise</a>
+                <a href="reports">Reports</a>
+                <a href="nutrition">Nutrition</a>
+                @if (_showKidneyLabs)
+                {
+                    <a href="renal-foods">Renal Friendly Foods</a>
+                    <a href="labs">Kidney Labs</a>
+                }
+            </nav>
+
+            <a class="rail-profile" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Blood Pressure Trend</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Person</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                    <a class="primary-action" href="blood-pressure">Add Reading</a>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <section class="status-band status-band--ok" aria-label="Blood pressure trend summary">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>@TrendSummaryTitle</strong>
+                    <p>@TrendSummaryText</p>
+                </div>
+                <div>
+                    <span>Range</span>
+                    <strong>@AppliedRangeText</strong>
+                </div>
+            </section>
+
+            <section class="dashboard-card bp-trend-panel">
+                <div class="card-heading">
+                    <div>
+                        <span>Trend</span>
+                        <h2>Systolic and Diastolic</h2>
+                    </div>
+                    <strong>@_trend.Count readings</strong>
+                </div>
+
+                <div class="bp-trend-controls" aria-label="Trend date range">
+                    <div class="field-group">
+                        <label for="bp-trend-from">From</label>
+                        <input id="bp-trend-from" class="form-input" type="date" value="@_fromDateText" @onchange="SetFromDate" />
+                    </div>
+                    <div class="field-group">
+                        <label for="bp-trend-to">To</label>
+                        <input id="bp-trend-to" class="form-input" type="date" value="@_toDateText" @onchange="SetToDate" />
+                    </div>
+                    <button type="button" class="secondary-link" @onclick="ApplyTrendRange">Apply</button>
+                </div>
+
+                @if (_trend.Count < 2)
+                {
+                    <div class="empty-state compact-empty">
+                        <h2>More readings needed</h2>
+                        <p>Choose a date range with at least two blood pressure readings to chart the trend.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="bp-trend-chart" aria-label="Blood pressure systolic and diastolic trend">
+                        <div class="chart-legend">
+                            <span><i class="bp-systolic-swatch"></i>Systolic</span>
+                            <span><i class="bp-diastolic-swatch"></i>Diastolic</span>
+                        </div>
+                        <svg viewBox="0 0 100 54" preserveAspectRatio="none" role="img">
+                            <polyline class="bp-trend-line bp-trend-line--systolic" points="@SystolicPolyline" />
+                            <polyline class="bp-trend-line bp-trend-line--diastolic" points="@DiastolicPolyline" />
+                        </svg>
+
+                        <div class="bp-trend-labels">
+                            @foreach (var point in TrendPoints)
+                            {
+                                <span>
+                                    <strong>@point.Value</strong>
+                                    @point.Label
+                                </span>
+                            }
+                        </div>
+                    </div>
+                }
+            </section>
+
+            <section class="dashboard-card bp-trend-readings">
+                <div class="card-heading">
+                    <div>
+                        <span>History</span>
+                        <h2>Readings in Range</h2>
+                    </div>
+                    <strong>@_trend.Count entries</strong>
+                </div>
+
+                @if (_trend.Count == 0)
+                {
+                    <div class="empty-state compact-empty">
+                        <h2>No readings found</h2>
+                        <p>Adjust the range or add a blood pressure reading.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="data-table-wrap bp-trend-reading-table">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Systolic</th>
+                                    <th>Diastolic</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var reading in _trend.OrderByDescending(x => x.ReadingTime))
+                                {
+                                    <tr>
+                                        <td>@reading.ReadingTime.ToString("M/d/yyyy h:mm tt")</td>
+                                        <td>@reading.Systolic</td>
+                                        <td>@reading.Diastolic</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        </main>
+    </section>
+}
+
+@code {
+    private readonly List<BloodPressureReading> _trend = [];
+    private bool _showKidneyLabs = true;
+    private bool _isBloodPressureMenuOpen = true;
+    private string _fromDateText = ToDateInput(DateTime.Today.AddDays(-14));
+    private string _toDateText = ToDateInput(DateTime.Today);
+    private DateTime _appliedFrom = DateTime.Today.AddDays(-14);
+    private DateTime _appliedTo = DateTime.Today;
+    private string? _message;
+    private string _messageClass = "page-message";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (!LoginSession.IsSignedIn)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            StateHasChanged();
+            return;
+        }
+
+        LoadPersonPreferences();
+        LoadTrend();
+        StateHasChanged();
+    }
+
+    private void LoadPersonPreferences()
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
+    }
+
+    private IReadOnlyList<BpTrendPoint> TrendPoints =>
+        _trend
+            .OrderBy(x => x.ReadingTime)
+            .Select(x => new BpTrendPoint(
+                x.ReadingTime.ToString("M/d"),
+                $"{x.Systolic}/{x.Diastolic}",
+                x.Systolic,
+                x.Diastolic))
+            .ToList();
+
+    private string SystolicPolyline => BuildPolyline(point => point.Systolic);
+
+    private string DiastolicPolyline => BuildPolyline(point => point.Diastolic);
+
+    private string TrendSummaryTitle =>
+        _trend.Count < 2
+            ? "Trend pending"
+            : $"{_trend.Count} readings charted";
+
+    private string TrendSummaryText
+    {
+        get
+        {
+            var points = TrendPoints;
+            if (points.Count < 2)
+                return "Select a range with at least two readings to compare blood pressure over time.";
+
+            var first = points[0];
+            var latest = points[^1];
+            return $"From {first.Value} to {latest.Value}.";
+        }
+    }
+
+    private string AppliedRangeText => $"{_appliedFrom:M/d/yyyy} - {_appliedTo:M/d/yyyy}";
+
+    private void SetFromDate(ChangeEventArgs args)
+    {
+        _fromDateText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void SetToDate(ChangeEventArgs args)
+    {
+        _toDateText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void ApplyTrendRange()
+    {
+        LoadTrend();
+    }
+
+    private void LoadTrend()
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        if (!DateTime.TryParse(_fromDateText, out var fromDate) || !DateTime.TryParse(_toDateText, out var toDate))
+        {
+            ShowError("Enter a valid from and to date.");
+            return;
+        }
+
+        if (toDate.Date < fromDate.Date)
+        {
+            ShowError("The to date must be on or after the from date.");
+            return;
+        }
+
+        try
+        {
+            _trend.Clear();
+            _trend.AddRange(
+                BloodPressureService
+                    .GetTrend(LoginSession.PersonId.Value, fromDate, toDate)
+                    .OrderBy(x => x.ReadingTime));
+
+            _appliedFrom = fromDate.Date;
+            _appliedTo = toDate.Date;
+            _message = null;
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private string BuildPolyline(Func<BpTrendPoint, int> selector)
+    {
+        var points = TrendPoints;
+        if (points.Count == 0)
+            return string.Empty;
+
+        var min = points.Min(x => Math.Min(x.Systolic, x.Diastolic));
+        var max = points.Max(x => Math.Max(x.Systolic, x.Diastolic));
+        var range = max - min;
+        if (range <= 0)
+            range = 1;
+
+        return string.Join(
+            " ",
+            points.Select((point, index) =>
+            {
+                var x = points.Count == 1 ? 50m : 4m + index * 92m / (points.Count - 1);
+                var y = 46m - ((selector(point) - min) / (decimal)range * 38m);
+                return $"{x:0.##},{y:0.##}";
+            }));
+    }
+
+    private void ToggleBloodPressureMenu()
+    {
+        _isBloodPressureMenuOpen = !_isBloodPressureMenuOpen;
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "page-message page-message--error";
+        _message = message;
+    }
+
+    private async Task SignOut()
+    {
+        await LoginSession.SignOutAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    private static string ToDateInput(DateTime value) => value.ToString("yyyy-MM-dd");
+
+    private sealed record BpTrendPoint(string Label, string Value, int Systolic, int Diastolic);
+}
