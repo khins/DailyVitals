@@ -1,0 +1,500 @@
+@page "/reports"
+@rendermode InteractiveServer
+@using DailyVitals.Data.Services
+@using DailyVitals.Data.Services.DailyVitals.App.Services
+@using DailyVitals.Domain.Models
+@using DailyVitals.Web.Services
+@inject BloodPressureService BloodPressureService
+@inject BloodGlucoseService BloodGlucoseService
+@inject WeightService WeightService
+@inject ExerciseService ExerciseService
+@inject FoodPhosphorusIntakeService FoodService
+@inject NutritionGoalService NutritionGoalService
+@inject PersonService PersonService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Reports | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
+            </div>
+
+            <nav class="rail-nav">
+                <a href="dashboard">Dashboard</a>
+                <a href="blood-pressure">Blood Pressure</a>
+                <a href="blood-glucose">Glucose</a>
+                <a href="weight">Weight</a>
+                <a href="exercise">Exercise</a>
+                <a class="is-active" href="reports">Reports</a>
+                <a href="nutrition">Nutrition</a>
+                @if (_showKidneyLabs)
+                {
+                    <a href="renal-foods">Renal Friendly Foods</a>
+                    <a href="labs">Kidney Labs</a>
+                }
+            </nav>
+
+            <a class="rail-profile" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Reports</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Person</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <section class="status-band status-band--ok" aria-label="Reports summary">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>@ReportSummaryTitle</strong>
+                    <p>Reports are person-scoped and summarize data already captured in DailyVitals.</p>
+                </div>
+                <div>
+                    <span>Reporting window</span>
+                    <strong>Last 30 days</strong>
+                </div>
+            </section>
+
+            <section class="report-card-grid" aria-label="Report overview">
+                <article class="dashboard-card report-card">
+                    <div class="card-heading">
+                        <div>
+                            <span>Weight Progress Report</span>
+                            <h2>@WeightChangeText</h2>
+                        </div>
+                        <strong class="@WeightStatusClass">@WeightStatusText</strong>
+                    </div>
+                    <dl class="report-metric-list">
+                        <div>
+                            <dt>Starting</dt>
+                            <dd>@WeightStartText</dd>
+                        </div>
+                        <div>
+                            <dt>Latest</dt>
+                            <dd>@WeightLatestText</dd>
+                        </div>
+                        <div>
+                            <dt>Readings</dt>
+                            <dd>@_weightHistory.Count</dd>
+                        </div>
+                    </dl>
+                </article>
+
+                <article class="dashboard-card report-card">
+                    <div class="card-heading">
+                        <div>
+                            <span>Nutrition Compliance Report</span>
+                            <h2>@NutritionActiveDaysText</h2>
+                        </div>
+                    </div>
+                    <dl class="report-metric-list report-metric-list--narrative">
+                        <div>
+                            <dt>Overall</dt>
+                            <dd>@NutritionComplianceText</dd>
+                        </div>
+                        <div>
+                            <dt>Phosphorus</dt>
+                            <dd>@PhosphorusComplianceText</dd>
+                        </div>
+                        <div>
+                            <dt>Sodium</dt>
+                            <dd>@SodiumComplianceText</dd>
+                        </div>
+                        <div>
+                            <dt>Avg calories</dt>
+                            <dd>@_nutritionAverageCalories.ToString("N0") cal</dd>
+                        </div>
+                    </dl>
+                </article>
+
+                <article class="dashboard-card report-card">
+                    <div class="card-heading">
+                        <div>
+                            <span>Exercise Consistency Report</span>
+                            <h2>@_exerciseActiveDays active days</h2>
+                        </div>
+                        <strong>@FormatMinutes(_exerciseTotalMinutes)</strong>
+                    </div>
+                    <dl class="report-metric-list">
+                        <div>
+                            <dt>Sessions</dt>
+                            <dd>@_recentExercise.Count</dd>
+                        </div>
+                        <div>
+                            <dt>Average session</dt>
+                            <dd>@FormatMinutes(_exerciseAverageMinutes)</dd>
+                        </div>
+                        <div>
+                            <dt>Most common</dt>
+                            <dd>@MostCommonExercise</dd>
+                        </div>
+                    </dl>
+                </article>
+
+                <article class="dashboard-card report-card">
+                    <div class="card-heading">
+                        <div>
+                            <span>Monthly Health Summary</span>
+                            <h2>@DateTime.Today.ToString("MMMM yyyy")</h2>
+                        </div>
+                        <strong>@MonthlyEntryCount entries</strong>
+                    </div>
+                    <dl class="report-metric-list">
+                        <div>
+                            <dt>Latest BP</dt>
+                            <dd>@LatestBloodPressureText</dd>
+                        </div>
+                        <div>
+                            <dt>Latest glucose</dt>
+                            <dd>@LatestGlucoseText</dd>
+                        </div>
+                        <div>
+                            <dt>Latest weight</dt>
+                            <dd>@WeightLatestText</dd>
+                        </div>
+                    </dl>
+                </article>
+            </section>
+
+            <section class="report-detail-grid">
+                <article class="dashboard-card report-detail-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Nutrition</span>
+                            <h2>Last 30 Days</h2>
+                        </div>
+                        <strong>@_recentNutrition.Count entries</strong>
+                    </div>
+
+                    <div class="data-table-wrap report-table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Total</th>
+                                    <th>Daily Average</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Phosphorus</td>
+                                    <td>@_nutritionTotalPhosphorus.ToString("N0") mg</td>
+                                    <td>@AveragePerActiveDay(_nutritionTotalPhosphorus).ToString("N0") mg</td>
+                                </tr>
+                                <tr>
+                                    <td>Sodium</td>
+                                    <td>@_nutritionTotalSodium.ToString("N0") mg</td>
+                                    <td>@AveragePerActiveDay(_nutritionTotalSodium).ToString("N0") mg</td>
+                                </tr>
+                                <tr>
+                                    <td>Calories</td>
+                                    <td>@_nutritionTotalCalories.ToString("N0") cal</td>
+                                    <td>@_nutritionAverageCalories.ToString("N0") cal</td>
+                                </tr>
+                                <tr>
+                                    <td>Protein</td>
+                                    <td>@_nutritionTotalProtein.ToString("N1") g</td>
+                                    <td>@AveragePerActiveDay(_nutritionTotalProtein).ToString("N1") g</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <article class="dashboard-card report-detail-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Archive</span>
+                            <h2>Recent Report Notes</h2>
+                        </div>
+                    </div>
+
+                    <div class="report-note-list">
+                        @foreach (var note in ReportNotes)
+                        {
+                            <div class="attention-row">
+                                <span class="attention-marker marker-info"></span>
+                                <div>
+                                    <strong>@note.Title</strong>
+                                    <p>@note.Detail</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </article>
+            </section>
+
+            <p class="dashboard-disclosure">
+                ActiveVitals reports are for personal tracking and awareness only, not medical diagnosis or treatment advice.
+            </p>
+        </main>
+    </section>
+}
+
+@code {
+    private readonly List<WeightReading> _weightHistory = [];
+    private readonly List<ExerciseSession> _exerciseHistory = [];
+    private readonly List<FoodPhosphorusIntake> _nutritionHistory = [];
+    private readonly List<BloodPressureReading> _bloodPressureHistory = [];
+    private readonly List<BloodGlucoseReading> _glucoseHistory = [];
+    private readonly List<ExerciseSession> _recentExercise = [];
+    private readonly List<FoodPhosphorusIntake> _recentNutrition = [];
+    private string? _message;
+    private string _messageClass = "page-message";
+    private bool _showKidneyLabs;
+    private NutritionGoal? _nutritionGoal;
+    private int _nutritionActiveDays;
+    private int _nutritionPhosphorusDaysInTarget;
+    private int _nutritionSodiumDaysInTarget;
+    private decimal _nutritionTotalPhosphorus;
+    private decimal _nutritionTotalSodium;
+    private decimal _nutritionTotalCalories;
+    private decimal _nutritionTotalProtein;
+    private decimal _nutritionAverageCalories;
+    private decimal _exerciseTotalMinutes;
+    private decimal _exerciseAverageMinutes;
+    private int _exerciseActiveDays;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (!LoginSession.IsSignedIn)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        LoadReports();
+        StateHasChanged();
+    }
+
+    private string ReportSummaryTitle =>
+        _weightHistory.Count + _exerciseHistory.Count + _nutritionHistory.Count + _bloodPressureHistory.Count + _glucoseHistory.Count == 0
+            ? "No report data yet"
+            : "Simple reports are ready";
+
+    private WeightReading? LatestWeight => _weightHistory.FirstOrDefault();
+
+    private WeightReading? StartingWeight => _weightHistory
+        .OrderBy(x => x.ReadingTime)
+        .FirstOrDefault();
+
+    private string WeightStartText => StartingWeight is null
+        ? "--"
+        : $"{StartingWeight.WeightValue:N1} {StartingWeight.WeightUnit}";
+
+    private string WeightLatestText => LatestWeight is null
+        ? "--"
+        : $"{LatestWeight.WeightValue:N1} {LatestWeight.WeightUnit}";
+
+    private decimal? WeightChange => LatestWeight is null || StartingWeight is null
+        ? null
+        : LatestWeight.WeightValue - StartingWeight.WeightValue;
+
+    private string WeightChangeText => WeightChange.HasValue
+        ? $"{WeightChange.Value:+0.0;-0.0;0.0} lb"
+        : "No trend yet";
+
+    private string WeightStatusText => WeightChange switch
+    {
+        < 0 => "Down",
+        > 0 => "Up",
+        0 => "Stable",
+        _ => "Waiting"
+    };
+
+    private string WeightStatusClass => WeightChange switch
+    {
+        < 0 => "status-pill status-ok",
+        > 0 => "status-pill status-watch",
+        _ => "status-pill status-info"
+    };
+
+    private string NutritionComplianceText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{Math.Round((_nutritionPhosphorusDaysInTarget + _nutritionSodiumDaysInTarget) / (decimal)(_nutritionActiveDays * 2) * 100m)}%";
+
+    private string PhosphorusComplianceText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{Math.Round(_nutritionPhosphorusDaysInTarget / (decimal)_nutritionActiveDays * 100m)}% ({_nutritionPhosphorusDaysInTarget} of {_nutritionActiveDays} days)";
+
+    private string SodiumComplianceText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{Math.Round(_nutritionSodiumDaysInTarget / (decimal)_nutritionActiveDays * 100m)}% ({_nutritionSodiumDaysInTarget} of {_nutritionActiveDays} days)";
+
+    private string NutritionActiveDaysText => _nutritionActiveDays == 1
+        ? "1 active day"
+        : $"{_nutritionActiveDays} active days";
+
+    private string MostCommonExercise =>
+        _recentExercise
+            .GroupBy(x => x.ExerciseName)
+            .OrderByDescending(x => x.Count())
+            .ThenBy(x => x.Key)
+            .Select(x => x.Key)
+            .FirstOrDefault() ?? "--";
+
+    private string LatestBloodPressureText => _bloodPressureHistory.FirstOrDefault() is { } bp
+        ? $"{bp.Systolic}/{bp.Diastolic}"
+        : "--";
+
+    private string LatestGlucoseText => _glucoseHistory.FirstOrDefault() is { } glucose
+        ? $"{glucose.GlucoseValue} mg/dL"
+        : "--";
+
+    private int MonthlyEntryCount
+    {
+        get
+        {
+            var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            return _bloodPressureHistory.Count(x => x.ReadingTime >= start)
+                + _glucoseHistory.Count(x => x.ReadingTime >= start)
+                + _weightHistory.Count(x => x.ReadingTime >= start)
+                + _exerciseHistory.Count(x => x.StartTime >= start)
+                + _nutritionHistory.Count(x => x.ConsumedAt >= start);
+        }
+    }
+
+    private IReadOnlyList<ReportNote> ReportNotes =>
+    [
+        new("Weight progress", WeightChange.HasValue ? $"Current trend is {WeightChangeText} from first to latest logged weight." : "Add at least two weight entries to show a progress trend."),
+        new("Nutrition compliance", _nutritionActiveDays > 0 ? $"Compared logged days against current phosphorus and sodium targets." : "Add nutrition entries to build compliance reporting."),
+        new("Exercise consistency", _recentExercise.Count > 0 ? $"{_recentExercise.Count} sessions logged in the last 30 days." : "Add exercise sessions to measure consistency."),
+        new("Monthly summary", $"{DateTime.Today:MMMM yyyy} includes {MonthlyEntryCount} logged records across active sections.")
+    ];
+
+    private void LoadReports()
+    {
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            return;
+        }
+
+        try
+        {
+            var personId = LoginSession.PersonId.Value;
+            var person = PersonService.GetPersonById(personId);
+            _showKidneyLabs = person?.TrackKidneyLabs == true;
+            _nutritionGoal = NutritionGoalService.GetActiveGoal(personId, DateTime.Today);
+
+            _weightHistory.Clear();
+            _exerciseHistory.Clear();
+            _nutritionHistory.Clear();
+            _bloodPressureHistory.Clear();
+            _glucoseHistory.Clear();
+            _recentExercise.Clear();
+            _recentNutrition.Clear();
+
+            _weightHistory.AddRange(WeightService.GetHistory(personId));
+            _exerciseHistory.AddRange(ExerciseService.GetHistory(personId));
+            _nutritionHistory.AddRange(FoodService.GetHistory(personId));
+            _bloodPressureHistory.AddRange(BloodPressureService.GetHistoryForPerson(personId));
+            _glucoseHistory.AddRange(BloodGlucoseService.GetHistory(personId));
+
+            var recentStart = DateTime.Today.AddDays(-29);
+            _recentExercise.AddRange(_exerciseHistory.Where(x => x.StartTime.Date >= recentStart));
+            _recentNutrition.AddRange(_nutritionHistory.Where(x => x.ConsumedAt.Date >= recentStart));
+
+            BuildNutritionReport();
+            BuildExerciseReport();
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Reports could not be loaded: {ex.Message}");
+        }
+    }
+
+    private void BuildNutritionReport()
+    {
+        var daily = _recentNutrition
+            .GroupBy(x => x.ConsumedAt.Date)
+            .Select(group => new
+            {
+                Phosphorus = group.Sum(x => x.PhosphorusMg),
+                Sodium = group.Sum(x => x.SodiumMg ?? 0),
+                Calories = group.Sum(x => x.Calories ?? 0),
+                Protein = group.Sum(x => x.ProteinG ?? 0)
+            })
+            .ToList();
+
+        _nutritionActiveDays = daily.Count;
+        _nutritionTotalPhosphorus = daily.Sum(x => x.Phosphorus);
+        _nutritionTotalSodium = daily.Sum(x => x.Sodium);
+        _nutritionTotalCalories = daily.Sum(x => x.Calories);
+        _nutritionTotalProtein = daily.Sum(x => x.Protein);
+        _nutritionAverageCalories = AveragePerActiveDay(_nutritionTotalCalories);
+
+        var phosphorusLimit = _nutritionGoal?.PhosphorusLimitMg ?? 1000;
+        var sodiumLimit = _nutritionGoal?.SodiumLimitMg ?? 2000;
+        _nutritionPhosphorusDaysInTarget = daily.Count(x => x.Phosphorus <= phosphorusLimit);
+        _nutritionSodiumDaysInTarget = daily.Count(x => x.Sodium <= sodiumLimit);
+    }
+
+    private void BuildExerciseReport()
+    {
+        _exerciseTotalMinutes = _recentExercise.Sum(x => x.DurationMinutes);
+        _exerciseAverageMinutes = _recentExercise.Count == 0
+            ? 0
+            : _exerciseTotalMinutes / _recentExercise.Count;
+        _exerciseActiveDays = _recentExercise.Select(x => x.StartTime.Date).Distinct().Count();
+    }
+
+    private decimal AveragePerActiveDay(decimal value) => _nutritionActiveDays == 0
+        ? 0
+        : value / _nutritionActiveDays;
+
+    private static string FormatMinutes(decimal minutes)
+    {
+        var rounded = (int)Math.Round(minutes);
+        var hours = rounded / 60;
+        var mins = rounded % 60;
+
+        return hours > 0
+            ? $"{hours} hr {mins} min"
+            : $"{mins} min";
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "page-message page-message--error";
+        _message = message;
+    }
+
+    private async Task SignOut()
+    {
+        await LoginSession.SignOutAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    private sealed record ReportNote(string Title, string Detail);
+}
