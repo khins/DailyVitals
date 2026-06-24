@@ -113,9 +113,18 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewReading">New</button>
-                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_formToast))
+                        {
+                            <div class="profile-toast form-toast" role="status">
+                                <span class="profile-toast-icon" aria-hidden="true">✓</span>
+                                <span>@_formToast</span>
+                                <button type="button" aria-label="Dismiss glucose update message" @onclick="DismissFormToast">×</button>
+                            </div>
+                        }
                     </EditForm>
                 </article>
 
@@ -137,7 +146,7 @@
                     }
                     else
                     {
-                        <div class="data-table-wrap">
+                        <div class="data-table-wrap blood-pressure-history-table">
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -147,7 +156,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var reading in _history)
+                                    @foreach (var reading in PagedHistory)
                                     {
                                         <tr class="@(reading.GlucoseId == _editingId ? "is-selected" : null)" @onclick="() => SelectReading(reading)">
                                             <td>@reading.ReadingTime.ToString("M/d/yyyy h:mm tt")</td>
@@ -158,9 +167,33 @@
                                 </tbody>
                             </table>
                         </div>
+                        @RenderHistoryPager()
                     }
                 </article>
             </section>
+
+            @if (_showDeleteConfirm)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
+                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="glucose-delete-title" @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>Confirm Delete</span>
+                                <h2 id="glucose-delete-title">Delete this glucose reading?</h2>
+                            </div>
+                            <button type="button" class="modal-close-button" aria-label="Cancel delete" @onclick="CancelDelete">×</button>
+                        </div>
+
+                        <p class="info-modal-note">This will permanently remove the selected reading from your blood glucose history.</p>
+                        <p class="confirm-modal-detail">@DeleteReadingSummary</p>
+
+                        <div class="confirm-modal-actions">
+                            <button type="button" class="secondary-link" @onclick="CancelDelete">Cancel</button>
+                            <button type="button" class="danger-action" @onclick="ConfirmDelete">Delete Reading</button>
+                        </div>
+                    </section>
+                </div>
+            }
         </main>
     </section>
 }
@@ -168,13 +201,17 @@
 @code {
     private readonly BloodGlucoseForm _form = new();
     private readonly List<BloodGlucoseReading> _history = [];
+    private const int HistoryPageSize = 20;
     private long? _editingId;
+    private int _historyPage = 1;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private bool _showKidneyLabs = true;
+    private bool _showDeleteConfirm;
     private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
     private string _messageClass = "page-message";
+    private string? _formToast;
 
     protected override void OnInitialized()
     {
@@ -254,6 +291,20 @@
             ? "None yet"
             : $"{_history[0].GlucoseValue} mg/dL on {_history[0].ReadingTime:M/d/yyyy}";
 
+    private List<BloodGlucoseReading> PagedHistory =>
+        _history
+            .Skip((_historyPage - 1) * HistoryPageSize)
+            .Take(HistoryPageSize)
+            .ToList();
+
+    private int HistoryPageCount =>
+        Math.Max(1, (int)Math.Ceiling(_history.Count / (double)HistoryPageSize));
+
+    private string DeleteReadingSummary =>
+        _editingId.HasValue
+            ? $"{_form.GlucoseValue} mg/dL, {_readingTimeText}"
+            : "No reading selected.";
+
     private string AuditText
     {
         get
@@ -276,9 +327,10 @@
             return;
 
         _history.AddRange(BloodGlucoseService.GetHistory(LoginSession.PersonId.Value));
+        EnsureHistoryPageInRange();
     }
 
-    private void SelectReading(BloodGlucoseReading reading)
+    private void SelectReading(BloodGlucoseReading reading, bool clearToast = true)
     {
         _editingId = reading.GlucoseId;
         _form.GlucoseValue = Convert.ToInt32(reading.GlucoseValue);
@@ -287,12 +339,17 @@
         _createdAt = reading.CreatedAt;
         _updatedAt = reading.UpdatedAt;
         _message = null;
+        _showDeleteConfirm = false;
+        if (clearToast)
+            _formToast = null;
     }
 
     private void BeginNewReading()
     {
         ResetForm();
         _message = null;
+        _formToast = null;
+        _showDeleteConfirm = false;
     }
 
     private void SetReadingTime(ChangeEventArgs args)
@@ -312,6 +369,8 @@
 
     private void SaveReading()
     {
+        _showDeleteConfirm = false;
+
         if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");
@@ -353,6 +412,7 @@
                     notes,
                     LoginSession.UserName ?? string.Empty);
 
+                _historyPage = 1;
                 ShowSuccess("Blood glucose reading saved.");
             }
 
@@ -360,12 +420,33 @@
 
             var selected = _history.FirstOrDefault(x => x.GlucoseId == _editingId);
             if (selected is not null)
-                SelectReading(selected);
+                SelectReading(selected, clearToast: false);
         }
         catch (Exception ex)
         {
             ShowError(ex.Message);
         }
+    }
+
+    private void RequestDeleteSelected()
+    {
+        if (!_editingId.HasValue)
+            return;
+
+        _message = null;
+        _formToast = null;
+        _showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirm = false;
+    }
+
+    private void ConfirmDelete()
+    {
+        _showDeleteConfirm = false;
+        DeleteSelected();
     }
 
     private void DeleteSelected()
@@ -407,13 +488,41 @@
     private void ShowSuccess(string message)
     {
         _messageClass = "page-message";
-        _message = message;
+        _message = null;
+        _formToast = message;
     }
 
     private void ShowError(string message)
     {
         _messageClass = "page-message page-message--error";
         _message = message;
+        _formToast = null;
+    }
+
+    private void DismissFormToast()
+    {
+        _formToast = null;
+    }
+
+    private void PreviousHistoryPage()
+    {
+        if (_historyPage > 1)
+            _historyPage--;
+    }
+
+    private void NextHistoryPage()
+    {
+        if (_historyPage < HistoryPageCount)
+            _historyPage++;
+    }
+
+    private void EnsureHistoryPageInRange()
+    {
+        if (_historyPage > HistoryPageCount)
+            _historyPage = HistoryPageCount;
+
+        if (_historyPage < 1)
+            _historyPage = 1;
     }
 
     private async Task SignOut()
@@ -421,6 +530,12 @@
         await LoginSession.SignOutAsync();
         Navigation.NavigateTo("/");
     }
+
+    private RenderFragment RenderHistoryPager() => @<div class="table-pager">
+        <button type="button" class="secondary-link compact-action" @onclick="PreviousHistoryPage" disabled="@(_historyPage <= 1)">Previous</button>
+        <span>Page @_historyPage of @HistoryPageCount</span>
+        <button type="button" class="secondary-link compact-action" @onclick="NextHistoryPage" disabled="@(_historyPage >= HistoryPageCount)">Next</button>
+    </div>;
 
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
 

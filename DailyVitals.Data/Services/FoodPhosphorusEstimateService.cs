@@ -26,7 +26,7 @@ namespace DailyVitals.Data.Services
 
             var model = GetSetting("OpenAiModel", "OPENAI_MODEL");
             if (string.IsNullOrWhiteSpace(model))
-                model = "gpt-5-nano";
+                model = "gpt-5.4-mini";
 
             var requestBody = new
             {
