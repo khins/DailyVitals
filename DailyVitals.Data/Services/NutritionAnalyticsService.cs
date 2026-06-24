@@ -23,23 +23,14 @@ namespace DailyVitals.Data.Services
                         INTERVAL '1 day'
                     )::date AS day
                 ),
-                binder_constants AS (
-                    SELECT
-                        800 AS mg_per_pill,
-                        0.075 AS binding_efficiency
-                ),
                 food_daily AS (
                     SELECT
                         f.consumed_at::date AS day,
                         COALESCE(SUM(f.calories), 0)::int AS calories_in,
                         COALESCE(SUM(f.sodium_mg), 0)::int AS sodium_mg,
                         COALESCE(SUM(f.phosphorus_mg), 0)::int AS phosphorus_mg,
-                        COALESCE(SUM(GREATEST(
-                            f.phosphorus_mg - (COALESCE(f.binders, 0) * bc.mg_per_pill * bc.binding_efficiency),
-                            0
-                        )), 0) AS net_phosphorus_mg
+                        COALESCE(SUM(f.phosphorus_mg), 0) AS net_phosphorus_mg
                     FROM public.food_phosphorus_intake f
-                    CROSS JOIN binder_constants bc
                     WHERE f.person_id = @person_id
                       AND f.consumed_at::date >= CURRENT_DATE - (@days - 1) * INTERVAL '1 day'
                     GROUP BY f.consumed_at::date

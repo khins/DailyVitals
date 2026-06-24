@@ -108,7 +108,7 @@
             <section class="status-band" aria-label="Today nutrition summary">
                 <div>
                     <span class="status-dot"></span>
-                    <strong>Today: @TodaySummary.PhosphorusMg mg phosphorus</strong>
+                    <strong>Today: @TodaySummary.PhosphorusMg mg net phosphorus</strong>
                     <p>@TodaySummary.Entries food @(TodaySummary.Entries == 1 ? "entry" : "entries") logged for @DateTime.Today.ToString("M/d/yyyy").</p>
                 </div>
                 <div>
@@ -131,7 +131,7 @@
 
                         <div class="nutrition-total-grid">
                             <div>
-                                <span>Phosphorus</span>
+                                <span>Net Phosphorus</span>
                                 <strong>@TodaySummary.PhosphorusMg mg</strong>
                             </div>
                             <div>
@@ -198,7 +198,7 @@
                         </div>
 
                         <div class="advanced-toggle-row">
-                            <span>AI lookup can eventually estimate phosphorus and serving details from the food description.</span>
+                            <span>AI lookup estimates nutrition and serving details from the food description.</span>
                             <button type="button" class="help-icon-button" aria-label="AI lookup note" @onclick="ShowLookupTip">?</button>
                         </div>
 
@@ -213,7 +213,12 @@
                         <div class="nutrition-number-grid">
                             <div class="field-group">
                                 <label for="phosphorus">Phosphorus (mg)</label>
-                                <InputNumber id="phosphorus" class="form-input" @bind-Value="_form.PhosphorusMg" />
+                                <input id="phosphorus"
+                                       class="form-input"
+                                       type="number"
+                                       min="0"
+                                       value="@_form.PhosphorusMg"
+                                       @onchange="SetPhosphorusMg" />
                                 <ValidationMessage For="() => _form.PhosphorusMg" />
                             </div>
 
@@ -240,8 +245,13 @@
                             @if (_showKidneyLabs)
                             {
                                 <div class="field-group">
-                                    <label for="binders">Binders</label>
-                                    <InputNumber id="binders" class="form-input" @bind-Value="_form.Binders" />
+                                    <label for="binders">Binders Taken</label>
+                                    <input id="binders"
+                                           class="form-input"
+                                           type="number"
+                                           min="0"
+                                           value="@_form.Binders"
+                                           @onchange="SetBindersTaken" />
                                     <ValidationMessage For="() => _form.Binders" />
                                 </div>
                             }
@@ -317,7 +327,7 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>Entries</th>
-                                    <th>Phos</th>
+                                    <th>Net Phos</th>
                                     <th>Calories</th>
                                     <th>Sodium</th>
                                     <th>Protein</th>
@@ -501,6 +511,7 @@
     private bool _draftApplied;
     private bool _showHistoryModal;
     private FoodPhosphorusIntake? _pendingDeleteEntry;
+    private int? _phosphorusBeforeBinderAdjustment;
     private bool _isNutritionMenuOpen = true;
     private bool _isHistoryRangeOpen = true;
     private NutritionSection _activeSection = NutritionSection.TodaysTotals;
@@ -661,7 +672,59 @@
         }
     }
 
+    private const decimal BinderMgPerPill = 800m;
+    private const decimal BinderBindingEfficiency = 0.075m;
+    private const decimal BinderPhosphorusReductionMg = BinderMgPerPill * BinderBindingEfficiency;
+
     private bool IsEstimateDisabled => _isEstimating || string.IsNullOrWhiteSpace(_form.FoodName);
+
+    private void SetPhosphorusMg(ChangeEventArgs args)
+    {
+        var phosphorusText = args.Value?.ToString();
+        int? phosphorusMg = int.TryParse(phosphorusText, out var parsedPhosphorus)
+            ? Math.Max(parsedPhosphorus, 0)
+            : null;
+
+        _form.PhosphorusMg = phosphorusMg;
+        _phosphorusBeforeBinderAdjustment = phosphorusMg;
+
+        if (_form.Binders > 0)
+            ApplyBinderAdjustmentToPhosphorus();
+    }
+
+    private void SetBindersTaken(ChangeEventArgs args)
+    {
+        var binderText = args.Value?.ToString();
+        var binders = int.TryParse(binderText, out var parsedBinders)
+            ? parsedBinders
+            : 0;
+
+        _form.Binders = Math.Max(binders, 0);
+
+        if (!_form.PhosphorusMg.HasValue)
+            return;
+
+        _phosphorusBeforeBinderAdjustment ??= _form.PhosphorusMg;
+
+        if (_form.Binders == 0)
+        {
+            _form.PhosphorusMg = _phosphorusBeforeBinderAdjustment;
+            _phosphorusBeforeBinderAdjustment = null;
+            return;
+        }
+
+        ApplyBinderAdjustmentToPhosphorus();
+    }
+
+    private void ApplyBinderAdjustmentToPhosphorus()
+    {
+        if (!_phosphorusBeforeBinderAdjustment.HasValue)
+            return;
+
+        var binderReduction = _form.Binders * BinderPhosphorusReductionMg;
+        var adjustedPhosphorus = Math.Max(_phosphorusBeforeBinderAdjustment.Value - binderReduction, 0);
+        _form.PhosphorusMg = Convert.ToInt32(Math.Round(adjustedPhosphorus));
+    }
 
     private void LoadHistory()
     {
@@ -686,6 +749,7 @@
         _form.ProteinG = item.ProteinG;
         _form.PotassiumMg = item.PotassiumMg;
         _form.Binders = item.Binders;
+        _phosphorusBeforeBinderAdjustment = null;
         _form.ServingDescription = item.ServingDescription ?? string.Empty;
         _form.EstimatedByAi = item.EstimatedByAi;
         _form.AiConfidence = item.AiConfidence;
@@ -836,6 +900,7 @@
         _form.ProteinG = null;
         _form.PotassiumMg = null;
         _form.Binders = 0;
+        _phosphorusBeforeBinderAdjustment = null;
         _form.ServingDescription = string.Empty;
         _form.EstimatedByAi = false;
         _form.AiConfidence = null;
@@ -862,6 +927,13 @@
             var estimate = await EstimateService.EstimateAsync(_form.FoodName);
             _form.FoodName = estimate.FoodName;
             _form.PhosphorusMg = estimate.EstimatedPhosphorusMg;
+            _phosphorusBeforeBinderAdjustment = estimate.EstimatedPhosphorusMg;
+            if (_form.Binders > 0)
+                ApplyBinderAdjustmentToPhosphorus();
+            _form.Calories = estimate.EstimatedCalories ?? _form.Calories;
+            _form.SodiumMg = estimate.EstimatedSodiumMg ?? _form.SodiumMg;
+            _form.ProteinG = estimate.EstimatedProteinG ?? _form.ProteinG;
+            _form.PotassiumMg = estimate.EstimatedPotassiumMg ?? _form.PotassiumMg;
             _form.ServingDescription = estimate.ServingDescription ?? _form.ServingDescription;
             _form.EstimatedByAi = true;
             _form.AiConfidence = estimate.Confidence;

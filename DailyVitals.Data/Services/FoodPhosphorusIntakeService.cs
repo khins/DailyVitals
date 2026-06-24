@@ -687,12 +687,7 @@ namespace DailyVitals.Data.Services
             EnsureFoodPhosphorusIntakeColumns(conn);
 
             const string sql = @"
-                WITH binder_constants AS (
-                    SELECT
-                        800 AS mg_per_pill,
-                        0.075 AS binding_efficiency
-                ),
-                calculated_intake AS (
+                WITH calculated_intake AS (
                     SELECT
                         f.food_phosphorus_intake_id,
                         f.consumed_at::date AS intake_date,
@@ -705,12 +700,8 @@ namespace DailyVitals.Data.Services
                         COALESCE(f.potassium_mg, 0) AS potassium_mg,
                         COALESCE(f.fluid_ml, 0) AS fluid_ml,
                         COALESCE(f.binders, 0) AS binders,
-                        GREATEST(
-                            f.phosphorus_mg - (COALESCE(f.binders, 0) * bc.mg_per_pill * bc.binding_efficiency),
-                            0
-                        ) AS net_item_phos_mg
+                        f.phosphorus_mg AS net_item_phos_mg
                     FROM food_phosphorus_intake f
-                    CROSS JOIN binder_constants bc
                     WHERE f.person_id = @person_id
                 )
                 SELECT

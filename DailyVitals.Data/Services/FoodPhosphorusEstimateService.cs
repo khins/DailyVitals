@@ -31,7 +31,7 @@ namespace DailyVitals.Data.Services
             var requestBody = new
             {
                 model,
-                instructions = "You estimate phosphorus content for a dialysis food tracking app. Use cautious, practical nutrition estimates and return only the requested structured data.",
+                instructions = "You estimate nutrition content for a dialysis food tracking app. Use cautious, practical nutrition estimates and return only the requested structured data.",
                 input = BuildPrompt(foodDescription),
                 text = new
                 {
@@ -44,12 +44,27 @@ namespace DailyVitals.Data.Services
                         {
                             type = "object",
                             additionalProperties = false,
-                            required = new[] { "foodName", "servingDescription", "estimatedPhosphorusMg", "confidence", "sourceNotes" },
+                            required = new[]
+                            {
+                                "foodName",
+                                "servingDescription",
+                                "estimatedPhosphorusMg",
+                                "estimatedCalories",
+                                "estimatedSodiumMg",
+                                "estimatedProteinG",
+                                "estimatedPotassiumMg",
+                                "confidence",
+                                "sourceNotes"
+                            },
                             properties = new
                             {
                                 foodName = new { type = "string" },
                                 servingDescription = new { type = "string" },
                                 estimatedPhosphorusMg = new { type = "integer" },
+                                estimatedCalories = new { type = new[] { "integer", "null" } },
+                                estimatedSodiumMg = new { type = new[] { "integer", "null" } },
+                                estimatedProteinG = new { type = new[] { "number", "null" } },
+                                estimatedPotassiumMg = new { type = new[] { "integer", "null" } },
                                 confidence = new { type = "string", @enum = new[] { "low", "medium", "high" } },
                                 sourceNotes = new { type = "string" }
                             }
@@ -89,6 +104,12 @@ namespace DailyVitals.Data.Services
             if (estimate.EstimatedPhosphorusMg < 0)
                 throw new InvalidOperationException("OpenAI returned an invalid phosphorus amount.");
 
+            if ((estimate.EstimatedCalories.HasValue && estimate.EstimatedCalories.Value < 0) ||
+                (estimate.EstimatedSodiumMg.HasValue && estimate.EstimatedSodiumMg.Value < 0) ||
+                (estimate.EstimatedProteinG.HasValue && estimate.EstimatedProteinG.Value < 0) ||
+                (estimate.EstimatedPotassiumMg.HasValue && estimate.EstimatedPotassiumMg.Value < 0))
+                throw new InvalidOperationException("OpenAI returned an invalid nutrition estimate.");
+
             if (string.IsNullOrWhiteSpace(estimate.FoodName))
                 estimate.FoodName = foodDescription.Trim();
 
@@ -98,9 +119,11 @@ namespace DailyVitals.Data.Services
         private static string BuildPrompt(string foodDescription)
         {
             return
-                "Estimate the phosphorus content in milligrams for this food item and serving:" + Environment.NewLine +
+                "Estimate nutrition content for this food item and serving:" + Environment.NewLine +
                 foodDescription.Trim() + Environment.NewLine + Environment.NewLine +
-                "Use a cautious estimate. If the serving size is unclear, make a reasonable serving-size assumption and say so in sourceNotes.";
+                "Return phosphorus in milligrams, calories, sodium in milligrams, protein in grams, and potassium in milligrams. " +
+                "Use a cautious estimate. If the serving size is unclear, make a reasonable serving-size assumption and say so in sourceNotes. " +
+                "Use null for calories, sodium, protein, or potassium only when the field cannot be reasonably estimated.";
         }
 
         private static string ExtractResponseText(string responseText)

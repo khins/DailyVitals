@@ -413,6 +413,14 @@ namespace DailyVitals.App.ViewModels
 
                 FoodName = estimate.FoodName;
                 PhosphorusMg = estimate.EstimatedPhosphorusMg.ToString();
+                if (estimate.EstimatedCalories.HasValue)
+                    Calories = estimate.EstimatedCalories.Value.ToString();
+                if (estimate.EstimatedSodiumMg.HasValue)
+                    SodiumMg = estimate.EstimatedSodiumMg.Value.ToString();
+                if (estimate.EstimatedProteinG.HasValue)
+                    ProteinG = estimate.EstimatedProteinG.Value.ToString("0.##");
+                if (estimate.EstimatedPotassiumMg.HasValue)
+                    PotassiumMg = estimate.EstimatedPotassiumMg.Value.ToString();
                 ServingDescription = estimate.ServingDescription;
                 EstimatedByAi = true;
                 AiConfidence = estimate.Confidence;
