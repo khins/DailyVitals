@@ -989,10 +989,18 @@ h1 {
     font-weight: 700;
 }
 
+.field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
 .bp-number-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
+    align-items: start;
 }
 
 .glucose-number-grid {
@@ -1010,6 +1018,7 @@ h1 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    align-items: start;
 }
 
 .nutrition-entry-grid {
@@ -1753,6 +1762,33 @@ h1 {
     margin-bottom: 16px;
     color: #53635f;
     line-height: 1.45;
+}
+
+.formula-panel {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: #f6f9f8;
+}
+
+.formula-panel code {
+    color: #173f4a;
+    font-weight: 800;
+    white-space: normal;
+}
+
+.formula-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 16px;
+    margin-bottom: 16px;
+}
+
+.formula-grid span {
+    color: #53635f;
 }
 
 .confirm-modal {

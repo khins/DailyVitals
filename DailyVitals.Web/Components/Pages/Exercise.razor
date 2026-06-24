@@ -1,6 +1,7 @@
 @page "/exercise"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
 @using DailyVitals.Data.Services
 @using DailyVitals.Data.Services.DailyVitals.App.Services
 @using DailyVitals.Domain.Models
@@ -88,7 +89,7 @@
                         </div>
                     </div>
 
-                    <EditForm Model="_form" FormName="exercise-entry-form" OnValidSubmit="SaveSession" class="bp-form">
+                    <EditForm EditContext="_editContext" FormName="exercise-entry-form" OnValidSubmit="SaveSession" class="bp-form">
                         <DataAnnotationsValidator />
 
                         <div class="form-row">
@@ -121,13 +122,13 @@
                         <div class="exercise-number-grid">
                             <div class="field-group">
                                 <label for="duration">Duration (min)</label>
-                                <InputNumber id="duration" class="form-input" @bind-Value="_form.DurationMinutes" />
+                                <InputNumber id="duration" class="form-input" @bind-Value="_form.DurationMinutes" @bind-Value:after="RefreshEstimatedCaloriesIfAuto" />
                                 <ValidationMessage For="() => _form.DurationMinutes" />
                             </div>
 
                             <div class="field-group">
                                 <label for="intensity">Intensity</label>
-                                <InputSelect id="intensity" class="form-input" @bind-Value="_form.Intensity">
+                                <InputSelect id="intensity" class="form-input" @bind-Value="_form.Intensity" @bind-Value:after="RefreshEstimatedCaloriesIfAuto">
                                     <option value="Low">Low</option>
                                     <option value="Moderate">Moderate</option>
                                     <option value="High">High</option>
@@ -154,8 +155,11 @@
                         @if (_showAdvancedCalories)
                         {
                             <div class="field-group">
-                                <label for="calories">Calories expended</label>
-                                <InputNumber id="calories" class="form-input" @bind-Value="_form.CaloriesExpended" />
+                                <div class="field-label-row">
+                                    <label for="calories">Calories expended</label>
+                                    <button type="button" class="help-icon-button" aria-label="Calories calculation details" @onclick="ShowCaloriesFormulaModal">?</button>
+                                </div>
+                                <InputNumber id="calories" class="form-input" @bind-Value="_form.CaloriesExpended" @bind-Value:after="MarkCaloriesManualOverride" />
                             </div>
                         }
 
@@ -171,7 +175,7 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewSession">New</button>
-                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
                         @if (ShowInlineFormMessage)
@@ -199,7 +203,7 @@
                     }
                     else
                     {
-                        <div class="data-table-wrap">
+                        <div class="data-table-wrap blood-pressure-history-table">
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -212,7 +216,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var session in _history)
+                                    @foreach (var session in PagedHistory)
                                     {
                                         <tr class="@(session.ExerciseSessionId == _editingId ? "is-selected" : null)" @onclick="() => SelectSession(session)">
                                             <td>@session.StartTime.ToString("M/d/yyyy h:mm tt")</td>
@@ -226,9 +230,72 @@
                                 </tbody>
                             </table>
                         </div>
+                        @RenderHistoryPager()
                     }
                 </article>
             </section>
+
+            @if (_showDeleteConfirm)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
+                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="exercise-delete-title" @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>Confirm Delete</span>
+                                <h2 id="exercise-delete-title">Delete this exercise session?</h2>
+                            </div>
+                            <button type="button" class="modal-close-button" aria-label="Cancel delete" @onclick="CancelDelete">×</button>
+                        </div>
+
+                        <p class="info-modal-note">This will permanently remove the selected session from your exercise history.</p>
+                        <p class="confirm-modal-detail">@DeleteSessionSummary</p>
+
+                        <div class="confirm-modal-actions">
+                            <button type="button" class="secondary-link" @onclick="CancelDelete">Cancel</button>
+                            <button type="button" class="danger-action" @onclick="ConfirmDelete">Delete Session</button>
+                        </div>
+                    </section>
+                </div>
+            }
+
+            @if (_showCaloriesFormulaModal)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="DismissCaloriesFormulaModal">
+                    <section class="info-modal" role="dialog" aria-modal="true" aria-labelledby="calories-formula-title" @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>Calories Estimate</span>
+                                <h2 id="calories-formula-title">How calories are calculated</h2>
+                            </div>
+                            <button type="button" class="modal-close-button" aria-label="Close calories calculation details" @onclick="DismissCaloriesFormulaModal">×</button>
+                        </div>
+
+                        <p class="info-modal-note">
+                            When calories are left blank, DailyVitals estimates calories from duration, intensity, and the latest saved weight.
+                        </p>
+
+                        <div class="formula-panel">
+                            <strong>Formula</strong>
+                            <code>MET × 3.5 × weightKg ÷ 200 × durationMinutes</code>
+                        </div>
+
+                        <div class="formula-grid" aria-label="Intensity MET values">
+                            <span>Low</span>
+                            <strong>3.5 MET</strong>
+                            <span>Moderate</span>
+                            <strong>5.0 MET</strong>
+                            <span>High</span>
+                            <strong>7.0 MET</strong>
+                            <span>Other</span>
+                            <strong>4.0 MET</strong>
+                        </div>
+
+                        <p class="info-modal-note">
+                            Weight is converted to kilograms unless it is already stored in kg. Exercise type is saved for history, but the current estimate uses intensity for the MET value.
+                        </p>
+                    </section>
+                </div>
+            }
         </main>
     </section>
 }
@@ -238,12 +305,18 @@
     private readonly ExerciseForm _form = new();
     private readonly List<ExerciseSession> _history = [];
     private readonly List<ExerciseType> _exerciseTypes = [];
+    private const int HistoryPageSize = 20;
+    private EditContext? _editContext;
     private long? _editingId;
+    private int _historyPage = 1;
     private DateTime? _editingStartDate;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private bool _showAdvancedCalories;
     private bool _showKidneyLabs = true;
+    private bool _showDeleteConfirm;
+    private bool _showCaloriesFormulaModal;
+    private bool _isCaloriesManualOverride;
     private string? _caloriesTip;
     private string _startTimeText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
@@ -316,6 +389,31 @@
             ? "None yet"
             : $"{_history[0].ExerciseName} on {_history[0].StartTime:M/d/yyyy}";
 
+    private List<ExerciseSession> PagedHistory =>
+        _history
+            .Skip((_historyPage - 1) * HistoryPageSize)
+            .Take(HistoryPageSize)
+            .ToList();
+
+    private int HistoryPageCount =>
+        Math.Max(1, (int)Math.Ceiling(_history.Count / (double)HistoryPageSize));
+
+    private string DeleteSessionSummary =>
+        _editingId.HasValue
+            ? $"{SelectedExerciseName}, {_form.DurationMinutes:0.##} min, {_startTimeText}"
+            : "No session selected.";
+
+    private string SelectedExerciseName
+    {
+        get
+        {
+            if (IsOtherExerciseSelected && !string.IsNullOrWhiteSpace(_form.OtherExerciseName))
+                return _form.OtherExerciseName;
+
+            return _exerciseTypes.FirstOrDefault(x => x.ExerciseTypeId == _form.ExerciseTypeId)?.ExerciseName ?? "Exercise";
+        }
+    }
+
     private bool IsOtherExerciseSelected => _form.ExerciseTypeId == OtherExerciseTypeId;
 
     private string CaloriesHelpText =>
@@ -351,6 +449,7 @@
             return;
 
         _history.AddRange(ExerciseService.GetHistory(LoginSession.PersonId.Value));
+        EnsureHistoryPageInRange();
     }
 
     private void SelectSession(ExerciseSession session)
@@ -367,13 +466,18 @@
         _createdAt = session.CreatedAt;
         _updatedAt = session.UpdatedAt;
         _showAdvancedCalories = session.CaloriesExpended.HasValue;
+        _isCaloriesManualOverride = false;
         _message = null;
+        _showDeleteConfirm = false;
+        _showCaloriesFormulaModal = false;
     }
 
     private void BeginNewSession()
     {
         ResetForm();
         _message = null;
+        _showDeleteConfirm = false;
+        _showCaloriesFormulaModal = false;
     }
 
     private void SetStartTime(ChangeEventArgs args)
@@ -395,6 +499,10 @@
         _createdAt = null;
         _updatedAt = null;
         _showAdvancedCalories = false;
+        _showDeleteConfirm = false;
+        _showCaloriesFormulaModal = false;
+        _isCaloriesManualOverride = false;
+        _editContext = new EditContext(_form);
     }
 
     private void ToggleAdvancedCalories()
@@ -402,7 +510,14 @@
         _showAdvancedCalories = !_showAdvancedCalories;
 
         if (!_showAdvancedCalories)
+        {
             _form.CaloriesExpended = null;
+            _isCaloriesManualOverride = false;
+        }
+        else
+        {
+            RefreshEstimatedCaloriesIfAuto();
+        }
     }
 
     private void ShowCaloriesTip()
@@ -415,8 +530,55 @@
         _caloriesTip = null;
     }
 
+    private void ShowCaloriesFormulaModal()
+    {
+        _showCaloriesFormulaModal = true;
+    }
+
+    private void DismissCaloriesFormulaModal()
+    {
+        _showCaloriesFormulaModal = false;
+    }
+
+    private void MarkCaloriesManualOverride()
+    {
+        _isCaloriesManualOverride = _form.CaloriesExpended.HasValue;
+    }
+
+    private void RefreshEstimatedCaloriesIfAuto()
+    {
+        if (_isCaloriesManualOverride)
+            return;
+
+        _form.CaloriesExpended = EstimateCalories();
+    }
+
+    private void PreviousHistoryPage()
+    {
+        if (_historyPage > 1)
+            _historyPage--;
+    }
+
+    private void NextHistoryPage()
+    {
+        if (_historyPage < HistoryPageCount)
+            _historyPage++;
+    }
+
+    private void EnsureHistoryPageInRange()
+    {
+        if (_historyPage > HistoryPageCount)
+            _historyPage = HistoryPageCount;
+
+        if (_historyPage < 1)
+            _historyPage = 1;
+    }
+
     private void SaveSession()
     {
+        _showDeleteConfirm = false;
+        _showCaloriesFormulaModal = false;
+
         if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");
@@ -488,6 +650,7 @@
                 ShowSuccess(_editingId.HasValue
                     ? "Exercise session saved as a new date."
                     : "Exercise session saved.");
+                _historyPage = 1;
                 _editingId = null;
                 _editingStartDate = null;
             }
@@ -552,6 +715,26 @@
             latestWeight.WeightUnit);
     }
 
+    private void RequestDeleteSelected()
+    {
+        if (!_editingId.HasValue)
+            return;
+
+        _message = null;
+        _showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirm = false;
+    }
+
+    private void ConfirmDelete()
+    {
+        _showDeleteConfirm = false;
+        DeleteSelected();
+    }
+
     private void DeleteSelected()
     {
         if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
@@ -605,6 +788,12 @@
         await LoginSession.SignOutAsync();
         Navigation.NavigateTo("/");
     }
+
+    private RenderFragment RenderHistoryPager() => @<div class="table-pager">
+        <button type="button" class="secondary-link compact-action" @onclick="PreviousHistoryPage" disabled="@(_historyPage <= 1)">Previous</button>
+        <span>Page @_historyPage of @HistoryPageCount</span>
+        <button type="button" class="secondary-link compact-action" @onclick="NextHistoryPage" disabled="@(_historyPage >= HistoryPageCount)">Next</button>
+    </div>;
 
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
 
