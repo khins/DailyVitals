@@ -1,0 +1,375 @@
+@page "/weight-trend"
+@rendermode InteractiveServer
+@using DailyVitals.Data.Services
+@using DailyVitals.Domain.Models
+@using DailyVitals.Web.Services
+@inject WeightService WeightService
+@inject PersonService PersonService
+@inject LocalLoginSession LoginSession
+@inject NavigationManager Navigation
+
+<PageTitle>Weight Trend | DailyVitals</PageTitle>
+
+@if (LoginSession.IsSignedIn)
+{
+    <section class="dashboard-shell">
+        <aside class="dashboard-rail" aria-label="Primary navigation">
+            <div class="rail-brand">
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
+                <span>DailyVitals</span>
+            </div>
+
+            <nav class="rail-nav">
+                <a href="dashboard">Dashboard</a>
+                <a href="blood-pressure">Blood Pressure</a>
+                <a href="blood-glucose">Glucose</a>
+                <button type="button" class="rail-nav-toggle is-active" aria-expanded="@_isWeightMenuOpen" @onclick="ToggleWeightMenu">
+                    <span>Weight</span>
+                    <span aria-hidden="true">@(_isWeightMenuOpen ? "-" : "+")</span>
+                </button>
+                @if (_isWeightMenuOpen)
+                {
+                    <div class="rail-subnav" aria-label="Weight sections">
+                        <a class="rail-subnav-button" href="weight">Entry</a>
+                        <a class="rail-subnav-button is-active" href="weight-trend">Trend</a>
+                    </div>
+                }
+                <a href="exercise">Exercise</a>
+                <a href="reports">Reports</a>
+                <a href="nutrition">Nutrition</a>
+                @if (_showKidneyLabs)
+                {
+                    <a href="renal-foods">Renal Friendly Foods</a>
+                    <a href="labs">Kidney Labs</a>
+                }
+            </nav>
+
+            <a class="rail-profile" href="profile" aria-label="Profile">
+                <span class="profile-icon" aria-hidden="true"></span>
+                <span>Profile</span>
+            </a>
+
+            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <div>
+                    <p class="eyebrow">DailyVitals Web</p>
+                    <h1>Weight Trend</h1>
+                </div>
+
+                <div class="dashboard-actions">
+                    <div class="person-switcher">
+                        <span>Person</span>
+                        <strong>@LoginSession.UserName</strong>
+                    </div>
+                    <a class="primary-action" href="weight">Add Reading</a>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="@_messageClass" role="status">@_message</div>
+            }
+
+            <section class="@WeightBandClass" aria-label="Weight trend summary">
+                <div>
+                    <span class="status-dot"></span>
+                    <strong>@TrendSummaryTitle</strong>
+                    <p>@TrendSummaryText</p>
+                </div>
+                <div>
+                    <span>Range</span>
+                    <strong>@AppliedRangeText</strong>
+                </div>
+            </section>
+
+            <section class="dashboard-card weight-trend-panel">
+                <div class="card-heading">
+                    <div>
+                        <span>Trend</span>
+                        <h2>Weight</h2>
+                    </div>
+                    <strong>@_trend.Count readings</strong>
+                </div>
+
+                <div class="bp-trend-controls" aria-label="Trend date range">
+                    <div class="field-group">
+                        <label for="weight-trend-from">From</label>
+                        <input id="weight-trend-from" class="form-input" type="date" value="@_fromDateText" @onchange="SetFromDate" />
+                    </div>
+                    <div class="field-group">
+                        <label for="weight-trend-to">To</label>
+                        <input id="weight-trend-to" class="form-input" type="date" value="@_toDateText" @onchange="SetToDate" />
+                    </div>
+                    <button type="button" class="secondary-link" @onclick="ApplyTrendRange">Apply</button>
+                </div>
+
+                @if (TrendPoints.Count < 2)
+                {
+                    <div class="empty-state compact-empty">
+                        <h2>More readings needed</h2>
+                        <p>Choose a date range with at least two weight readings to chart the trend.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="weight-trend-chart" aria-label="Weight trend">
+                        <svg viewBox="0 0 100 54" preserveAspectRatio="none" role="img">
+                            <polyline class="weight-trend-line" points="@WeightPolyline" />
+                        </svg>
+
+                        <div class="weight-trend-callout weight-trend-callout--start">
+                            Start: @StartingWeightText
+                        </div>
+                        <div class="weight-trend-callout weight-trend-callout--current">
+                            Current: @CurrentWeightText
+                        </div>
+                    </div>
+
+                    <p class="@WeightChangeClass">Weight change: @WeightChangeText</p>
+                }
+            </section>
+
+            <section class="dashboard-card weight-trend-readings">
+                <div class="card-heading">
+                    <div>
+                        <span>History</span>
+                        <h2>Readings in Range</h2>
+                    </div>
+                    <strong>@_trend.Count entries</strong>
+                </div>
+
+                @if (_trend.Count == 0)
+                {
+                    <div class="empty-state compact-empty">
+                        <h2>No readings found</h2>
+                        <p>Adjust the range or add a weight reading.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="data-table-wrap weight-trend-reading-table">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Weight</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var reading in _trend.OrderByDescending(x => x.ReadingTime))
+                                {
+                                    <tr>
+                                        <td>@reading.ReadingTime.ToString("M/d/yyyy h:mm tt")</td>
+                                        <td>@reading.WeightValue.ToString("0.##") @reading.WeightUnit</td>
+                                        <td>@reading.Notes</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        </main>
+    </section>
+}
+
+@code {
+    private readonly List<WeightReading> _history = [];
+    private readonly List<WeightReading> _trend = [];
+    private bool _showKidneyLabs = true;
+    private bool _isWeightMenuOpen = true;
+    private string _fromDateText = ToDateInput(DateTime.Today.AddMonths(-3));
+    private string _toDateText = ToDateInput(DateTime.Today);
+    private DateTime _appliedFrom = DateTime.Today.AddMonths(-3);
+    private DateTime _appliedTo = DateTime.Today;
+    private string? _message;
+    private string _messageClass = "page-message";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoginSession.RestoreAsync();
+
+        if (!LoginSession.IsSignedIn)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
+            StateHasChanged();
+            return;
+        }
+
+        LoadPersonPreferences();
+        LoadHistory();
+        LoadTrend();
+        StateHasChanged();
+    }
+
+    private void LoadPersonPreferences()
+    {
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
+    }
+
+    private void LoadHistory()
+    {
+        _history.Clear();
+
+        if (!LoginSession.PersonId.HasValue)
+            return;
+
+        _history.AddRange(WeightService.GetHistory(LoginSession.PersonId.Value));
+    }
+
+    private IReadOnlyList<WeightTrendPoint> TrendPoints =>
+        _trend
+            .OrderBy(x => x.ReadingTime)
+            .Select(x => new WeightTrendPoint(
+                x.ReadingTime.ToString("M/d"),
+                x.WeightValue,
+                string.IsNullOrWhiteSpace(x.WeightUnit) ? "lb" : x.WeightUnit))
+            .ToList();
+
+    private WeightTrendPoint? StartingWeight => TrendPoints.FirstOrDefault();
+
+    private WeightTrendPoint? CurrentWeight => TrendPoints.LastOrDefault();
+
+    private decimal? WeightChange => StartingWeight is null || CurrentWeight is null
+        ? null
+        : CurrentWeight.Value - StartingWeight.Value;
+
+    private string StartingWeightText => StartingWeight is null
+        ? "--"
+        : $"{StartingWeight.Value:0.#} {StartingWeight.Unit}";
+
+    private string CurrentWeightText => CurrentWeight is null
+        ? "--"
+        : $"{CurrentWeight.Value:0.#} {CurrentWeight.Unit}";
+
+    private string WeightChangeText => WeightChange.HasValue
+        ? $"{WeightChange.Value:+0.0;-0.0;0.0} lb"
+        : "No trend yet";
+
+    private string WeightChangeClass => WeightChange switch
+    {
+        < 0 => "weight-change-summary weight-change-summary--good",
+        > 0 => "weight-change-summary weight-change-summary--watch",
+        _ => "weight-change-summary"
+    };
+
+    private string WeightBandClass => WeightChange switch
+    {
+        < 0 => "status-band status-band--ok",
+        > 0 => "status-band status-band--watch",
+        _ => "status-band"
+    };
+
+    private string TrendSummaryTitle =>
+        TrendPoints.Count < 2
+            ? "Trend pending"
+            : $"From {StartingWeightText} to {CurrentWeightText}";
+
+    private string TrendSummaryText =>
+        TrendPoints.Count < 2
+            ? "Select a range with at least two readings to compare weight over time."
+            : $"Weight change is {WeightChangeText} across {_trend.Count} readings.";
+
+    private string AppliedRangeText => $"{_appliedFrom:M/d/yyyy} - {_appliedTo:M/d/yyyy}";
+
+    private string WeightPolyline
+    {
+        get
+        {
+            var points = TrendPoints;
+            if (points.Count == 0)
+                return string.Empty;
+
+            var min = points.Min(x => x.Value);
+            var max = points.Max(x => x.Value);
+            var range = max - min;
+            if (range <= 0)
+                range = 1;
+
+            return string.Join(
+                " ",
+                points.Select((point, index) =>
+                {
+                    var x = points.Count == 1 ? 50m : 4m + index * 92m / (points.Count - 1);
+                    var y = 46m - ((point.Value - min) / range * 38m);
+                    return $"{x:0.##},{y:0.##}";
+                }));
+        }
+    }
+
+    private void SetFromDate(ChangeEventArgs args)
+    {
+        _fromDateText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void SetToDate(ChangeEventArgs args)
+    {
+        _toDateText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void ApplyTrendRange()
+    {
+        LoadTrend();
+    }
+
+    private void LoadTrend()
+    {
+        if (!DateTime.TryParse(_fromDateText, out var fromDate) || !DateTime.TryParse(_toDateText, out var toDate))
+        {
+            ShowError("Enter a valid from and to date.");
+            return;
+        }
+
+        if (toDate.Date < fromDate.Date)
+        {
+            ShowError("The to date must be on or after the from date.");
+            return;
+        }
+
+        _trend.Clear();
+        _trend.AddRange(_history
+            .Where(x => x.ReadingTime.Date >= fromDate.Date && x.ReadingTime.Date <= toDate.Date)
+            .OrderBy(x => x.ReadingTime));
+
+        _appliedFrom = fromDate.Date;
+        _appliedTo = toDate.Date;
+        _message = null;
+    }
+
+    private void ToggleWeightMenu()
+    {
+        _isWeightMenuOpen = !_isWeightMenuOpen;
+    }
+
+    private void ShowError(string message)
+    {
+        _messageClass = "page-message page-message--error";
+        _message = message;
+    }
+
+    private async Task SignOut()
+    {
+        await LoginSession.SignOutAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    private static string ToDateInput(DateTime value) => value.ToString("yyyy-MM-dd");
+
+    private sealed record WeightTrendPoint(string Label, decimal Value, string Unit);
+}

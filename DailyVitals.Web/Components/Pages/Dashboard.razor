@@ -723,8 +723,6 @@
 
     private decimal TodayPhosphorusMg => TodayNutritionRows.Sum(x => x.NetItemPhosphorusMg);
 
-    private int TodayRawPhosphorusMg => TodayNutritionRows.Sum(x => x.RawPhosphorusMg);
-
     private int TodayCalories => TodayNutritionRows.Sum(x => x.Calories);
 
     private int TodaySodiumMg => TodayNutritionRows.Sum(x => x.SodiumMg);
@@ -771,7 +769,7 @@
 
     private string TodayNutritionSummaryText =>
         TodayNutritionRows.Any()
-            ? $"Targets for {DateTime.Today:M/d/yyyy}. {TodayRawPhosphorusMg:N0} mg raw phosphorus logged today."
+            ? $"Targets for {DateTime.Today:M/d/yyyy}. {TodayPhosphorusMg:N0} mg phosphorus logged today after binder adjustment."
             : "No food entries logged today yet.";
 
     private IReadOnlyList<ExerciseTrendPoint> ExerciseSessionTrendPoints =>

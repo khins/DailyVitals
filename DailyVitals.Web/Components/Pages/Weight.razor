@@ -25,7 +25,17 @@
                 <a href="dashboard">Dashboard</a>
                 <a href="blood-pressure">Blood Pressure</a>
                 <a href="blood-glucose">Glucose</a>
-                <a class="is-active" href="weight">Weight</a>
+                <button type="button" class="rail-nav-toggle is-active" aria-expanded="@_isWeightMenuOpen" @onclick="ToggleWeightMenu">
+                    <span>Weight</span>
+                    <span aria-hidden="true">@(_isWeightMenuOpen ? "-" : "+")</span>
+                </button>
+                @if (_isWeightMenuOpen)
+                {
+                    <div class="rail-subnav" aria-label="Weight sections">
+                        <a class="rail-subnav-button is-active" href="weight">Entry</a>
+                        <a class="rail-subnav-button" href="weight-trend">Trend</a>
+                    </div>
+                }
                 <a href="exercise">Exercise</a>
                 <a href="reports">Reports</a>
                 <a href="nutrition">Nutrition</a>
@@ -130,9 +140,18 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewReading">New</button>
-                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_formToast))
+                        {
+                            <div class="profile-toast form-toast" role="status">
+                                <span class="profile-toast-icon" aria-hidden="true">✓</span>
+                                <span>@_formToast</span>
+                                <button type="button" aria-label="Dismiss weight update message" @onclick="DismissFormToast">×</button>
+                            </div>
+                        }
                     </EditForm>
                 </article>
 
@@ -154,7 +173,7 @@
                     }
                     else
                     {
-                        <div class="data-table-wrap">
+                        <div class="data-table-wrap weight-history-table">
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -165,7 +184,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var reading in _history)
+                                    @foreach (var reading in PagedHistory)
                                     {
                                         <tr class="@(reading.WeightId == _editingId ? "is-selected" : null)" @onclick="() => SelectReading(reading)">
                                             <td>@reading.ReadingTime.ToString("M/d/yyyy h:mm tt")</td>
@@ -177,9 +196,33 @@
                                 </tbody>
                             </table>
                         </div>
+                        @RenderHistoryPager()
                     }
                 </article>
             </section>
+
+            @if (_showDeleteConfirm)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
+                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="weight-delete-title" @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>Confirm Delete</span>
+                                <h2 id="weight-delete-title">Delete this weight reading?</h2>
+                            </div>
+                            <button type="button" class="modal-close-button" aria-label="Cancel delete" @onclick="CancelDelete">×</button>
+                        </div>
+
+                        <p class="info-modal-note">This will permanently remove the selected reading from your weight history.</p>
+                        <p class="confirm-modal-detail">@DeleteReadingSummary</p>
+
+                        <div class="confirm-modal-actions">
+                            <button type="button" class="secondary-link" @onclick="CancelDelete">Cancel</button>
+                            <button type="button" class="danger-action" @onclick="ConfirmDelete">Delete Reading</button>
+                        </div>
+                    </section>
+                </div>
+            }
         </main>
     </section>
 
@@ -258,15 +301,20 @@
 
     private readonly WeightForm _form = new();
     private readonly List<WeightReading> _history = [];
+    private const int HistoryPageSize = 20;
     private long? _editingId;
+    private int _historyPage = 1;
     private decimal? _heightFt;
     private bool _showKidneyLabs = true;
+    private bool _isWeightMenuOpen = true;
     private bool _showBmiHelp;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
     private string _messageClass = "page-message";
+    private string? _formToast;
+    private bool _showDeleteConfirm;
 
     protected override void OnInitialized()
     {
@@ -365,6 +413,20 @@
             ? "None yet"
             : $"{_history[0].WeightValue:0.##} {_history[0].WeightUnit} on {_history[0].ReadingTime:M/d/yyyy}";
 
+    private string DeleteReadingSummary =>
+        _editingId.HasValue
+            ? $"{(_form.WeightValue.HasValue ? _form.WeightValue.Value.ToString("0.##") : "--")} {_form.WeightUnit}, {_readingTimeText}"
+            : "No reading selected.";
+
+    private List<WeightReading> PagedHistory =>
+        _history
+            .Skip((_historyPage - 1) * HistoryPageSize)
+            .Take(HistoryPageSize)
+            .ToList();
+
+    private int HistoryPageCount =>
+        Math.Max(1, (int)Math.Ceiling(_history.Count / (double)HistoryPageSize));
+
     private string HeightDisplay =>
         _heightFt.HasValue
             ? $"Height: {FormatHeight(_heightFt.Value)} ({_heightFt.Value:0.00} ft)"
@@ -401,9 +463,10 @@
             return;
 
         _history.AddRange(WeightService.GetHistory(LoginSession.PersonId.Value));
+        EnsureHistoryPageInRange();
     }
 
-    private void SelectReading(WeightReading reading)
+    private void SelectReading(WeightReading reading, bool clearToast = true)
     {
         _editingId = reading.WeightId;
         _form.WeightValue = reading.WeightValue;
@@ -413,12 +476,17 @@
         _createdAt = reading.CreatedAt;
         _updatedAt = reading.UpdatedAt;
         _message = null;
+        _showDeleteConfirm = false;
+        if (clearToast)
+            _formToast = null;
     }
 
     private void BeginNewReading()
     {
         ResetForm();
         _message = null;
+        _formToast = null;
+        _showDeleteConfirm = false;
     }
 
     private void SetReadingTime(ChangeEventArgs args)
@@ -440,6 +508,8 @@
 
     private void SaveReading()
     {
+        _showDeleteConfirm = false;
+
         if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");
@@ -498,6 +568,7 @@
                     LoginSession.UserName ?? string.Empty);
 
                 _editingId = insertedId;
+                _historyPage = 1;
                 ShowSuccess("Weight reading saved.");
             }
 
@@ -505,12 +576,33 @@
 
             var selected = _history.FirstOrDefault(x => x.WeightId == _editingId);
             if (selected is not null)
-                SelectReading(selected);
+                SelectReading(selected, clearToast: false);
         }
         catch (Exception ex)
         {
             ShowError(ex.Message);
         }
+    }
+
+    private void RequestDeleteSelected()
+    {
+        if (!_editingId.HasValue)
+            return;
+
+        _message = null;
+        _formToast = null;
+        _showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirm = false;
+    }
+
+    private void ConfirmDelete()
+    {
+        _showDeleteConfirm = false;
+        DeleteSelected();
     }
 
     private void DeleteSelected()
@@ -552,13 +644,46 @@
     private void ShowSuccess(string message)
     {
         _messageClass = "page-message";
-        _message = message;
+        _message = null;
+        _formToast = message;
     }
 
     private void ShowError(string message)
     {
         _messageClass = "page-message page-message--error";
         _message = message;
+        _formToast = null;
+    }
+
+    private void DismissFormToast()
+    {
+        _formToast = null;
+    }
+
+    private void ToggleWeightMenu()
+    {
+        _isWeightMenuOpen = !_isWeightMenuOpen;
+    }
+
+    private void PreviousHistoryPage()
+    {
+        if (_historyPage > 1)
+            _historyPage--;
+    }
+
+    private void NextHistoryPage()
+    {
+        if (_historyPage < HistoryPageCount)
+            _historyPage++;
+    }
+
+    private void EnsureHistoryPageInRange()
+    {
+        if (_historyPage > HistoryPageCount)
+            _historyPage = HistoryPageCount;
+
+        if (_historyPage < 1)
+            _historyPage = 1;
     }
 
     private void ShowBmiHelp()
@@ -576,6 +701,12 @@
         await LoginSession.SignOutAsync();
         Navigation.NavigateTo("/");
     }
+
+    private RenderFragment RenderHistoryPager() => @<div class="table-pager">
+        <button type="button" class="secondary-link compact-action" @onclick="PreviousHistoryPage" disabled="@(_historyPage <= 1)">Previous</button>
+        <span>Page @_historyPage of @HistoryPageCount</span>
+        <button type="button" class="secondary-link compact-action" @onclick="NextHistoryPage" disabled="@(_historyPage >= HistoryPageCount)">Next</button>
+    </div>;
 
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
 
