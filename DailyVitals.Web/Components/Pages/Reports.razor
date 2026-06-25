@@ -135,6 +135,102 @@
                 <article class="dashboard-card report-card">
                     <div class="card-heading">
                         <div>
+                            <span>Sodium Goal Progress</span>
+                            <h2>@SodiumAverageText</h2>
+                        </div>
+                        <strong class="@SodiumStatusClass">@SodiumStatusText</strong>
+                    </div>
+                    <dl class="report-metric-list">
+                        <div>
+                            <dt>Target</dt>
+                            <dd>@_sodiumTargetMg.ToString("N0") mg/day</dd>
+                        </div>
+                        <div>
+                            <dt>Within goal</dt>
+                            <dd>@SodiumDaysWithinGoalText</dd>
+                        </div>
+                        <div>
+                            <dt>Average excess</dt>
+                            <dd>@SodiumAverageExcessText</dd>
+                        </div>
+                    </dl>
+                </article>
+
+                <article class="dashboard-card report-card">
+                    <div class="card-heading">
+                        <div>
+                            <span>Phosphorus Goal Progress</span>
+                            <h2>@PhosphorusAverageText</h2>
+                        </div>
+                        <strong class="@PhosphorusStatusClass">@PhosphorusStatusText</strong>
+                    </div>
+                    <dl class="report-metric-list">
+                        <div>
+                            <dt>Target</dt>
+                            <dd>@_phosphorusTargetMg.ToString("N0") mg/day</dd>
+                        </div>
+                        <div>
+                            <dt>Within goal</dt>
+                            <dd>@PhosphorusDaysWithinGoalText</dd>
+                        </div>
+                        <div>
+                            <dt>Average excess</dt>
+                            <dd>@PhosphorusAverageExcessText</dd>
+                        </div>
+                    </dl>
+                </article>
+
+                <article class="dashboard-card report-card">
+                    <div class="card-heading">
+                        <div>
+                            <span>Protein Target Progress</span>
+                            <h2>@ProteinAverageText</h2>
+                        </div>
+                        <strong class="@ProteinStatusClass">@ProteinStatusText</strong>
+                    </div>
+                    <dl class="report-metric-list">
+                        <div>
+                            <dt>Target</dt>
+                            <dd>@_proteinTargetG.ToString("N0") g/day</dd>
+                        </div>
+                        <div>
+                            <dt>Meeting target</dt>
+                            <dd>@ProteinDaysMeetingTargetText</dd>
+                        </div>
+                        <div>
+                            <dt>Average gap</dt>
+                            <dd>@ProteinAverageGapText</dd>
+                        </div>
+                    </dl>
+                </article>
+
+                <article class="dashboard-card report-card">
+                    <div class="card-heading">
+                        <div>
+                            <span>Potassium Goal Progress</span>
+                            <h2>@PotassiumAverageText</h2>
+                        </div>
+                        <strong class="@PotassiumStatusClass">@PotassiumStatusText</strong>
+                    </div>
+                    <dl class="report-metric-list">
+                        <div>
+                            <dt>Target</dt>
+                            <dd>@_potassiumTargetMg.ToString("N0") mg/day</dd>
+                        </div>
+                        <div>
+                            <dt>Within goal</dt>
+                            <dd>@PotassiumDaysWithinGoalText</dd>
+                        </div>
+                        <div>
+                            <dt>Average excess</dt>
+                            <dd>@PotassiumAverageExcessText</dd>
+                        </div>
+                    </dl>
+                </article>
+
+                <article class="dashboard-card report-card">
+                    <div class="card-heading">
+                        <div>
                             <span>Exercise Consistency Report</span>
                             <h2>@_exerciseActiveDays active days</h2>
                         </div>
@@ -221,9 +317,188 @@
                                     <td>@_nutritionTotalProtein.ToString("N1") g</td>
                                     <td>@AveragePerActiveDay(_nutritionTotalProtein).ToString("N1") g</td>
                                 </tr>
+                                <tr>
+                                    <td>Potassium</td>
+                                    <td>@_nutritionTotalPotassium.ToString("N0") mg</td>
+                                    <td>@AveragePerActiveDay(_nutritionTotalPotassium).ToString("N0") mg</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
+                </article>
+
+                <article class="dashboard-card report-detail-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Actionable Nutrition</span>
+                            <h2>Sodium Goal Progress</h2>
+                        </div>
+                        <strong>@SodiumDaysWithinGoalText</strong>
+                    </div>
+
+                    <dl class="action-report-list">
+                        <div>
+                            <dt>Target</dt>
+                            <dd>@_sodiumTargetMg.ToString("N0") mg/day</dd>
+                        </div>
+                        <div>
+                            <dt>Average</dt>
+                            <dd>@SodiumAverageText</dd>
+                        </div>
+                        <div>
+                            <dt>Days Within Goal</dt>
+                            <dd>@SodiumDaysWithinGoalText</dd>
+                        </div>
+                        <div>
+                            <dt>Average Excess</dt>
+                            <dd>@SodiumAverageExcessText</dd>
+                        </div>
+                        <div>
+                            <dt>Highest Day</dt>
+                            <dd>@SodiumHighestDayText</dd>
+                        </div>
+                        <div>
+                            <dt>Lowest Day</dt>
+                            <dd>@SodiumLowestDayText</dd>
+                        </div>
+                    </dl>
+
+                    <div class="action-source-list">
+                        <strong>Biggest Sodium Sources</strong>
+                        @if (_topSodiumSources.Count == 0)
+                        {
+                            <p>Add foods with sodium values to identify your largest sources.</p>
+                        }
+                        else
+                        {
+                            <ul>
+                                @foreach (var source in _topSodiumSources)
+                                {
+                                    <li>
+                                        <span>@source.FoodName</span>
+                                        <strong>@source.SodiumMg.ToString("N0") mg</strong>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </article>
+
+                <article class="dashboard-card report-detail-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Actionable Nutrition</span>
+                            <h2>Phosphorus Goal Progress</h2>
+                        </div>
+                        <strong>@PhosphorusDaysWithinGoalText</strong>
+                    </div>
+
+                    <dl class="action-report-list">
+                        <div>
+                            <dt>Target</dt>
+                            <dd>@_phosphorusTargetMg.ToString("N0") mg/day</dd>
+                        </div>
+                        <div>
+                            <dt>Average</dt>
+                            <dd>@PhosphorusAverageText</dd>
+                        </div>
+                        <div>
+                            <dt>Days Within Goal</dt>
+                            <dd>@PhosphorusDaysWithinGoalText</dd>
+                        </div>
+                        <div>
+                            <dt>Average Excess</dt>
+                            <dd>@PhosphorusAverageExcessText</dd>
+                        </div>
+                        <div>
+                            <dt>Highest Day</dt>
+                            <dd>@PhosphorusHighestDayText</dd>
+                        </div>
+                        <div>
+                            <dt>Lowest Day</dt>
+                            <dd>@PhosphorusLowestDayText</dd>
+                        </div>
+                    </dl>
+
+                    @RenderSourceList("Biggest Phosphorus Sources", _topPhosphorusSources, "mg")
+                </article>
+
+                <article class="dashboard-card report-detail-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Actionable Nutrition</span>
+                            <h2>Protein Target Progress</h2>
+                        </div>
+                        <strong>@ProteinDaysMeetingTargetText</strong>
+                    </div>
+
+                    <dl class="action-report-list">
+                        <div>
+                            <dt>Target</dt>
+                            <dd>@_proteinTargetG.ToString("N0") g/day</dd>
+                        </div>
+                        <div>
+                            <dt>Average</dt>
+                            <dd>@ProteinAverageText</dd>
+                        </div>
+                        <div>
+                            <dt>Days Meeting Target</dt>
+                            <dd>@ProteinDaysMeetingTargetText</dd>
+                        </div>
+                        <div>
+                            <dt>Average Gap</dt>
+                            <dd>@ProteinAverageGapText</dd>
+                        </div>
+                        <div>
+                            <dt>Highest Day</dt>
+                            <dd>@ProteinHighestDayText</dd>
+                        </div>
+                        <div>
+                            <dt>Lowest Day</dt>
+                            <dd>@ProteinLowestDayText</dd>
+                        </div>
+                    </dl>
+
+                    @RenderSourceList("Biggest Protein Sources", _topProteinSources, "g")
+                </article>
+
+                <article class="dashboard-card report-detail-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Actionable Nutrition</span>
+                            <h2>Potassium Goal Progress</h2>
+                        </div>
+                        <strong>@PotassiumDaysWithinGoalText</strong>
+                    </div>
+
+                    <dl class="action-report-list">
+                        <div>
+                            <dt>Target</dt>
+                            <dd>@_potassiumTargetMg.ToString("N0") mg/day</dd>
+                        </div>
+                        <div>
+                            <dt>Average</dt>
+                            <dd>@PotassiumAverageText</dd>
+                        </div>
+                        <div>
+                            <dt>Days Within Goal</dt>
+                            <dd>@PotassiumDaysWithinGoalText</dd>
+                        </div>
+                        <div>
+                            <dt>Average Excess</dt>
+                            <dd>@PotassiumAverageExcessText</dd>
+                        </div>
+                        <div>
+                            <dt>Highest Day</dt>
+                            <dd>@PotassiumHighestDayText</dd>
+                        </div>
+                        <div>
+                            <dt>Lowest Day</dt>
+                            <dd>@PotassiumLowestDayText</dd>
+                        </div>
+                    </dl>
+
+                    @RenderSourceList("Biggest Potassium Sources", _topPotassiumSources, "mg")
                 </article>
 
                 <article class="dashboard-card report-detail-panel">
@@ -275,7 +550,45 @@
     private decimal _nutritionTotalSodium;
     private decimal _nutritionTotalCalories;
     private decimal _nutritionTotalProtein;
+    private decimal _nutritionTotalPotassium;
     private decimal _nutritionAverageCalories;
+    private int _sodiumTargetMg = 2000;
+    private decimal _sodiumAverage;
+    private decimal _sodiumAverageExcess;
+    private int _sodiumDaysInWindow = 30;
+    private int _sodiumDaysWithinGoal;
+    private DateTime? _sodiumHighestDate;
+    private int? _sodiumHighestMg;
+    private DateTime? _sodiumLowestDate;
+    private int? _sodiumLowestMg;
+    private readonly List<SodiumSource> _topSodiumSources = [];
+    private int _phosphorusTargetMg = 1000;
+    private decimal _phosphorusAverage;
+    private decimal _phosphorusAverageExcess;
+    private int _phosphorusDaysWithinGoal;
+    private DateTime? _phosphorusHighestDate;
+    private int? _phosphorusHighestMg;
+    private DateTime? _phosphorusLowestDate;
+    private int? _phosphorusLowestMg;
+    private readonly List<NutrientSource> _topPhosphorusSources = [];
+    private decimal _proteinTargetG = 60;
+    private decimal _proteinAverage;
+    private decimal _proteinAverageGap;
+    private int _proteinDaysMeetingTarget;
+    private DateTime? _proteinHighestDate;
+    private decimal? _proteinHighestG;
+    private DateTime? _proteinLowestDate;
+    private decimal? _proteinLowestG;
+    private readonly List<NutrientSource> _topProteinSources = [];
+    private int _potassiumTargetMg = 2000;
+    private decimal _potassiumAverage;
+    private decimal _potassiumAverageExcess;
+    private int _potassiumDaysWithinGoal;
+    private DateTime? _potassiumHighestDate;
+    private int? _potassiumHighestMg;
+    private DateTime? _potassiumLowestDate;
+    private int? _potassiumLowestMg;
+    private readonly List<NutrientSource> _topPotassiumSources = [];
     private decimal _exerciseTotalMinutes;
     private decimal _exerciseAverageMinutes;
     private int _exerciseActiveDays;
@@ -350,6 +663,118 @@
     private string SodiumComplianceText => _nutritionActiveDays == 0
         ? "--"
         : $"{Math.Round(_nutritionSodiumDaysInTarget / (decimal)_nutritionActiveDays * 100m)}% ({_nutritionSodiumDaysInTarget} of {_nutritionActiveDays} days)";
+
+    private string SodiumAverageText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_sodiumAverage:N0} mg/day";
+
+    private string SodiumDaysWithinGoalText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_sodiumDaysWithinGoal} of {_sodiumDaysInWindow} ({Math.Round(_sodiumDaysWithinGoal / (decimal)_sodiumDaysInWindow * 100m)}%)";
+
+    private string SodiumAverageExcessText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_sodiumAverageExcess:N0} mg/day";
+
+    private string SodiumHighestDayText => _sodiumHighestMg.HasValue
+        ? $"{_sodiumHighestMg.Value:N0} mg on {_sodiumHighestDate:M/d}"
+        : "--";
+
+    private string SodiumLowestDayText => _sodiumLowestMg.HasValue
+        ? $"{_sodiumLowestMg.Value:N0} mg on {_sodiumLowestDate:M/d}"
+        : "--";
+
+    private string SodiumStatusText => _nutritionActiveDays == 0
+        ? "Waiting"
+        : _sodiumAverage <= _sodiumTargetMg ? "On Track" : "Over";
+
+    private string SodiumStatusClass => _nutritionActiveDays == 0
+        ? "status-pill status-info"
+        : _sodiumAverage <= _sodiumTargetMg ? "status-pill status-ok" : "status-pill status-watch";
+
+    private string PhosphorusAverageText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_phosphorusAverage:N0} mg/day";
+
+    private string PhosphorusDaysWithinGoalText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_phosphorusDaysWithinGoal} of {_sodiumDaysInWindow} ({Math.Round(_phosphorusDaysWithinGoal / (decimal)_sodiumDaysInWindow * 100m)}%)";
+
+    private string PhosphorusAverageExcessText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_phosphorusAverageExcess:N0} mg/day";
+
+    private string PhosphorusHighestDayText => _phosphorusHighestMg.HasValue
+        ? $"{_phosphorusHighestMg.Value:N0} mg on {_phosphorusHighestDate:M/d}"
+        : "--";
+
+    private string PhosphorusLowestDayText => _phosphorusLowestMg.HasValue
+        ? $"{_phosphorusLowestMg.Value:N0} mg on {_phosphorusLowestDate:M/d}"
+        : "--";
+
+    private string PhosphorusStatusText => _nutritionActiveDays == 0
+        ? "Waiting"
+        : _phosphorusAverage <= _phosphorusTargetMg ? "On Track" : "Over";
+
+    private string PhosphorusStatusClass => _nutritionActiveDays == 0
+        ? "status-pill status-info"
+        : _phosphorusAverage <= _phosphorusTargetMg ? "status-pill status-ok" : "status-pill status-watch";
+
+    private string ProteinAverageText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_proteinAverage:N1} g/day";
+
+    private string ProteinDaysMeetingTargetText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_proteinDaysMeetingTarget} of {_sodiumDaysInWindow} ({Math.Round(_proteinDaysMeetingTarget / (decimal)_sodiumDaysInWindow * 100m)}%)";
+
+    private string ProteinAverageGapText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_proteinAverageGap:N1} g/day";
+
+    private string ProteinHighestDayText => _proteinHighestG.HasValue
+        ? $"{_proteinHighestG.Value:N1} g on {_proteinHighestDate:M/d}"
+        : "--";
+
+    private string ProteinLowestDayText => _proteinLowestG.HasValue
+        ? $"{_proteinLowestG.Value:N1} g on {_proteinLowestDate:M/d}"
+        : "--";
+
+    private string ProteinStatusText => _nutritionActiveDays == 0
+        ? "Waiting"
+        : _proteinAverage >= _proteinTargetG ? "On Track" : "Low";
+
+    private string ProteinStatusClass => _nutritionActiveDays == 0
+        ? "status-pill status-info"
+        : _proteinAverage >= _proteinTargetG ? "status-pill status-ok" : "status-pill status-watch";
+
+    private string PotassiumAverageText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_potassiumAverage:N0} mg/day";
+
+    private string PotassiumDaysWithinGoalText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_potassiumDaysWithinGoal} of {_sodiumDaysInWindow} ({Math.Round(_potassiumDaysWithinGoal / (decimal)_sodiumDaysInWindow * 100m)}%)";
+
+    private string PotassiumAverageExcessText => _nutritionActiveDays == 0
+        ? "--"
+        : $"{_potassiumAverageExcess:N0} mg/day";
+
+    private string PotassiumHighestDayText => _potassiumHighestMg.HasValue
+        ? $"{_potassiumHighestMg.Value:N0} mg on {_potassiumHighestDate:M/d}"
+        : "--";
+
+    private string PotassiumLowestDayText => _potassiumLowestMg.HasValue
+        ? $"{_potassiumLowestMg.Value:N0} mg on {_potassiumLowestDate:M/d}"
+        : "--";
+
+    private string PotassiumStatusText => _nutritionActiveDays == 0
+        ? "Waiting"
+        : _potassiumAverage <= _potassiumTargetMg ? "On Track" : "Over";
+
+    private string PotassiumStatusClass => _nutritionActiveDays == 0
+        ? "status-pill status-info"
+        : _potassiumAverage <= _potassiumTargetMg ? "status-pill status-ok" : "status-pill status-watch";
 
     private string NutritionActiveDaysText => _nutritionActiveDays == 1
         ? "1 active day"
@@ -440,10 +865,12 @@
             .GroupBy(x => x.ConsumedAt.Date)
             .Select(group => new
             {
+                Day = group.Key,
                 Phosphorus = group.Sum(x => x.PhosphorusMg),
                 Sodium = group.Sum(x => x.SodiumMg ?? 0),
                 Calories = group.Sum(x => x.Calories ?? 0),
-                Protein = group.Sum(x => x.ProteinG ?? 0)
+                Protein = group.Sum(x => x.ProteinG ?? 0),
+                Potassium = group.Sum(x => x.PotassiumMg ?? 0)
             })
             .ToList();
 
@@ -452,12 +879,140 @@
         _nutritionTotalSodium = daily.Sum(x => x.Sodium);
         _nutritionTotalCalories = daily.Sum(x => x.Calories);
         _nutritionTotalProtein = daily.Sum(x => x.Protein);
+        _nutritionTotalPotassium = daily.Sum(x => x.Potassium);
         _nutritionAverageCalories = AveragePerActiveDay(_nutritionTotalCalories);
 
         var phosphorusLimit = _nutritionGoal?.PhosphorusLimitMg ?? 1000;
         var sodiumLimit = _nutritionGoal?.SodiumLimitMg ?? 2000;
+        var proteinTarget = _nutritionGoal?.ProteinTargetG ?? 60;
+        var potassiumLimit = _nutritionGoal?.PotassiumLimitMg ?? 2000;
         _nutritionPhosphorusDaysInTarget = daily.Count(x => x.Phosphorus <= phosphorusLimit);
         _nutritionSodiumDaysInTarget = daily.Count(x => x.Sodium <= sodiumLimit);
+
+        _sodiumTargetMg = sodiumLimit;
+        _sodiumDaysInWindow = 30;
+        _sodiumDaysWithinGoal = daily.Count(x => x.Sodium <= sodiumLimit);
+        _sodiumAverage = AveragePerActiveDay(_nutritionTotalSodium);
+        _sodiumAverageExcess = Math.Max(0, _sodiumAverage - sodiumLimit);
+
+        var highestSodiumDay = daily
+            .OrderByDescending(x => x.Sodium)
+            .ThenByDescending(x => x.Day)
+            .FirstOrDefault();
+        _sodiumHighestDate = highestSodiumDay?.Day;
+        _sodiumHighestMg = highestSodiumDay?.Sodium;
+
+        var lowestSodiumDay = daily
+            .Where(x => x.Sodium > 0)
+            .OrderBy(x => x.Sodium)
+            .ThenByDescending(x => x.Day)
+            .FirstOrDefault();
+        _sodiumLowestDate = lowestSodiumDay?.Day;
+        _sodiumLowestMg = lowestSodiumDay?.Sodium;
+
+        _topSodiumSources.Clear();
+        _topSodiumSources.AddRange(_recentNutrition
+            .Where(x => (x.SodiumMg ?? 0) > 0)
+            .GroupBy(x => x.FoodName.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group => new SodiumSource(
+                group.First().FoodName.Trim(),
+                group.Sum(x => x.SodiumMg ?? 0)))
+            .OrderByDescending(x => x.SodiumMg)
+            .ThenBy(x => x.FoodName)
+            .Take(4));
+
+        _phosphorusTargetMg = phosphorusLimit;
+        _phosphorusDaysWithinGoal = daily.Count(x => x.Phosphorus <= phosphorusLimit);
+        _phosphorusAverage = AveragePerActiveDay(_nutritionTotalPhosphorus);
+        _phosphorusAverageExcess = Math.Max(0, _phosphorusAverage - phosphorusLimit);
+
+        var highestPhosphorusDay = daily
+            .OrderByDescending(x => x.Phosphorus)
+            .ThenByDescending(x => x.Day)
+            .FirstOrDefault();
+        _phosphorusHighestDate = highestPhosphorusDay?.Day;
+        _phosphorusHighestMg = highestPhosphorusDay?.Phosphorus;
+
+        var lowestPhosphorusDay = daily
+            .Where(x => x.Phosphorus > 0)
+            .OrderBy(x => x.Phosphorus)
+            .ThenByDescending(x => x.Day)
+            .FirstOrDefault();
+        _phosphorusLowestDate = lowestPhosphorusDay?.Day;
+        _phosphorusLowestMg = lowestPhosphorusDay?.Phosphorus;
+
+        _topPhosphorusSources.Clear();
+        _topPhosphorusSources.AddRange(_recentNutrition
+            .Where(x => x.PhosphorusMg > 0)
+            .GroupBy(x => x.FoodName.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group => new NutrientSource(
+                group.First().FoodName.Trim(),
+                group.Sum(x => x.PhosphorusMg)))
+            .OrderByDescending(x => x.Amount)
+            .ThenBy(x => x.FoodName)
+            .Take(4));
+
+        _proteinTargetG = proteinTarget;
+        _proteinDaysMeetingTarget = daily.Count(x => x.Protein >= proteinTarget);
+        _proteinAverage = AveragePerActiveDay(_nutritionTotalProtein);
+        _proteinAverageGap = Math.Max(0, proteinTarget - _proteinAverage);
+
+        var highestProteinDay = daily
+            .OrderByDescending(x => x.Protein)
+            .ThenByDescending(x => x.Day)
+            .FirstOrDefault();
+        _proteinHighestDate = highestProteinDay?.Day;
+        _proteinHighestG = highestProteinDay?.Protein;
+
+        var lowestProteinDay = daily
+            .Where(x => x.Protein > 0)
+            .OrderBy(x => x.Protein)
+            .ThenByDescending(x => x.Day)
+            .FirstOrDefault();
+        _proteinLowestDate = lowestProteinDay?.Day;
+        _proteinLowestG = lowestProteinDay?.Protein;
+
+        _topProteinSources.Clear();
+        _topProteinSources.AddRange(_recentNutrition
+            .Where(x => (x.ProteinG ?? 0) > 0)
+            .GroupBy(x => x.FoodName.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group => new NutrientSource(
+                group.First().FoodName.Trim(),
+                group.Sum(x => x.ProteinG ?? 0)))
+            .OrderByDescending(x => x.Amount)
+            .ThenBy(x => x.FoodName)
+            .Take(4));
+
+        _potassiumTargetMg = potassiumLimit;
+        _potassiumDaysWithinGoal = daily.Count(x => x.Potassium <= potassiumLimit);
+        _potassiumAverage = AveragePerActiveDay(_nutritionTotalPotassium);
+        _potassiumAverageExcess = Math.Max(0, _potassiumAverage - potassiumLimit);
+
+        var highestPotassiumDay = daily
+            .OrderByDescending(x => x.Potassium)
+            .ThenByDescending(x => x.Day)
+            .FirstOrDefault();
+        _potassiumHighestDate = highestPotassiumDay?.Day;
+        _potassiumHighestMg = highestPotassiumDay?.Potassium;
+
+        var lowestPotassiumDay = daily
+            .Where(x => x.Potassium > 0)
+            .OrderBy(x => x.Potassium)
+            .ThenByDescending(x => x.Day)
+            .FirstOrDefault();
+        _potassiumLowestDate = lowestPotassiumDay?.Day;
+        _potassiumLowestMg = lowestPotassiumDay?.Potassium;
+
+        _topPotassiumSources.Clear();
+        _topPotassiumSources.AddRange(_recentNutrition
+            .Where(x => (x.PotassiumMg ?? 0) > 0)
+            .GroupBy(x => x.FoodName.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group => new NutrientSource(
+                group.First().FoodName.Trim(),
+                group.Sum(x => x.PotassiumMg ?? 0)))
+            .OrderByDescending(x => x.Amount)
+            .ThenBy(x => x.FoodName)
+            .Take(4));
     }
 
     private void BuildExerciseReport()
@@ -496,5 +1051,34 @@
         Navigation.NavigateTo("/");
     }
 
+    private RenderFragment RenderSourceList(string title, IReadOnlyList<NutrientSource> sources, string unit) => @<div class="action-source-list">
+        <strong>@title</strong>
+        @if (sources.Count == 0)
+        {
+            <p>Add foods with @unit values to identify your largest sources.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var source in sources)
+                {
+                    <li>
+                        <span>@source.FoodName</span>
+                        <strong>@FormatNutrientAmount(source.Amount, unit)</strong>
+                    </li>
+                }
+            </ul>
+        }
+    </div>;
+
+    private static string FormatNutrientAmount(decimal value, string unit) =>
+        unit == "g"
+            ? $"{value:N1} g"
+            : $"{value:N0} {unit}";
+
     private sealed record ReportNote(string Title, string Detail);
+
+    private sealed record SodiumSource(string FoodName, int SodiumMg);
+
+    private sealed record NutrientSource(string FoodName, decimal Amount);
 }
