@@ -6,6 +6,7 @@ namespace DailyVitals.Web.Services;
 public sealed class LocalLoginSession
 {
     private const string StorageKey = "dailyvitals.loginSession";
+    private const int RememberDeviceDays = 30;
     private readonly IJSRuntime _jsRuntime;
 
     public LocalLoginSession(IJSRuntime jsRuntime)
@@ -28,7 +29,10 @@ public sealed class LocalLoginSession
     {
         SignIn(userName, personId);
 
-        var storedSession = JsonSerializer.Serialize(new StoredLoginSession(userName, personId));
+        var expiresAt = rememberDevice
+            ? DateTimeOffset.UtcNow.AddDays(RememberDeviceDays)
+            : (DateTimeOffset?)null;
+        var storedSession = JsonSerializer.Serialize(new StoredLoginSession(userName, personId, expiresAt));
         await ClearBrowserStorageAsync();
 
         var storageName = rememberDevice ? "localStorage.setItem" : "sessionStorage.setItem";
@@ -40,8 +44,9 @@ public sealed class LocalLoginSession
         if (!IsSignedIn)
             return;
 
-        var storedSession = JsonSerializer.Serialize(new StoredLoginSession(userName, PersonId));
-        var useLocalStorage = await ReadBrowserStorageAsync("localStorage.getItem") is not null;
+        var localSession = await ReadBrowserStorageAsync("localStorage.getItem");
+        var useLocalStorage = localSession is not null;
+        var storedSession = JsonSerializer.Serialize(new StoredLoginSession(userName, PersonId, localSession?.ExpiresAt));
 
         UserName = userName;
         await ClearBrowserStorageAsync();
@@ -60,6 +65,12 @@ public sealed class LocalLoginSession
 
         if (storedSession is null || string.IsNullOrWhiteSpace(storedSession.UserName))
             return;
+
+        if (storedSession.ExpiresAt.HasValue && storedSession.ExpiresAt.Value <= DateTimeOffset.UtcNow)
+        {
+            await ClearBrowserStorageAsync();
+            return;
+        }
 
         SignIn(storedSession.UserName, storedSession.PersonId);
     }
@@ -116,5 +127,5 @@ public sealed class LocalLoginSession
         }
     }
 
-    private sealed record StoredLoginSession(string UserName, long? PersonId);
+    private sealed record StoredLoginSession(string UserName, long? PersonId, DateTimeOffset? ExpiresAt);
 }

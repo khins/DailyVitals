@@ -1,15 +1,16 @@
-@page "/blood-glucose"
+@page "/fluid-intake"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using DailyVitals.Data.Services
 @using DailyVitals.Domain.Models
+@using FluidIntakeEntry = DailyVitals.Domain.Models.FluidIntake
 @using DailyVitals.Web.Services
-@inject BloodGlucoseService BloodGlucoseService
+@inject FluidIntakeService FluidService
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 
-<PageTitle>Blood Glucose | DailyVitals</PageTitle>
+<PageTitle>Fluid Intake | DailyVitals</PageTitle>
 
 @if (LoginSession.IsSignedIn)
 {
@@ -23,12 +24,12 @@
             <nav class="rail-nav">
                 <a href="dashboard">Dashboard</a>
                 <a href="blood-pressure">Blood Pressure</a>
-                <a class="is-active" href="blood-glucose">Glucose</a>
+                <a href="blood-glucose">Glucose</a>
                 <a href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
                 <a href="reports">Reports</a>
                 <a href="nutrition">Nutrition</a>
-                <a href="fluid-intake">Fluid Intake</a>
+                <a class="is-active" href="fluid-intake">Fluid Intake</a>
                 @if (_showKidneyLabs)
                 {
                     <a href="renal-foods">Renal Friendly Foods</a>
@@ -48,7 +49,7 @@
             <header class="dashboard-topbar">
                 <div>
                     <p class="eyebrow">DailyVitals Web</p>
-                    <h1>Blood Glucose</h1>
+                    <h1>Fluid Intake</h1>
                 </div>
 
                 <div class="dashboard-actions">
@@ -56,7 +57,7 @@
                         <span>Person</span>
                         <strong>@LoginSession.UserName</strong>
                     </div>
-                    <button type="button" class="primary-action" @onclick="BeginNewReading">New Reading</button>
+                    <button type="button" class="primary-action" @onclick="BeginNewEntry">Add Fluid</button>
                 </div>
             </header>
 
@@ -65,15 +66,15 @@
                 <div class="@_messageClass" role="status">@_message</div>
             }
 
-            <section class="@SeverityBandClass" aria-label="Current blood glucose status">
+            <section class="status-band status-band--ok" aria-label="Fluid intake summary">
                 <div>
                     <span class="status-dot"></span>
-                    <strong>@SeverityText</strong>
-                    <p>@SeveritySummary</p>
+                    <strong>@TodayFluidMl.ToString("N0") mL today</strong>
+                    <p>@TodayFluidCount fluid @(TodayFluidCount == 1 ? "entry" : "entries") logged for @DateTime.Today.ToString("M/d/yyyy").</p>
                 </div>
                 <div>
-                    <span>Latest reading</span>
-                    <strong>@LatestReadingText</strong>
+                    <span>Fluid weight estimate</span>
+                    <strong>@TodayFluidWeightText</strong>
                 </div>
             </section>
 
@@ -81,26 +82,34 @@
                 <article class="dashboard-card entry-panel">
                     <div class="card-heading">
                         <div>
-                            <span>@(_editingId.HasValue ? "Edit Reading" : "New Reading")</span>
-                            <h2>Details</h2>
+                            <span>@(_editingId.HasValue ? "Edit Intake" : "New Intake")</span>
+                            <h2>Fluid Details</h2>
                         </div>
                     </div>
 
-                    <EditForm Model="_form" FormName="blood-glucose-entry-form" OnValidSubmit="SaveReading" class="bp-form">
+                    <EditForm Model="_form" FormName="fluid-intake-form" OnValidSubmit="SaveEntry" class="bp-form">
                         <DataAnnotationsValidator />
 
                         <div class="form-row">
-                            <label for="reading-time">Reading Time</label>
-                            <input id="reading-time" class="form-input" type="datetime-local" value="@_readingTimeText" @onchange="SetReadingTime" />
+                            <label for="consumed-at">Time</label>
+                            <input id="consumed-at" class="form-input" type="datetime-local" value="@_consumedAtText" @onchange="SetConsumedAt" />
                         </div>
 
                         <div class="glucose-number-grid">
                             <div class="field-group">
-                                <label for="glucose">Glucose (mg/dL)</label>
-                                <InputNumber id="glucose" class="form-input" @bind-Value="_form.GlucoseValue" />
-                                <ValidationMessage For="() => _form.GlucoseValue" />
+                                <label for="beverage">Beverage</label>
+                                <InputText id="beverage" class="form-input" @bind-Value="_form.BeverageName" />
+                                <ValidationMessage For="() => _form.BeverageName" />
+                            </div>
+
+                            <div class="field-group">
+                                <label for="fluid-ml">Amount (mL)</label>
+                                <InputNumber id="fluid-ml" class="form-input" @bind-Value="_form.FluidMl" />
+                                <ValidationMessage For="() => _form.FluidMl" />
                             </div>
                         </div>
+
+                        <p class="helper-text">Quick reference: 8 fl oz is about 237 mL, 12 fl oz is about 355 mL, and 16 fl oz is about 473 mL.</p>
 
                         <div class="field-group">
                             <label for="notes">Notes</label>
@@ -113,7 +122,7 @@
                         }
 
                         <div class="form-command-row">
-                            <button type="button" class="secondary-link" @onclick="BeginNewReading">New</button>
+                            <button type="button" class="secondary-link" @onclick="BeginNewEntry">New</button>
                             <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
@@ -123,7 +132,7 @@
                             <div class="profile-toast form-toast" role="status">
                                 <span class="profile-toast-icon" aria-hidden="true">✓</span>
                                 <span>@_formToast</span>
-                                <button type="button" aria-label="Dismiss glucose update message" @onclick="DismissFormToast">×</button>
+                                <button type="button" aria-label="Dismiss fluid intake update message" @onclick="DismissFormToast">×</button>
                             </div>
                         }
                     </EditForm>
@@ -133,7 +142,7 @@
                     <div class="card-heading">
                         <div>
                             <span>History</span>
-                            <h2>Recent Readings</h2>
+                            <h2>Recent Fluid Intake</h2>
                         </div>
                         <strong>@_history.Count entries</strong>
                     </div>
@@ -141,8 +150,8 @@
                     @if (_history.Count == 0)
                     {
                         <div class="empty-state compact-empty">
-                            <h2>No readings yet</h2>
-                            <p>Save a blood glucose reading to start this person's history.</p>
+                            <h2>No fluid entries yet</h2>
+                            <p>Save a fluid intake entry to start this person's history.</p>
                         </div>
                     }
                     else
@@ -151,24 +160,25 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Glucose</th>
+                                        <th>Time</th>
+                                        <th>Beverage</th>
+                                        <th>Amount</th>
                                         <th>Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var reading in PagedHistory)
+                                    @foreach (var entry in _history)
                                     {
-                                        <tr class="@(reading.GlucoseId == _editingId ? "is-selected" : null)" @onclick="() => SelectReading(reading)">
-                                            <td>@reading.ReadingTime.ToString("M/d/yyyy h:mm tt")</td>
-                                            <td>@reading.GlucoseValue</td>
-                                            <td>@reading.Notes</td>
+                                        <tr class="@(entry.FluidIntakeId == _editingId ? "is-selected" : null)" @onclick="() => SelectEntry(entry)">
+                                            <td>@entry.ConsumedAt.ToString("M/d/yyyy h:mm tt")</td>
+                                            <td>@entry.BeverageName</td>
+                                            <td>@entry.FluidMl.ToString("N0") mL</td>
+                                            <td>@entry.Notes</td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
                         </div>
-                        @RenderHistoryPager()
                     }
                 </article>
             </section>
@@ -176,21 +186,21 @@
             @if (_showDeleteConfirm)
             {
                 <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
-                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="glucose-delete-title" @onclick:stopPropagation="true">
+                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="fluid-delete-title" @onclick:stopPropagation="true">
                         <div class="info-modal-header">
                             <div>
                                 <span>Confirm Delete</span>
-                                <h2 id="glucose-delete-title">Delete this glucose reading?</h2>
+                                <h2 id="fluid-delete-title">Delete this fluid intake?</h2>
                             </div>
                             <button type="button" class="modal-close-button" aria-label="Cancel delete" @onclick="CancelDelete">×</button>
                         </div>
 
-                        <p class="info-modal-note">This will permanently remove the selected reading from your blood glucose history.</p>
-                        <p class="confirm-modal-detail">@DeleteReadingSummary</p>
+                        <p class="info-modal-note">This will permanently remove the selected fluid intake entry from history.</p>
+                        <p class="confirm-modal-detail">@DeleteEntrySummary</p>
 
                         <div class="confirm-modal-actions">
                             <button type="button" class="secondary-link" @onclick="CancelDelete">Cancel</button>
-                            <button type="button" class="danger-action" @onclick="ConfirmDelete">Delete Reading</button>
+                            <button type="button" class="danger-action" @onclick="ConfirmDelete">Delete Intake</button>
                         </div>
                     </section>
                 </div>
@@ -200,16 +210,14 @@
 }
 
 @code {
-    private readonly BloodGlucoseForm _form = new();
-    private readonly List<BloodGlucoseReading> _history = [];
-    private const int HistoryPageSize = 20;
+    private readonly FluidForm _form = new();
+    private readonly List<FluidIntakeEntry> _history = [];
     private long? _editingId;
-    private int _historyPage = 1;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private bool _showKidneyLabs = true;
     private bool _showDeleteConfirm;
-    private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
+    private string _consumedAtText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
     private string _messageClass = "page-message";
     private string? _formToast;
@@ -239,72 +247,27 @@
             return;
         }
 
-        LoadPersonPreferences();
+        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
         LoadHistory();
         StateHasChanged();
     }
 
-    private void LoadPersonPreferences()
-    {
-        if (!LoginSession.PersonId.HasValue)
-            return;
-
-        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
-    }
-
-    private string SeverityText
-    {
-        get
-        {
-            if (!_form.GlucoseValue.HasValue)
-                return "Ready";
-
-            if (_form.GlucoseValue.Value < 70)
-                return "Low";
-
-            if (_form.GlucoseValue.Value <= 140)
-                return "In range";
-
-            return "High";
-        }
-    }
-
-    private string SeverityBandClass =>
-        SeverityText switch
-        {
-            "In range" => "status-band status-band--ok",
-            "Low" => "status-band status-band--watch",
-            "High" => "status-band status-band--high",
-            _ => "status-band"
-        };
-
-    private string SeveritySummary =>
-        SeverityText switch
-        {
-            "In range" => "This reading is inside the common tracking range.",
-            "Low" => "This reading is below the common tracking range.",
-            "High" => "This reading is above the common tracking range.",
-            _ => "Enter a glucose value to classify the reading."
-        };
-
-    private string LatestReadingText =>
-        _history.Count == 0
-            ? "None yet"
-            : $"{_history[0].GlucoseValue} mg/dL on {_history[0].ReadingTime:M/d/yyyy}";
-
-    private List<BloodGlucoseReading> PagedHistory =>
+    private IReadOnlyList<FluidIntakeEntry> TodayEntries =>
         _history
-            .Skip((_historyPage - 1) * HistoryPageSize)
-            .Take(HistoryPageSize)
+            .Where(x => x.ConsumedAt.Date == DateTime.Today)
             .ToList();
 
-    private int HistoryPageCount =>
-        Math.Max(1, (int)Math.Ceiling(_history.Count / (double)HistoryPageSize));
+    private int TodayFluidMl => TodayEntries.Sum(x => x.FluidMl);
 
-    private string DeleteReadingSummary =>
-        _editingId.HasValue
-            ? $"{_form.GlucoseValue} mg/dL, {_readingTimeText}"
-            : "No reading selected.";
+    private int TodayFluidCount => TodayEntries.Count;
+
+    private string TodayFluidWeightText => TodayFluidMl == 0
+        ? "--"
+        : $"{TodayFluidMl / 1000m:0.##} kg / {TodayFluidMl / 1000m * 2.20462m:0.##} lb";
+
+    private string DeleteEntrySummary => _editingId.HasValue
+        ? $"{_form.BeverageName}, {_form.FluidMl:N0} mL, {_consumedAtText}"
+        : "No fluid intake selected.";
 
     private string AuditText
     {
@@ -327,25 +290,25 @@
         if (!LoginSession.PersonId.HasValue)
             return;
 
-        _history.AddRange(BloodGlucoseService.GetHistory(LoginSession.PersonId.Value));
-        EnsureHistoryPageInRange();
+        _history.AddRange(FluidService.GetHistory(LoginSession.PersonId.Value));
     }
 
-    private void SelectReading(BloodGlucoseReading reading, bool clearToast = true)
+    private void SelectEntry(FluidIntakeEntry entry, bool clearToast = true)
     {
-        _editingId = reading.GlucoseId;
-        _form.GlucoseValue = Convert.ToInt32(reading.GlucoseValue);
-        _form.Notes = reading.Notes ?? string.Empty;
-        _readingTimeText = ToDateTimeLocal(reading.ReadingTime);
-        _createdAt = reading.CreatedAt;
-        _updatedAt = reading.UpdatedAt;
+        _editingId = entry.FluidIntakeId;
+        _consumedAtText = ToDateTimeLocal(entry.ConsumedAt);
+        _form.BeverageName = entry.BeverageName;
+        _form.FluidMl = entry.FluidMl;
+        _form.Notes = entry.Notes ?? string.Empty;
+        _createdAt = entry.CreatedAt;
+        _updatedAt = entry.UpdatedAt;
         _message = null;
         _showDeleteConfirm = false;
         if (clearToast)
             _formToast = null;
     }
 
-    private void BeginNewReading()
+    private void BeginNewEntry()
     {
         ResetForm();
         _message = null;
@@ -353,22 +316,23 @@
         _showDeleteConfirm = false;
     }
 
-    private void SetReadingTime(ChangeEventArgs args)
+    private void SetConsumedAt(ChangeEventArgs args)
     {
-        _readingTimeText = args.Value?.ToString() ?? string.Empty;
+        _consumedAtText = args.Value?.ToString() ?? string.Empty;
     }
 
     private void ResetForm()
     {
         _editingId = null;
-        _form.GlucoseValue = null;
-        _form.Notes = "Morning reading";
-        _readingTimeText = ToDateTimeLocal(DateTime.Now);
+        _consumedAtText = ToDateTimeLocal(DateTime.Now);
+        _form.BeverageName = "Water";
+        _form.FluidMl = null;
+        _form.Notes = string.Empty;
         _createdAt = null;
         _updatedAt = null;
     }
 
-    private void SaveReading()
+    private void SaveEntry()
     {
         _showDeleteConfirm = false;
 
@@ -378,50 +342,51 @@
             return;
         }
 
-        if (!TryGetReadingTime(out var readingTime))
+        if (!TryGetConsumedAt(out var consumedAt))
             return;
 
-        if (!_form.GlucoseValue.HasValue || _form.GlucoseValue.Value <= 0)
-        {
-            ShowError("Enter a valid glucose value.");
-            return;
-        }
-
-        var personId = LoginSession.PersonId.Value;
-        var notes = _form.Notes ?? string.Empty;
+        var beverageName = _form.BeverageName?.Trim() ?? string.Empty;
+        var notes = _form.Notes?.Trim();
 
         try
         {
             if (_editingId.HasValue)
             {
-                BloodGlucoseService.Update(
+                var updated = FluidService.UpdateForPerson(
                     _editingId.Value,
-                    personId,
-                    _form.GlucoseValue.Value,
-                    readingTime,
+                    LoginSession.PersonId.Value,
+                    consumedAt,
+                    _form.FluidMl!.Value,
+                    beverageName,
                     notes,
                     LoginSession.UserName ?? string.Empty);
 
-                ShowSuccess("Blood glucose reading updated.");
+                if (!updated)
+                {
+                    ShowError("The selected fluid intake could not be updated.");
+                    return;
+                }
+
+                ShowSuccess("Fluid intake updated.");
             }
             else
             {
-                _editingId = BloodGlucoseService.Insert(
-                    personId,
-                    _form.GlucoseValue.Value,
-                    readingTime,
+                _editingId = FluidService.Insert(
+                    LoginSession.PersonId.Value,
+                    consumedAt,
+                    _form.FluidMl!.Value,
+                    beverageName,
                     notes,
                     LoginSession.UserName ?? string.Empty);
 
-                _historyPage = 1;
-                ShowSuccess("Blood glucose reading saved.");
+                ShowSuccess("Fluid intake saved.");
             }
 
             LoadHistory();
 
-            var selected = _history.FirstOrDefault(x => x.GlucoseId == _editingId);
+            var selected = _history.FirstOrDefault(x => x.FluidIntakeId == _editingId);
             if (selected is not null)
-                SelectReading(selected, clearToast: false);
+                SelectEntry(selected, clearToast: false);
         }
         catch (Exception ex)
         {
@@ -457,19 +422,19 @@
 
         try
         {
-            var deleted = BloodGlucoseService.DeleteBloodGlucoseForPerson(
+            var deleted = FluidService.DeleteForPerson(
                 LoginSession.PersonId.Value,
                 _editingId.Value);
 
             if (!deleted)
             {
-                ShowError("The selected blood glucose record could not be deleted.");
+                ShowError("The selected fluid intake could not be deleted.");
                 return;
             }
 
             LoadHistory();
             ResetForm();
-            ShowSuccess("Blood glucose reading deleted.");
+            ShowSuccess("Fluid intake deleted.");
         }
         catch (Exception ex)
         {
@@ -477,12 +442,12 @@
         }
     }
 
-    private bool TryGetReadingTime(out DateTime readingTime)
+    private bool TryGetConsumedAt(out DateTime consumedAt)
     {
-        if (DateTime.TryParse(_readingTimeText, out readingTime))
+        if (DateTime.TryParse(_consumedAtText, out consumedAt))
             return true;
 
-        ShowError("Enter a valid reading time.");
+        ShowError("Enter a valid intake time.");
         return false;
     }
 
@@ -505,46 +470,23 @@
         _formToast = null;
     }
 
-    private void PreviousHistoryPage()
-    {
-        if (_historyPage > 1)
-            _historyPage--;
-    }
-
-    private void NextHistoryPage()
-    {
-        if (_historyPage < HistoryPageCount)
-            _historyPage++;
-    }
-
-    private void EnsureHistoryPageInRange()
-    {
-        if (_historyPage > HistoryPageCount)
-            _historyPage = HistoryPageCount;
-
-        if (_historyPage < 1)
-            _historyPage = 1;
-    }
-
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
         Navigation.NavigateTo("/");
     }
 
-    private RenderFragment RenderHistoryPager() => @<div class="table-pager">
-        <button type="button" class="secondary-link compact-action" @onclick="PreviousHistoryPage" disabled="@(_historyPage <= 1)">Previous</button>
-        <span>Page @_historyPage of @HistoryPageCount</span>
-        <button type="button" class="secondary-link compact-action" @onclick="NextHistoryPage" disabled="@(_historyPage >= HistoryPageCount)">Next</button>
-    </div>;
-
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
 
-    private sealed class BloodGlucoseForm
+    private sealed class FluidForm
     {
-        [Required]
-        [Range(1, 1000)]
-        public int? GlucoseValue { get; set; }
+        [Required(ErrorMessage = "Enter a beverage.")]
+        [StringLength(120, ErrorMessage = "Beverage must be 120 characters or less.")]
+        public string? BeverageName { get; set; }
+
+        [Required(ErrorMessage = "Enter the fluid amount.")]
+        [Range(1, 10000, ErrorMessage = "Fluid amount must be greater than 0.")]
+        public int? FluidMl { get; set; }
 
         public string? Notes { get; set; }
     }

@@ -28,6 +28,7 @@
                 <a href="exercise">Exercise</a>
                 <a href="reports">Reports</a>
                 <a href="nutrition">Nutrition</a>
+                <a href="fluid-intake">Fluid Intake</a>
                 <a href="renal-foods">Renal Friendly Foods</a>
                 <a class="is-active" href="labs">Kidney Labs</a>
             </nav>
@@ -182,9 +183,18 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewResult">New</button>
-                            <button type="button" class="secondary-link" @onclick="DeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_formToast))
+                        {
+                            <div class="profile-toast form-toast" role="status">
+                                <span class="profile-toast-icon" aria-hidden="true">✓</span>
+                                <span>@_formToast</span>
+                                <button type="button" aria-label="Dismiss kidney labs update message" @onclick="DismissFormToast">×</button>
+                            </div>
+                        }
                     </EditForm>
                 </article>
 
@@ -278,6 +288,29 @@
                     }
                 </article>
             </section>
+
+            @if (_showDeleteConfirm)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
+                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="kidney-lab-delete-title" @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>Confirm Delete</span>
+                                <h2 id="kidney-lab-delete-title">Delete this kidney lab panel?</h2>
+                            </div>
+                            <button type="button" class="modal-close-button" aria-label="Cancel delete" @onclick="CancelDelete">×</button>
+                        </div>
+
+                        <p class="info-modal-note">This will permanently remove the selected monthly kidney lab panel from history.</p>
+                        <p class="confirm-modal-detail">@DeletePanelSummary</p>
+
+                        <div class="confirm-modal-actions">
+                            <button type="button" class="secondary-link" @onclick="CancelDelete">Cancel</button>
+                            <button type="button" class="danger-action" @onclick="ConfirmDelete">Delete Panel</button>
+                        </div>
+                    </section>
+                </div>
+            }
         </main>
     </section>
 }
@@ -291,6 +324,8 @@
     private string _resultMonthText = ToMonthText(DateTime.Now);
     private string? _message;
     private string _messageClass = "page-message";
+    private string? _formToast;
+    private bool _showDeleteConfirm;
 
     protected override void OnInitialized()
     {
@@ -408,6 +443,14 @@
         }
     }
 
+    private string DeletePanelSummary => _editingId.HasValue
+        ? $"Kidney lab panel for {DisplayResultMonth}"
+        : "No kidney lab panel selected.";
+
+    private string DisplayResultMonth => TryParseResultMonthText(out var resultMonth)
+        ? NormalizeMonth(resultMonth).ToString("MMM yyyy")
+        : _resultMonthText;
+
     private void LoadHistory()
     {
         _history.Clear();
@@ -418,7 +461,7 @@
         _history.AddRange(KidneyLabService.GetHistory(LoginSession.PersonId.Value));
     }
 
-    private void SelectResult(KidneyLabResult result)
+    private void SelectResult(KidneyLabResult result, bool clearToast = true)
     {
         _editingId = result.KidneyLabResultId;
         _resultMonthText = ToMonthText(result.ResultMonth);
@@ -439,12 +482,17 @@
         _createdAt = result.CreatedAt;
         _updatedAt = result.UpdatedAt;
         _message = null;
+        _showDeleteConfirm = false;
+        if (clearToast)
+            _formToast = null;
     }
 
     private void BeginNewResult()
     {
         ResetForm();
         _message = null;
+        _formToast = null;
+        _showDeleteConfirm = false;
     }
 
     private void SetResultMonth(ChangeEventArgs args)
@@ -472,10 +520,13 @@
         _form.Notes = "Monthly kidney lab panel";
         _createdAt = null;
         _updatedAt = null;
+        _showDeleteConfirm = false;
     }
 
     private void SaveResult()
     {
+        _showDeleteConfirm = false;
+
         if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");
@@ -529,12 +580,33 @@
 
             var selected = _history.FirstOrDefault(x => x.KidneyLabResultId == _editingId);
             if (selected is not null)
-                SelectResult(selected);
+                SelectResult(selected, clearToast: false);
         }
         catch (Exception ex)
         {
             ShowError(ex.Message);
         }
+    }
+
+    private void RequestDeleteSelected()
+    {
+        if (!_editingId.HasValue)
+            return;
+
+        _message = null;
+        _formToast = null;
+        _showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirm = false;
+    }
+
+    private void ConfirmDelete()
+    {
+        _showDeleteConfirm = false;
+        DeleteSelected();
     }
 
     private void DeleteSelected()
@@ -601,7 +673,7 @@
 
     private bool TryGetResultMonth(out DateTime resultMonth)
     {
-        if (DateTime.TryParse($"{_resultMonthText}-01", out resultMonth))
+        if (TryParseResultMonthText(out resultMonth))
         {
             resultMonth = NormalizeMonth(resultMonth);
             return true;
@@ -611,16 +683,26 @@
         return false;
     }
 
+    private bool TryParseResultMonthText(out DateTime resultMonth) =>
+        DateTime.TryParse($"{_resultMonthText}-01", out resultMonth);
+
     private void ShowSuccess(string message)
     {
         _messageClass = "page-message";
-        _message = message;
+        _message = null;
+        _formToast = message;
     }
 
     private void ShowError(string message)
     {
         _messageClass = "page-message page-message--error";
         _message = message;
+        _formToast = null;
+    }
+
+    private void DismissFormToast()
+    {
+        _formToast = null;
     }
 
     private async Task SignOut()
