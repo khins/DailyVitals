@@ -78,6 +78,10 @@
                     <InputCheckbox @bind-Value="_model.RememberMe" />
                     <span>Remember this device</span>
                 </label>
+                @if (_model.RememberMe)
+                {
+                    <span class="remember-device-duration">Keep me logged in for 30 days</span>
+                }
             </div>
 
             @if (!string.IsNullOrWhiteSpace(_message))

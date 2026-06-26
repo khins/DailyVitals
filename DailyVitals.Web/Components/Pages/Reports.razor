@@ -33,6 +33,7 @@
                 <a href="exercise">Exercise</a>
                 <a class="is-active" href="reports">Reports</a>
                 <a href="nutrition">Nutrition</a>
+                <a href="fluid-intake">Fluid Intake</a>
                 @if (_showKidneyLabs)
                 {
                     <a href="renal-foods">Renal Friendly Foods</a>
@@ -154,6 +155,7 @@
                             <dd>@SodiumAverageExcessText</dd>
                         </div>
                     </dl>
+                    <button type="button" class="secondary-link report-card-action" @onclick="ShowSodiumReport">Details</button>
                 </article>
 
                 <article class="dashboard-card report-card">
@@ -178,6 +180,7 @@
                             <dd>@PhosphorusAverageExcessText</dd>
                         </div>
                     </dl>
+                    <button type="button" class="secondary-link report-card-action" @onclick="ShowPhosphorusReport">Details</button>
                 </article>
 
                 <article class="dashboard-card report-card">
@@ -202,6 +205,7 @@
                             <dd>@ProteinAverageGapText</dd>
                         </div>
                     </dl>
+                    <button type="button" class="secondary-link report-card-action" @onclick="ShowProteinReport">Details</button>
                 </article>
 
                 <article class="dashboard-card report-card">
@@ -226,6 +230,7 @@
                             <dd>@PotassiumAverageExcessText</dd>
                         </div>
                     </dl>
+                    <button type="button" class="secondary-link report-card-action" @onclick="ShowPotassiumReport">Details</button>
                 </article>
 
                 <article class="dashboard-card report-card">
@@ -288,7 +293,7 @@
                     </div>
 
                     <div class="data-table-wrap report-table-wrap">
-                        <table class="data-table">
+                        <table class="data-table data-table--readonly">
                             <thead>
                                 <tr>
                                     <th>Metric</th>
@@ -330,180 +335,6 @@
                 <article class="dashboard-card report-detail-panel">
                     <div class="card-heading">
                         <div>
-                            <span>Actionable Nutrition</span>
-                            <h2>Sodium Goal Progress</h2>
-                        </div>
-                        <strong>@SodiumDaysWithinGoalText</strong>
-                    </div>
-
-                    <dl class="action-report-list">
-                        <div>
-                            <dt>Target</dt>
-                            <dd>@_sodiumTargetMg.ToString("N0") mg/day</dd>
-                        </div>
-                        <div>
-                            <dt>Average</dt>
-                            <dd>@SodiumAverageText</dd>
-                        </div>
-                        <div>
-                            <dt>Days Within Goal</dt>
-                            <dd>@SodiumDaysWithinGoalText</dd>
-                        </div>
-                        <div>
-                            <dt>Average Excess</dt>
-                            <dd>@SodiumAverageExcessText</dd>
-                        </div>
-                        <div>
-                            <dt>Highest Day</dt>
-                            <dd>@SodiumHighestDayText</dd>
-                        </div>
-                        <div>
-                            <dt>Lowest Day</dt>
-                            <dd>@SodiumLowestDayText</dd>
-                        </div>
-                    </dl>
-
-                    <div class="action-source-list">
-                        <strong>Biggest Sodium Sources</strong>
-                        @if (_topSodiumSources.Count == 0)
-                        {
-                            <p>Add foods with sodium values to identify your largest sources.</p>
-                        }
-                        else
-                        {
-                            <ul>
-                                @foreach (var source in _topSodiumSources)
-                                {
-                                    <li>
-                                        <span>@source.FoodName</span>
-                                        <strong>@source.SodiumMg.ToString("N0") mg</strong>
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    </div>
-                </article>
-
-                <article class="dashboard-card report-detail-panel">
-                    <div class="card-heading">
-                        <div>
-                            <span>Actionable Nutrition</span>
-                            <h2>Phosphorus Goal Progress</h2>
-                        </div>
-                        <strong>@PhosphorusDaysWithinGoalText</strong>
-                    </div>
-
-                    <dl class="action-report-list">
-                        <div>
-                            <dt>Target</dt>
-                            <dd>@_phosphorusTargetMg.ToString("N0") mg/day</dd>
-                        </div>
-                        <div>
-                            <dt>Average</dt>
-                            <dd>@PhosphorusAverageText</dd>
-                        </div>
-                        <div>
-                            <dt>Days Within Goal</dt>
-                            <dd>@PhosphorusDaysWithinGoalText</dd>
-                        </div>
-                        <div>
-                            <dt>Average Excess</dt>
-                            <dd>@PhosphorusAverageExcessText</dd>
-                        </div>
-                        <div>
-                            <dt>Highest Day</dt>
-                            <dd>@PhosphorusHighestDayText</dd>
-                        </div>
-                        <div>
-                            <dt>Lowest Day</dt>
-                            <dd>@PhosphorusLowestDayText</dd>
-                        </div>
-                    </dl>
-
-                    @RenderSourceList("Biggest Phosphorus Sources", _topPhosphorusSources, "mg")
-                </article>
-
-                <article class="dashboard-card report-detail-panel">
-                    <div class="card-heading">
-                        <div>
-                            <span>Actionable Nutrition</span>
-                            <h2>Protein Target Progress</h2>
-                        </div>
-                        <strong>@ProteinDaysMeetingTargetText</strong>
-                    </div>
-
-                    <dl class="action-report-list">
-                        <div>
-                            <dt>Target</dt>
-                            <dd>@_proteinTargetG.ToString("N0") g/day</dd>
-                        </div>
-                        <div>
-                            <dt>Average</dt>
-                            <dd>@ProteinAverageText</dd>
-                        </div>
-                        <div>
-                            <dt>Days Meeting Target</dt>
-                            <dd>@ProteinDaysMeetingTargetText</dd>
-                        </div>
-                        <div>
-                            <dt>Average Gap</dt>
-                            <dd>@ProteinAverageGapText</dd>
-                        </div>
-                        <div>
-                            <dt>Highest Day</dt>
-                            <dd>@ProteinHighestDayText</dd>
-                        </div>
-                        <div>
-                            <dt>Lowest Day</dt>
-                            <dd>@ProteinLowestDayText</dd>
-                        </div>
-                    </dl>
-
-                    @RenderSourceList("Biggest Protein Sources", _topProteinSources, "g")
-                </article>
-
-                <article class="dashboard-card report-detail-panel">
-                    <div class="card-heading">
-                        <div>
-                            <span>Actionable Nutrition</span>
-                            <h2>Potassium Goal Progress</h2>
-                        </div>
-                        <strong>@PotassiumDaysWithinGoalText</strong>
-                    </div>
-
-                    <dl class="action-report-list">
-                        <div>
-                            <dt>Target</dt>
-                            <dd>@_potassiumTargetMg.ToString("N0") mg/day</dd>
-                        </div>
-                        <div>
-                            <dt>Average</dt>
-                            <dd>@PotassiumAverageText</dd>
-                        </div>
-                        <div>
-                            <dt>Days Within Goal</dt>
-                            <dd>@PotassiumDaysWithinGoalText</dd>
-                        </div>
-                        <div>
-                            <dt>Average Excess</dt>
-                            <dd>@PotassiumAverageExcessText</dd>
-                        </div>
-                        <div>
-                            <dt>Highest Day</dt>
-                            <dd>@PotassiumHighestDayText</dd>
-                        </div>
-                        <div>
-                            <dt>Lowest Day</dt>
-                            <dd>@PotassiumLowestDayText</dd>
-                        </div>
-                    </dl>
-
-                    @RenderSourceList("Biggest Potassium Sources", _topPotassiumSources, "mg")
-                </article>
-
-                <article class="dashboard-card report-detail-panel">
-                    <div class="card-heading">
-                        <div>
                             <span>Archive</span>
                             <h2>Recent Report Notes</h2>
                         </div>
@@ -524,6 +355,50 @@
                 </article>
             </section>
 
+            @if (ActiveNutrientReport is { } report)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="DismissNutrientReport">
+                    <section class="info-modal nutrient-report-modal" role="dialog" aria-modal="true" aria-labelledby="nutrient-report-title" @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>Actionable Nutrition</span>
+                                <h2 id="nutrient-report-title">@report.Title</h2>
+                            </div>
+                            <button type="button" class="modal-close-button" aria-label="Close nutrient report" @onclick="DismissNutrientReport">×</button>
+                        </div>
+
+                        <dl class="action-report-list">
+                            <div>
+                                <dt>Target</dt>
+                                <dd>@report.Target</dd>
+                            </div>
+                            <div>
+                                <dt>Average</dt>
+                                <dd>@report.Average</dd>
+                            </div>
+                            <div>
+                                <dt>@report.DaysLabel</dt>
+                                <dd>@report.DaysText</dd>
+                            </div>
+                            <div>
+                                <dt>@report.VarianceLabel</dt>
+                                <dd>@report.Variance</dd>
+                            </div>
+                            <div>
+                                <dt>Highest Day</dt>
+                                <dd>@report.HighestDay</dd>
+                            </div>
+                            <div>
+                                <dt>Lowest Day</dt>
+                                <dd>@report.LowestDay</dd>
+                            </div>
+                        </dl>
+
+                        @RenderSourceList(report.SourceTitle, report.Sources, report.Unit)
+                    </section>
+                </div>
+            }
+
             <p class="dashboard-disclosure">
                 ActiveVitals reports are for personal tracking and awareness only, not medical diagnosis or treatment advice.
             </p>
@@ -542,6 +417,7 @@
     private string? _message;
     private string _messageClass = "page-message";
     private bool _showKidneyLabs;
+    private string? _activeNutrientReportKey;
     private NutritionGoal? _nutritionGoal;
     private int _nutritionActiveDays;
     private int _nutritionPhosphorusDaysInTarget;
@@ -561,7 +437,7 @@
     private int? _sodiumHighestMg;
     private DateTime? _sodiumLowestDate;
     private int? _sodiumLowestMg;
-    private readonly List<SodiumSource> _topSodiumSources = [];
+    private readonly List<NutrientSource> _topSodiumSources = [];
     private int _phosphorusTargetMg = 1000;
     private decimal _phosphorusAverage;
     private decimal _phosphorusAverageExcess;
@@ -776,6 +652,63 @@
         ? "status-pill status-info"
         : _potassiumAverage <= _potassiumTargetMg ? "status-pill status-ok" : "status-pill status-watch";
 
+    private NutrientReport? ActiveNutrientReport => _activeNutrientReportKey switch
+    {
+        "sodium" => new NutrientReport(
+            "Sodium Goal Progress",
+            $"{_sodiumTargetMg:N0} mg/day",
+            SodiumAverageText,
+            "Days Within Goal",
+            SodiumDaysWithinGoalText,
+            "Average Excess",
+            SodiumAverageExcessText,
+            SodiumHighestDayText,
+            SodiumLowestDayText,
+            "Biggest Sodium Sources",
+            _topSodiumSources,
+            "mg"),
+        "phosphorus" => new NutrientReport(
+            "Phosphorus Goal Progress",
+            $"{_phosphorusTargetMg:N0} mg/day",
+            PhosphorusAverageText,
+            "Days Within Goal",
+            PhosphorusDaysWithinGoalText,
+            "Average Excess",
+            PhosphorusAverageExcessText,
+            PhosphorusHighestDayText,
+            PhosphorusLowestDayText,
+            "Biggest Phosphorus Sources",
+            _topPhosphorusSources,
+            "mg"),
+        "protein" => new NutrientReport(
+            "Protein Target Progress",
+            $"{_proteinTargetG:N0} g/day",
+            ProteinAverageText,
+            "Days Meeting Target",
+            ProteinDaysMeetingTargetText,
+            "Average Gap",
+            ProteinAverageGapText,
+            ProteinHighestDayText,
+            ProteinLowestDayText,
+            "Biggest Protein Sources",
+            _topProteinSources,
+            "g"),
+        "potassium" => new NutrientReport(
+            "Potassium Goal Progress",
+            $"{_potassiumTargetMg:N0} mg/day",
+            PotassiumAverageText,
+            "Days Within Goal",
+            PotassiumDaysWithinGoalText,
+            "Average Excess",
+            PotassiumAverageExcessText,
+            PotassiumHighestDayText,
+            PotassiumLowestDayText,
+            "Biggest Potassium Sources",
+            _topPotassiumSources,
+            "mg"),
+        _ => null
+    };
+
     private string NutritionActiveDaysText => _nutritionActiveDays == 1
         ? "1 active day"
         : $"{_nutritionActiveDays} active days";
@@ -914,10 +847,10 @@
         _topSodiumSources.AddRange(_recentNutrition
             .Where(x => (x.SodiumMg ?? 0) > 0)
             .GroupBy(x => x.FoodName.Trim(), StringComparer.OrdinalIgnoreCase)
-            .Select(group => new SodiumSource(
+            .Select(group => new NutrientSource(
                 group.First().FoodName.Trim(),
                 group.Sum(x => x.SodiumMg ?? 0)))
-            .OrderByDescending(x => x.SodiumMg)
+            .OrderByDescending(x => x.Amount)
             .ThenBy(x => x.FoodName)
             .Take(4));
 
@@ -1051,6 +984,24 @@
         Navigation.NavigateTo("/");
     }
 
+    private void ShowNutrientReport(string reportKey)
+    {
+        _activeNutrientReportKey = reportKey;
+    }
+
+    private void ShowSodiumReport() => ShowNutrientReport("sodium");
+
+    private void ShowPhosphorusReport() => ShowNutrientReport("phosphorus");
+
+    private void ShowProteinReport() => ShowNutrientReport("protein");
+
+    private void ShowPotassiumReport() => ShowNutrientReport("potassium");
+
+    private void DismissNutrientReport()
+    {
+        _activeNutrientReportKey = null;
+    }
+
     private RenderFragment RenderSourceList(string title, IReadOnlyList<NutrientSource> sources, string unit) => @<div class="action-source-list">
         <strong>@title</strong>
         @if (sources.Count == 0)
@@ -1078,7 +1029,19 @@
 
     private sealed record ReportNote(string Title, string Detail);
 
-    private sealed record SodiumSource(string FoodName, int SodiumMg);
-
     private sealed record NutrientSource(string FoodName, decimal Amount);
+
+    private sealed record NutrientReport(
+        string Title,
+        string Target,
+        string Average,
+        string DaysLabel,
+        string DaysText,
+        string VarianceLabel,
+        string Variance,
+        string HighestDay,
+        string LowestDay,
+        string SourceTitle,
+        IReadOnlyList<NutrientSource> Sources,
+        string Unit);
 }
