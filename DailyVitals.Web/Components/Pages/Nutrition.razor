@@ -939,9 +939,7 @@
             _form.EstimatedByAi = true;
             _form.AiConfidence = estimate.Confidence;
             _form.SourceNotes = estimate.SourceNotes;
-            _foodNotes = string.IsNullOrWhiteSpace(estimate.SourceNotes)
-                ? _foodNotes
-                : estimate.SourceNotes;
+            _foodNotes = BuildRenalFoodNotes(estimate) ?? _foodNotes;
             ShowSuccess($"Estimate ready: {estimate.EstimatedPhosphorusMg} mg phosphorus.");
         }
         catch (Exception ex)
@@ -952,6 +950,27 @@
         {
             _isEstimating = false;
         }
+    }
+
+    private static string? BuildRenalFoodNotes(FoodPhosphorusEstimate estimate)
+    {
+        if (estimate.RenalRating is >= 1 and <= 5 && !string.IsNullOrWhiteSpace(estimate.RenalReason))
+        {
+            return
+                $"Renal Rating: {BuildStarRating(estimate.RenalRating)}" +
+                $"{Environment.NewLine}{Environment.NewLine}" +
+                $"Reason: {estimate.RenalReason.Trim()}";
+        }
+
+        return string.IsNullOrWhiteSpace(estimate.SourceNotes)
+            ? null
+            : estimate.SourceNotes;
+    }
+
+    private static string BuildStarRating(int rating)
+    {
+        rating = Math.Clamp(rating, 1, 5);
+        return new string('★', rating) + new string('☆', 5 - rating);
     }
 
     private void SaveEntry()

@@ -2001,6 +2001,146 @@ h1 {
     font-weight: 700;
 }
 
+.ai-coach-card {
+    display: grid;
+    gap: 18px;
+    border-left: 4px solid #2f7d69;
+    padding: 22px;
+    background: #ffffff;
+}
+
+.ai-coach-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.ai-coach-heading span {
+    display: block;
+    color: #2f6f61;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.ai-coach-heading h2 {
+    margin: 4px 0 0;
+    font-size: 1.55rem;
+}
+
+.ai-coach-heading p,
+.ai-coach-placeholder,
+.ai-coach-summary,
+.ai-coach-care-note,
+.ai-coach-disclosure {
+    margin: 6px 0 0;
+}
+
+.ai-coach-heading p,
+.ai-coach-placeholder {
+    color: #5d6a68;
+    font-weight: 700;
+}
+
+.ai-coach-heading .ai-coach-saved {
+    color: #2f6f61;
+    font-size: 0.84rem;
+}
+
+.ai-coach-facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    border: 1px solid #d7e1df;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #d7e1df;
+}
+
+.ai-coach-facts div {
+    min-width: 0;
+    padding: 12px 14px;
+    background: #f7faf9;
+}
+
+.ai-coach-facts dt {
+    color: #5d6a68;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.ai-coach-facts dd {
+    margin: 4px 0 0;
+    color: #071518;
+    font-weight: 800;
+}
+
+.ai-coach-summary {
+    max-width: 980px;
+    color: #17211f;
+    font-size: 1.05rem;
+    line-height: 1.55;
+}
+
+.ai-coach-guidance {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.ai-coach-guidance section {
+    border-top: 3px solid #b9d8ce;
+    padding-top: 12px;
+}
+
+.ai-coach-guidance h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.ai-coach-guidance ul {
+    display: grid;
+    gap: 8px;
+    margin: 10px 0 0;
+    padding-left: 20px;
+}
+
+.ai-coach-guidance li {
+    line-height: 1.45;
+}
+
+.ai-coach-care-note {
+    border-left: 3px solid #d39b2d;
+    padding: 10px 12px;
+    background: #fff8e8;
+    color: #4b4128;
+    line-height: 1.45;
+}
+
+.ai-coach-error {
+    border: 1px solid #e6b6b1;
+    border-radius: 8px;
+    padding: 11px 13px;
+    background: #fff2f0;
+    color: #8d2921;
+    font-weight: 700;
+}
+
+.ai-coach-disclosure {
+    border-top: 1px solid #edf2f1;
+    padding-top: 12px;
+    color: #5d6a68;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.ai-coach-card .primary-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .report-card-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2302,9 +2442,15 @@ h1 {
 
     .dashboard-topbar,
     .dashboard-actions,
-    .status-band {
+    .status-band,
+    .ai-coach-heading {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .ai-coach-facts,
+    .ai-coach-guidance {
+        grid-template-columns: 1fr;
     }
 
     .status-band > div:last-child {
