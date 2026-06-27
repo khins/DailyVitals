@@ -10,6 +10,7 @@
 @inject ExerciseService ExerciseService
 @inject FoodPhosphorusIntakeService FoodService
 @inject NutritionGoalService NutritionGoalService
+@inject NutritionCoachService NutritionCoachService
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
@@ -80,6 +81,82 @@
                     <strong>Last 30 days</strong>
                 </div>
             </section>
+
+            <article class="dashboard-card ai-coach-card" aria-labelledby="ai-coach-title">
+                <div class="ai-coach-heading">
+                    <div>
+                        <span>AI Nutrition Coach</span>
+                        <h2 id="ai-coach-title">@(_coachReview?.Headline ?? "Your weekly nutrition review")</h2>
+                        <p>@CoachPeriodText</p>
+                        @if (_coachReviewCreatedAt.HasValue)
+                        {
+                            <p class="ai-coach-saved">Saved @_coachReviewCreatedAt.Value.ToString("MMM d, yyyy h:mm tt")</p>
+                        }
+                    </div>
+                    <button type="button"
+                            class="primary-action"
+                            disabled="@(!CanGenerateCoachReview)"
+                            @onclick="GenerateCoachReview">
+                        @(_isGeneratingCoachReview ? "Reviewing..." : _coachReview is null ? "Generate Review" : "Refresh Review")
+                    </button>
+                </div>
+
+                @if (_coachSnapshot is { } coachSnapshot)
+                {
+                    <dl class="ai-coach-facts" aria-label="Weekly nutrition data coverage">
+                        <div>
+                            <dt>Days logged</dt>
+                            <dd>@coachSnapshot.DaysLogged of @coachSnapshot.DaysInPeriod</dd>
+                        </div>
+                        <div>
+                            <dt>Food entries</dt>
+                            <dd>@coachSnapshot.FoodEntries</dd>
+                        </div>
+                        <div>
+                            <dt>Phosphorus within goal</dt>
+                            <dd>@FormatCoachGoalDays(coachSnapshot.Phosphorus)</dd>
+                        </div>
+                        <div>
+                            <dt>Sodium within goal</dt>
+                            <dd>@FormatCoachGoalDays(coachSnapshot.Sodium)</dd>
+                        </div>
+                    </dl>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_coachError))
+                {
+                    <div class="ai-coach-error" role="alert">@_coachError</div>
+                }
+                else if (_isGeneratingCoachReview)
+                {
+                    <p class="ai-coach-placeholder" role="status">Reviewing your logged nutrition patterns...</p>
+                }
+                else if (_coachReview is { } coachReview)
+                {
+                    <p class="ai-coach-summary">@coachReview.Summary</p>
+
+                    <div class="ai-coach-guidance">
+                        @RenderCoachList("Wins", coachReview.Wins)
+                        @RenderCoachList("Focus Areas", coachReview.FocusAreas)
+                        @RenderCoachList("Next Steps", coachReview.SuggestedActions)
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(coachReview.CareTeamNote))
+                    {
+                        <p class="ai-coach-care-note"><strong>For your care team:</strong> @coachReview.CareTeamNote</p>
+                    }
+                }
+                else
+                {
+                    <p class="ai-coach-placeholder">
+                        @(_coachSnapshot?.DaysLogged > 0
+                            ? "Generate a review to turn this week's logged foods and personal nutrition goals into a concise summary."
+                            : "Log at least one day of nutrition to generate a weekly review.")
+                    </p>
+                }
+
+                <p class="ai-coach-disclosure">Educational guidance only. The coach does not change nutrition goals, binders, medications, or treatment plans.</p>
+            </article>
 
             <section class="report-card-grid" aria-label="Report overview">
                 <article class="dashboard-card report-card">
@@ -418,6 +495,11 @@
     private string _messageClass = "page-message";
     private bool _showKidneyLabs;
     private string? _activeNutrientReportKey;
+    private NutritionCoachSnapshot? _coachSnapshot;
+    private NutritionCoachReview? _coachReview;
+    private DateTime? _coachReviewCreatedAt;
+    private bool _isGeneratingCoachReview;
+    private string? _coachError;
     private NutritionGoal? _nutritionGoal;
     private int _nutritionActiveDays;
     private int _nutritionPhosphorusDaysInTarget;
@@ -490,6 +572,13 @@
         _weightHistory.Count + _exerciseHistory.Count + _nutritionHistory.Count + _bloodPressureHistory.Count + _glucoseHistory.Count == 0
             ? "No report data yet"
             : "Simple reports are ready";
+
+    private bool CanGenerateCoachReview =>
+        !_isGeneratingCoachReview && _coachSnapshot?.DaysLogged > 0;
+
+    private string CoachPeriodText => _coachSnapshot is null
+        ? "Last 7 days"
+        : $"{_coachSnapshot.PeriodStart:MMM d} - {_coachSnapshot.PeriodEnd:MMM d, yyyy}";
 
     private WeightReading? LatestWeight => _weightHistory.FirstOrDefault();
 
@@ -785,6 +874,17 @@
 
             BuildNutritionReport();
             BuildExerciseReport();
+            _coachSnapshot = NutritionCoachService.BuildSnapshot(
+                _nutritionHistory,
+                _nutritionGoal,
+                DateTime.Today);
+            var storedCoachReview = NutritionCoachService.GetLatestSuccessfulReview(
+                personId,
+                _coachSnapshot.PeriodStart,
+                _coachSnapshot.PeriodEnd);
+            _coachReview = storedCoachReview?.Review;
+            _coachReviewCreatedAt = storedCoachReview?.CreatedAt;
+            _coachError = null;
         }
         catch (Exception ex)
         {
@@ -1001,6 +1101,46 @@
     {
         _activeNutrientReportKey = null;
     }
+
+    private async Task GenerateCoachReview()
+    {
+        if (_coachSnapshot is null || _coachSnapshot.DaysLogged == 0 || _isGeneratingCoachReview)
+            return;
+
+        _isGeneratingCoachReview = true;
+        _coachError = null;
+
+        try
+        {
+            var storedReview = await NutritionCoachService.GenerateReviewAsync(
+                LoginSession.PersonId!.Value,
+                _coachSnapshot);
+            _coachReview = storedReview.Review;
+            _coachReviewCreatedAt = storedReview.CreatedAt;
+        }
+        catch (Exception ex)
+        {
+            _coachError = ex.Message;
+        }
+        finally
+        {
+            _isGeneratingCoachReview = false;
+        }
+    }
+
+    private string FormatCoachGoalDays(NutritionCoachMetric metric) => _coachSnapshot is null || _coachSnapshot.DaysLogged == 0
+        ? "--"
+        : $"{metric.DaysMeetingGoal} of {_coachSnapshot.DaysLogged} logged days";
+
+    private RenderFragment RenderCoachList(string title, IReadOnlyList<string> items) => @<section>
+        <h3>@title</h3>
+        <ul>
+            @foreach (var item in items)
+            {
+                <li>@item</li>
+            }
+        </ul>
+    </section>;
 
     private RenderFragment RenderSourceList(string title, IReadOnlyList<NutrientSource> sources, string unit) => @<div class="action-source-list">
         <strong>@title</strong>

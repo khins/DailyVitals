@@ -9,6 +9,8 @@ namespace DailyVitals.Domain.Models
         public int? EstimatedSodiumMg { get; set; }
         public decimal? EstimatedProteinG { get; set; }
         public int? EstimatedPotassiumMg { get; set; }
+        public int RenalRating { get; set; }
+        public string? RenalReason { get; set; }
         public string? Confidence { get; set; }
         public string? SourceNotes { get; set; }
     }

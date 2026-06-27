@@ -53,6 +53,8 @@ namespace DailyVitals.Data.Services
                                 "estimatedSodiumMg",
                                 "estimatedProteinG",
                                 "estimatedPotassiumMg",
+                                "renalRating",
+                                "renalReason",
                                 "confidence",
                                 "sourceNotes"
                             },
@@ -65,6 +67,8 @@ namespace DailyVitals.Data.Services
                                 estimatedSodiumMg = new { type = new[] { "integer", "null" } },
                                 estimatedProteinG = new { type = new[] { "number", "null" } },
                                 estimatedPotassiumMg = new { type = new[] { "integer", "null" } },
+                                renalRating = new { type = "integer", minimum = 1, maximum = 5 },
+                                renalReason = new { type = "string" },
                                 confidence = new { type = "string", @enum = new[] { "low", "medium", "high" } },
                                 sourceNotes = new { type = "string" }
                             }
@@ -104,6 +108,9 @@ namespace DailyVitals.Data.Services
             if (estimate.EstimatedPhosphorusMg < 0)
                 throw new InvalidOperationException("OpenAI returned an invalid phosphorus amount.");
 
+            if (estimate.RenalRating < 1 || estimate.RenalRating > 5)
+                throw new InvalidOperationException("OpenAI returned an invalid renal rating.");
+
             if ((estimate.EstimatedCalories.HasValue && estimate.EstimatedCalories.Value < 0) ||
                 (estimate.EstimatedSodiumMg.HasValue && estimate.EstimatedSodiumMg.Value < 0) ||
                 (estimate.EstimatedProteinG.HasValue && estimate.EstimatedProteinG.Value < 0) ||
@@ -122,6 +129,8 @@ namespace DailyVitals.Data.Services
                 "Estimate nutrition content for this food item and serving:" + Environment.NewLine +
                 foodDescription.Trim() + Environment.NewLine + Environment.NewLine +
                 "Return phosphorus in milligrams, calories, sodium in milligrams, protein in grams, and potassium in milligrams. " +
+                "Also return a renalRating from 1 to 5 where 5 is most renal-friendly and 1 is least renal-friendly for a dialysis-focused diet, " +
+                "plus a concise renalReason that explains the rating using practical factors such as sodium, potassium, phosphorus, protein, fluid, and processed-food risk. " +
                 "Use a cautious estimate. If the serving size is unclear, make a reasonable serving-size assumption and say so in sourceNotes. " +
                 "Use null for calories, sodium, protein, or potassium only when the field cannot be reasonably estimated.";
         }

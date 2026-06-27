@@ -22,6 +22,7 @@ builder.Services.AddScoped<WeightService>();
 builder.Services.AddScoped<ExerciseService>();
 builder.Services.AddScoped<FoodPhosphorusIntakeService>();
 builder.Services.AddScoped<FoodPhosphorusEstimateService>();
+builder.Services.AddScoped<NutritionCoachService>();
 builder.Services.AddScoped<FluidIntakeService>();
 builder.Services.AddScoped<NutritionGoalService>();
 builder.Services.AddScoped<KidneyLabResultService>();
