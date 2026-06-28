@@ -35,6 +35,7 @@ The project also includes an AI-assisted nutrition workflow. Food estimates retu
 - [Testing Strategy](docs/testing-strategy.md)
 - [Deployment](docs/deployment.md)
 - [Engineering Decisions](docs/decisions/README.md)
+- [Portfolio Screenshot Guide](docs/screenshots/README.md)
 
 ## Important Notice
 
