@@ -1,0 +1,10 @@
+@using DailyVitals.Web.Services
+@inject LocalLoginSession LoginSession
+
+@if (LoginSession.IsDemo)
+{
+    <div class="demo-mode-banner" role="status">
+        <strong>Demo Mode</strong>
+        <span>Read-only synthetic data</span>
+    </div>
+}

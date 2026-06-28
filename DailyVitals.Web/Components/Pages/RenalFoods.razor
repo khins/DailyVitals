@@ -13,7 +13,7 @@
 
 @if (LoginSession.IsSignedIn)
 {
-    <section class="dashboard-shell">
+    <section class="dashboard-shell @(LoginSession.IsDemo ? "demo-mode" : null)">
         <aside class="dashboard-rail" aria-label="Primary navigation">
             <div class="rail-brand">
                 <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
@@ -42,6 +42,7 @@
         </aside>
 
         <main class="dashboard-main">
+            <DemoModeBanner />
             <header class="dashboard-topbar">
                 <div>
                     <p class="eyebrow">DailyVitals Web</p>
@@ -98,7 +99,7 @@
                         </div>
                         <div>
                             <button type="button" class="secondary-link" @onclick="ClearSelectedFoods" disabled="@(_selectedFoodIds.Count == 0)">Clear</button>
-                            <button type="button" class="primary-action" @onclick="AddSelectedFoodsToToday" disabled="@(_selectedFoodIds.Count == 0)">Add selected to today</button>
+                            <button type="button" class="primary-action" @onclick="AddSelectedFoodsToToday" disabled="@(LoginSession.IsDemo || _selectedFoodIds.Count == 0)">Add selected to today</button>
                         </div>
                     </div>
 
@@ -264,6 +265,12 @@
 
     private void AddSelectedFoodsToToday()
     {
+        if (LoginSession.IsDemo)
+        {
+            ShowError(DemoModeGuard.ReadOnlyMessage);
+            return;
+        }
+
         if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");

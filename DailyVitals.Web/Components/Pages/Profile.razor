@@ -15,7 +15,7 @@
 
 @if (LoginSession.IsSignedIn)
 {
-    <section class="dashboard-shell">
+    <section class="dashboard-shell @(LoginSession.IsDemo ? "demo-mode" : null)">
         <aside class="dashboard-rail" aria-label="Primary navigation">
             <div class="rail-brand">
                 <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
@@ -47,6 +47,7 @@
         </aside>
 
         <main class="dashboard-main">
+            <DemoModeBanner />
             <header class="dashboard-topbar">
                 <div>
                     <p class="eyebrow">DailyVitals Web</p>
@@ -250,7 +251,7 @@
                                     <button type="button" aria-label="Dismiss profile update message" @onclick="DismissProfileToast">×</button>
                                 </div>
                             }
-                            <button type="submit" class="primary-action">Save Profile</button>
+                            <button type="submit" class="primary-action" disabled="@LoginSession.IsDemo">Save Profile</button>
                         </div>
                     </EditForm>
                 </article>
@@ -431,6 +432,12 @@
 
     private async Task SaveProfile()
     {
+        if (LoginSession.IsDemo)
+        {
+            ShowError(DemoModeGuard.ReadOnlyMessage);
+            return;
+        }
+
         if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");

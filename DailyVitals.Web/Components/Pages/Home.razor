@@ -5,6 +5,7 @@
 @inject NavigationManager Navigation
 @inject LocalLoginService LoginService
 @inject LocalLoginSession LoginSession
+@inject IConfiguration Configuration
 
 <PageTitle>Sign in | DailyVitals</PageTitle>
 
@@ -91,6 +92,17 @@
 
             <button type="submit" class="primary-button">Sign in</button>
             <a class="form-link" href="create-account">Create account</a>
+
+            @if (DemoModeEnabled)
+            {
+                <div class="demo-login-panel">
+                    <div>
+                        <strong>Explore Demo Mode</strong>
+                        <span>@DemoUserName</span>
+                    </div>
+                    <button type="button" class="secondary-link" @onclick="UseDemoCredentials">Use demo account</button>
+                </div>
+            }
         </EditForm>
     </div>
 </section>
@@ -105,6 +117,8 @@
     private bool _showPassword;
 
     private string PasswordInputType => _showPassword ? "text" : "password";
+    private bool DemoModeEnabled => Configuration.GetValue("DemoMode:Enabled", false);
+    private string DemoUserName => Configuration["DemoMode:UserName"] ?? "demo@activevitals.app";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -139,8 +153,20 @@
         }
 
         _message = null;
-        await LoginSession.SignInAsync(loginUser.UserName, loginUser.PersonId, _model.RememberMe);
+        await LoginSession.SignInAsync(
+            loginUser.UserName,
+            loginUser.PersonId,
+            _model.RememberMe,
+            loginUser.IsDemo);
         Navigation.NavigateTo("/dashboard", replace: true);
+    }
+
+    private void UseDemoCredentials()
+    {
+        _model.UserName = DemoUserName;
+        _model.Password = Configuration["DemoMode:Password"] ?? "Demo123!";
+        _model.RememberMe = false;
+        _message = null;
     }
 
     private sealed class LoginModel

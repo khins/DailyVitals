@@ -19,7 +19,7 @@
 
 @if (LoginSession.IsSignedIn)
 {
-    <section class="dashboard-shell">
+    <section class="dashboard-shell @(LoginSession.IsDemo ? "demo-mode" : null)">
         <aside class="dashboard-rail" aria-label="Primary navigation">
             <div class="rail-brand">
                 <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
@@ -51,6 +51,7 @@
         </aside>
 
         <main class="dashboard-main">
+            <DemoModeBanner />
             <header class="dashboard-topbar">
                 <div>
                     <p class="eyebrow">DailyVitals Web</p>
@@ -574,7 +575,7 @@
             : "Simple reports are ready";
 
     private bool CanGenerateCoachReview =>
-        !_isGeneratingCoachReview && _coachSnapshot?.DaysLogged > 0;
+        !LoginSession.IsDemo && !_isGeneratingCoachReview && _coachSnapshot?.DaysLogged > 0;
 
     private string CoachPeriodText => _coachSnapshot is null
         ? "Last 7 days"
@@ -1104,6 +1105,12 @@
 
     private async Task GenerateCoachReview()
     {
+        if (LoginSession.IsDemo)
+        {
+            _coachError = DemoModeGuard.ReadOnlyMessage;
+            return;
+        }
+
         if (_coachSnapshot is null || _coachSnapshot.DaysLogged == 0 || _isGeneratingCoachReview)
             return;
 

@@ -44,6 +44,13 @@ ASP.NET Core Data Protection keys are persisted under the web application's `App
 - Strict structured outputs reduce parsing ambiguity.
 - The coach receives calculated facts and explicit medical-safety constraints.
 
+### Demo account
+
+- Demo records are synthetic and isolated under a dedicated person identifier.
+- The demo password is intentionally public but stored in PostgreSQL only as a PBKDF2 hash.
+- Server handlers and PostgreSQL triggers enforce read-only behavior.
+- AI requests are disabled for the demo account to avoid transmitting data or consuming API credits.
+
 ## Known Gaps
 
 Before any public or multi-user deployment, address these items:

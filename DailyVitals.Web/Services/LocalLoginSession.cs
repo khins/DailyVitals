@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DailyVitals.Data.Services;
 using Microsoft.JSInterop;
 
 namespace DailyVitals.Web.Services;
@@ -8,26 +9,31 @@ public sealed class LocalLoginSession
     private const string StorageKey = "dailyvitals.loginSession";
     private const int RememberDeviceDays = 30;
     private readonly IJSRuntime _jsRuntime;
+    private readonly LoginUserService _loginUserService;
 
-    public LocalLoginSession(IJSRuntime jsRuntime)
+    public LocalLoginSession(IJSRuntime jsRuntime, LoginUserService loginUserService)
     {
         _jsRuntime = jsRuntime;
+        _loginUserService = loginUserService;
     }
 
     public bool IsSignedIn { get; private set; }
     public string? UserName { get; private set; }
     public long? PersonId { get; private set; }
+    public bool IsDemo { get; private set; }
+    public bool CanWrite => IsSignedIn && !IsDemo;
 
-    public void SignIn(string userName, long? personId)
+    public void SignIn(string userName, long? personId, bool isDemo = false)
     {
         IsSignedIn = true;
         UserName = userName;
         PersonId = personId;
+        IsDemo = isDemo;
     }
 
-    public async Task SignInAsync(string userName, long? personId, bool rememberDevice)
+    public async Task SignInAsync(string userName, long? personId, bool rememberDevice, bool isDemo = false)
     {
-        SignIn(userName, personId);
+        SignIn(userName, personId, isDemo);
 
         var expiresAt = rememberDevice
             ? DateTimeOffset.UtcNow.AddDays(RememberDeviceDays)
@@ -72,7 +78,17 @@ public sealed class LocalLoginSession
             return;
         }
 
-        SignIn(storedSession.UserName, storedSession.PersonId);
+        var isDemo = false;
+        try
+        {
+            isDemo = _loginUserService.IsDemoLogin(storedSession.UserName, storedSession.PersonId);
+        }
+        catch
+        {
+            // Database-backed mode is rechecked when available; normal local sessions remain usable offline.
+        }
+
+        SignIn(storedSession.UserName, storedSession.PersonId, isDemo);
     }
 
     public void SignOut()
@@ -80,6 +96,7 @@ public sealed class LocalLoginSession
         IsSignedIn = false;
         UserName = null;
         PersonId = null;
+        IsDemo = false;
     }
 
     public async Task SignOutAsync()
