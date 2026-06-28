@@ -30,6 +30,7 @@ The project also includes an AI-assisted nutrition workflow. Food estimates retu
 - [Database Design](docs/database-design.md)
 - [Local Development](docs/local-development.md)
 - [AI Nutrition Coach](docs/ai-nutrition-coach.md)
+- [Demo Mode](docs/demo-mode.md)
 - [Security and Privacy](docs/security-and-privacy.md)
 - [Testing Strategy](docs/testing-strategy.md)
 - [Deployment](docs/deployment.md)

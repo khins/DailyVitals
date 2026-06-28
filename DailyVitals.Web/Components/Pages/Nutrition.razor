@@ -14,7 +14,7 @@
 
 @if (LoginSession.IsSignedIn)
 {
-    <section class="dashboard-shell">
+    <section class="dashboard-shell @(LoginSession.IsDemo ? "demo-mode" : null)">
         <aside class="dashboard-rail" aria-label="Primary navigation">
             <div class="rail-brand">
                 <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
@@ -86,6 +86,7 @@
         </aside>
 
         <main class="dashboard-main">
+            <DemoModeBanner />
             <header class="dashboard-topbar">
                 <div>
                     <p class="eyebrow">DailyVitals Web</p>
@@ -275,8 +276,8 @@
                         }
 
                         <div class="form-command-row">
-                            <button type="button" class="secondary-link" @onclick="BeginNewEntry">New</button>
-                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="button" class="secondary-link" @onclick="BeginNewEntry" disabled="@LoginSession.IsDemo">New</button>
+                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(LoginSession.IsDemo || !_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
                         @if (ShowInlineFormMessage)
@@ -454,7 +455,7 @@
                                             }
                                             <td>@DisplayValue(item.ServingDescription)</td>
                                             <td>
-                                                <button type="button" class="secondary-link compact-action" @onclick="() => RequestDeleteEntry(item)" @onclick:stopPropagation="true">Delete</button>
+                                                <button type="button" class="secondary-link compact-action" @onclick="() => RequestDeleteEntry(item)" @onclick:stopPropagation="true" disabled="@LoginSession.IsDemo">Delete</button>
                                             </td>
                                         </tr>
                                     }
@@ -677,7 +678,7 @@
     private const decimal BinderBindingEfficiency = 0.075m;
     private const decimal BinderPhosphorusReductionMg = BinderMgPerPill * BinderBindingEfficiency;
 
-    private bool IsEstimateDisabled => _isEstimating || string.IsNullOrWhiteSpace(_form.FoodName);
+    private bool IsEstimateDisabled => LoginSession.IsDemo || _isEstimating || string.IsNullOrWhiteSpace(_form.FoodName);
 
     private void SetPhosphorusMg(ChangeEventArgs args)
     {
@@ -914,6 +915,12 @@
 
     private async Task EstimateFood()
     {
+        if (LoginSession.IsDemo)
+        {
+            ShowError(DemoModeGuard.ReadOnlyMessage);
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_form.FoodName))
         {
             ShowError("Enter a food item before estimating.");
@@ -975,6 +982,12 @@
 
     private void SaveEntry()
     {
+        if (LoginSession.IsDemo)
+        {
+            ShowError(DemoModeGuard.ReadOnlyMessage);
+            return;
+        }
+
         if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");
@@ -1116,6 +1129,12 @@
 
     private void DeleteEntryById(long foodPhosphorusIntakeId)
     {
+        if (LoginSession.IsDemo)
+        {
+            ShowError(DemoModeGuard.ReadOnlyMessage);
+            return;
+        }
+
         if (!LoginSession.PersonId.HasValue)
             return;
 
@@ -1254,7 +1273,7 @@
                         @if (includeActions)
                         {
                             <td>
-                                <button type="button" class="secondary-link compact-action" @onclick="() => RequestDeleteEntry(item)" @onclick:stopPropagation="true">Delete</button>
+                                <button type="button" class="secondary-link compact-action" @onclick="() => RequestDeleteEntry(item)" @onclick:stopPropagation="true" disabled="@LoginSession.IsDemo">Delete</button>
                             </td>
                         }
                     </tr>

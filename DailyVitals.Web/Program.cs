@@ -31,8 +31,22 @@ builder.Services.AddScoped<RenalDietFoodService>();
 builder.Services.AddScoped<PersonService>();
 builder.Services.AddScoped<LocalLoginService>();
 builder.Services.AddScoped<LocalLoginSession>();
+builder.Services.AddScoped<DemoAccountSeeder>();
 
 var app = builder.Build();
+
+if (builder.Configuration.GetValue("DemoMode:Enabled", false))
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<DemoAccountSeeder>().EnsureSeeded();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "Demo Mode could not be initialized.");
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

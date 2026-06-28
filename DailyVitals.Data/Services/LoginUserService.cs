@@ -33,6 +33,7 @@ namespace DailyVitals.Data.Services
                     password_iterations,
                     password_algorithm,
                     is_active,
+                    is_demo,
                     created_at,
                     updated_at,
                     last_login_at
@@ -68,9 +69,10 @@ namespace DailyVitals.Data.Services
                 PersonId = reader.IsDBNull(1) ? null : reader.GetInt64(1),
                 UserName = reader.GetString(2),
                 IsActive = isActive,
-                CreatedAt = reader.GetDateTime(8),
-                UpdatedAt = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
-                LastLoginAt = reader.IsDBNull(10) ? null : reader.GetDateTime(10)
+                IsDemo = reader.GetBoolean(8),
+                CreatedAt = reader.GetDateTime(9),
+                UpdatedAt = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                LastLoginAt = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
             };
 
             reader.Close();
@@ -148,6 +150,81 @@ namespace DailyVitals.Data.Services
             };
         }
 
+        public LoginUser EnsureDemoLoginUser(long personId, string userName, string password)
+        {
+            if (personId <= 0)
+                throw new InvalidOperationException("Demo person is required.");
+
+            if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+                throw new InvalidOperationException("Demo user name and password are required.");
+
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureLoginUserTable(conn);
+
+            long loginUserId;
+            if (TryGetLoginUserId(conn, userName.Trim(), out var existingLoginUserId))
+            {
+                UpdateLoginUser(conn, existingLoginUserId, password, true);
+
+                const string markDemoSql = @"
+                    UPDATE public.login_user
+                    SET person_id = @person_id,
+                        is_demo = TRUE,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE login_user_id = @login_user_id;";
+
+                using var markDemoCmd = new NpgsqlCommand(markDemoSql, conn);
+                markDemoCmd.Parameters.AddWithValue("person_id", personId);
+                markDemoCmd.Parameters.AddWithValue("login_user_id", existingLoginUserId);
+                markDemoCmd.ExecuteNonQuery();
+                loginUserId = existingLoginUserId;
+            }
+            else
+            {
+                loginUserId = InsertLoginUser(conn, personId, userName, password, true);
+
+                using var markDemoCmd = new NpgsqlCommand(
+                    "UPDATE public.login_user SET is_demo = TRUE WHERE login_user_id = @login_user_id;",
+                    conn);
+                markDemoCmd.Parameters.AddWithValue("login_user_id", loginUserId);
+                markDemoCmd.ExecuteNonQuery();
+            }
+
+            return new LoginUser
+            {
+                LoginUserId = loginUserId,
+                PersonId = personId,
+                UserName = userName.Trim(),
+                IsActive = true,
+                IsDemo = true,
+                CreatedAt = DateTime.Now
+            };
+        }
+
+        public bool IsDemoLogin(string? userName, long? personId)
+        {
+            if (string.IsNullOrWhiteSpace(userName) || !personId.HasValue)
+                return false;
+
+            using var conn = DbConnectionFactory.Create();
+            conn.Open();
+            EnsureLoginUserTable(conn);
+
+            const string sql = @"
+                SELECT COALESCE(is_demo, FALSE)
+                FROM public.login_user
+                WHERE lower(user_name) = lower(@user_name)
+                  AND person_id = @person_id
+                  AND is_active = TRUE
+                LIMIT 1;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("user_name", userName.Trim());
+            cmd.Parameters.AddWithValue("person_id", personId.Value);
+            return cmd.ExecuteScalar() is true;
+        }
+
         public void UpdateUserNameForPerson(long personId, string userName)
         {
             if (personId <= 0)
@@ -159,6 +236,9 @@ namespace DailyVitals.Data.Services
             using var conn = DbConnectionFactory.Create();
             conn.Open();
             EnsureLoginUserTable(conn);
+
+            if (IsDemoPerson(conn, personId))
+                throw new InvalidOperationException("Demo Mode is read-only.");
 
             const string duplicateSql = @"
                 SELECT EXISTS (
@@ -290,7 +370,7 @@ namespace DailyVitals.Data.Services
             EnsureLoginUserTable(conn);
 
             const string sql = @"
-                SELECT lu.login_user_id, lu.person_id, p.person_id
+                SELECT lu.login_user_id, lu.person_id, p.person_id, lu.is_demo
                 FROM public.login_user lu
                 LEFT JOIN public.person p ON p.person_id = lu.person_id
                 WHERE lower(lu.user_name) = lower(@user_name)
@@ -311,6 +391,12 @@ namespace DailyVitals.Data.Services
             if (reader.IsDBNull(1) || reader.IsDBNull(2))
             {
                 failureReason = "This login is not linked to a person record.";
+                return false;
+            }
+
+            if (reader.GetBoolean(3))
+            {
+                failureReason = "The demo account password cannot be changed.";
                 return false;
             }
 
@@ -336,7 +422,7 @@ namespace DailyVitals.Data.Services
             EnsureLoginUserTable(conn);
 
             const string sql = @"
-                SELECT login_user_id, person_id, user_name, is_active, created_at, updated_at, last_login_at
+                SELECT login_user_id, person_id, user_name, is_active, is_demo, created_at, updated_at, last_login_at
                 FROM public.login_user
                 ORDER BY user_name;";
 
@@ -351,9 +437,10 @@ namespace DailyVitals.Data.Services
                     PersonId = reader.IsDBNull(1) ? null : reader.GetInt64(1),
                     UserName = reader.GetString(2),
                     IsActive = reader.GetBoolean(3),
-                    CreatedAt = reader.GetDateTime(4),
-                    UpdatedAt = reader.IsDBNull(5) ? null : reader.GetDateTime(5),
-                    LastLoginAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6)
+                    IsDemo = reader.GetBoolean(4),
+                    CreatedAt = reader.GetDateTime(5),
+                    UpdatedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                    LastLoginAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
                 });
             }
 
@@ -547,6 +634,7 @@ namespace DailyVitals.Data.Services
                     password_iterations int4 NOT NULL,
                     password_algorithm varchar(50) NOT NULL,
                     is_active boolean NOT NULL DEFAULT true,
+                    is_demo boolean NOT NULL DEFAULT false,
                     created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at timestamp NULL,
                     last_login_at timestamp NULL,
@@ -560,6 +648,7 @@ namespace DailyVitals.Data.Services
                     ADD COLUMN IF NOT EXISTS person_id int8 NULL,
                     ADD COLUMN IF NOT EXISTS password_algorithm varchar(50) NOT NULL DEFAULT 'PBKDF2-SHA256',
                     ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true,
+                    ADD COLUMN IF NOT EXISTS is_demo boolean NOT NULL DEFAULT false,
                     ADD COLUMN IF NOT EXISTS created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     ADD COLUMN IF NOT EXISTS updated_at timestamp NULL,
                     ADD COLUMN IF NOT EXISTS last_login_at timestamp NULL;
@@ -598,6 +687,21 @@ namespace DailyVitals.Data.Services
             using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("login_user_id", loginUserId);
             cmd.ExecuteNonQuery();
+        }
+
+        private static bool IsDemoPerson(NpgsqlConnection conn, long personId)
+        {
+            const string sql = @"
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM public.login_user
+                    WHERE person_id = @person_id
+                      AND is_demo = TRUE
+                );";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("person_id", personId);
+            return cmd.ExecuteScalar() is true;
         }
 
         private static string GenerateSalt()

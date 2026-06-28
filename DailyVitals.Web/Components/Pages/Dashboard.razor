@@ -20,7 +20,7 @@
 
 @if (LoginSession.IsSignedIn)
 {
-    <section class="dashboard-shell">
+    <section class="dashboard-shell @(LoginSession.IsDemo ? "demo-mode" : null)">
         <aside class="dashboard-rail" aria-label="Primary navigation">
             <div class="rail-brand">
                 <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
@@ -52,6 +52,7 @@
         </aside>
 
         <main class="dashboard-main">
+            <DemoModeBanner />
             <header class="dashboard-topbar">
                 <div>
                     <p class="eyebrow">DailyVitals Web</p>

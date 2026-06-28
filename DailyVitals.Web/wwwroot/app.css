@@ -557,6 +557,60 @@ h1 {
     padding: 28px;
 }
 
+.demo-login-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border-top: 1px solid #d7e1df;
+    padding-top: 16px;
+}
+
+.demo-login-panel div {
+    min-width: 0;
+}
+
+.demo-login-panel strong,
+.demo-login-panel span {
+    display: block;
+}
+
+.demo-login-panel span {
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+    color: #5d6a68;
+    font-size: 0.9rem;
+}
+
+.demo-mode-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+    border: 1px solid #d4ad50;
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: #fff8e8;
+    color: #594515;
+}
+
+.demo-mode-banner strong {
+    color: #173f4a;
+}
+
+.demo-mode-banner span {
+    font-weight: 700;
+}
+
+.dashboard-shell.demo-mode .primary-action,
+.dashboard-shell.demo-mode .danger-action,
+.dashboard-shell.demo-mode button[type="submit"] {
+    cursor: not-allowed;
+    opacity: 0.52;
+    pointer-events: none;
+}
+
 .dashboard-topbar {
     display: flex;
     align-items: flex-start;

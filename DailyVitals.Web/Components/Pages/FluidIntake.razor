@@ -14,7 +14,7 @@
 
 @if (LoginSession.IsSignedIn)
 {
-    <section class="dashboard-shell">
+    <section class="dashboard-shell @(LoginSession.IsDemo ? "demo-mode" : null)">
         <aside class="dashboard-rail" aria-label="Primary navigation">
             <div class="rail-brand">
                 <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
@@ -46,6 +46,7 @@
         </aside>
 
         <main class="dashboard-main">
+            <DemoModeBanner />
             <header class="dashboard-topbar">
                 <div>
                     <p class="eyebrow">DailyVitals Web</p>
@@ -122,8 +123,8 @@
                         }
 
                         <div class="form-command-row">
-                            <button type="button" class="secondary-link" @onclick="BeginNewEntry">New</button>
-                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(!_editingId.HasValue)">Delete</button>
+                            <button type="button" class="secondary-link" @onclick="BeginNewEntry" disabled="@LoginSession.IsDemo">New</button>
+                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(LoginSession.IsDemo || !_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
 
@@ -334,6 +335,12 @@
 
     private void SaveEntry()
     {
+        if (LoginSession.IsDemo)
+        {
+            ShowError(DemoModeGuard.ReadOnlyMessage);
+            return;
+        }
+
         _showDeleteConfirm = false;
 
         if (!LoginSession.PersonId.HasValue)
@@ -417,6 +424,12 @@
 
     private void DeleteSelected()
     {
+        if (LoginSession.IsDemo)
+        {
+            ShowError(DemoModeGuard.ReadOnlyMessage);
+            return;
+        }
+
         if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
             return;
 
