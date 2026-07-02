@@ -26,7 +26,8 @@ namespace DailyVitals.Data.Services
             string? aiProvider,
             string? aiConfidence,
             string? sourceNotes,
-            string enteredBy)
+            string enteredBy,
+            string? mealType = null)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
@@ -57,6 +58,7 @@ namespace DailyVitals.Data.Services
                         fluid_ml,
                         binders,
                         consumed_at,
+                        meal_type,
                         notes,
                         serving_description,
                         estimated_by_ai,
@@ -76,6 +78,7 @@ namespace DailyVitals.Data.Services
                         @p_fluid_ml,
                         @p_binders,
                         COALESCE(@p_consumed_at, CURRENT_TIMESTAMP),
+                        @p_meal_type,
                         @p_notes,
                         @p_serving_description,
                         COALESCE(@p_estimated_by_ai, false),
@@ -108,6 +111,7 @@ namespace DailyVitals.Data.Services
                             'fluid_ml', @p_fluid_ml,
                             'binders', @p_binders,
                             'consumed_at', @p_consumed_at,
+                            'meal_type', @p_meal_type,
                             'notes', @p_notes,
                             'serving_description', @p_serving_description,
                             'estimated_by_ai', @p_estimated_by_ai,
@@ -138,6 +142,7 @@ namespace DailyVitals.Data.Services
                 (object?)fluidMl ?? DBNull.Value;
             cmd.Parameters.AddWithValue("p_binders", binders);
             cmd.Parameters.AddWithValue("p_consumed_at", consumedAt);
+            cmd.Parameters.AddWithValue("p_meal_type", (object?)mealType ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_serving_description", (object?)servingDescription ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_estimated_by_ai", estimatedByAi);
@@ -172,7 +177,8 @@ namespace DailyVitals.Data.Services
             string? aiProvider,
             string? aiConfidence,
             string? sourceNotes,
-            string enteredBy)
+            string enteredBy,
+            string? mealType = null)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
@@ -203,6 +209,7 @@ namespace DailyVitals.Data.Services
                         fluid_ml = @p_fluid_ml,
                         binders = @p_binders,
                         consumed_at = COALESCE(@p_consumed_at, CURRENT_TIMESTAMP),
+                        meal_type = @p_meal_type,
                         notes = @p_notes,
                         serving_description = @p_serving_description,
                         estimated_by_ai = COALESCE(@p_estimated_by_ai, false),
@@ -237,6 +244,7 @@ namespace DailyVitals.Data.Services
                             'fluid_ml', @p_fluid_ml,
                             'binders', @p_binders,
                             'consumed_at', @p_consumed_at,
+                            'meal_type', @p_meal_type,
                             'notes', @p_notes,
                             'serving_description', @p_serving_description,
                             'estimated_by_ai', @p_estimated_by_ai,
@@ -268,6 +276,7 @@ namespace DailyVitals.Data.Services
                 (object?)fluidMl ?? DBNull.Value;
             cmd.Parameters.AddWithValue("p_binders", binders);
             cmd.Parameters.AddWithValue("p_consumed_at", consumedAt);
+            cmd.Parameters.AddWithValue("p_meal_type", (object?)mealType ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_notes", (object?)notes ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_serving_description", (object?)servingDescription ?? DBNull.Value);
             cmd.Parameters.AddWithValue("p_estimated_by_ai", estimatedByAi);
@@ -311,7 +320,8 @@ namespace DailyVitals.Data.Services
                     i.created_at,
                     i.updated_at,
                     i.food_phosphorus_food_id,
-                    n.note_text
+                    n.note_text,
+                    i.meal_type
                 FROM food_phosphorus_intake i
                 LEFT JOIN food_phosphorus_food f
                     ON f.food_phosphorus_food_id = i.food_phosphorus_food_id
@@ -349,7 +359,8 @@ namespace DailyVitals.Data.Services
                     CreatedAt = reader.GetDateTime(17),
                     UpdatedAt = reader.IsDBNull(18) ? null : reader.GetDateTime(18),
                     FoodPhosphorusFoodId = reader.IsDBNull(19) ? null : reader.GetInt64(19),
-                    FoodNotes = reader.IsDBNull(20) ? null : reader.GetString(20)
+                    FoodNotes = reader.IsDBNull(20) ? null : reader.GetString(20),
+                    MealType = reader.IsDBNull(21) ? null : reader.GetString(21)
                 });
             }
 

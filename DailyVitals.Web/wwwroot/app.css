@@ -2217,6 +2217,13 @@ h1 {
     margin-top: 16px;
 }
 
+.meal-sodium-note {
+    margin: 16px 0 0;
+    color: #5d6a68;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
 .report-metric-list {
     display: grid;
     gap: 10px;

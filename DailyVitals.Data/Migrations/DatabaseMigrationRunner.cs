@@ -104,8 +104,8 @@ public sealed class DatabaseMigrationRunner
         if (start < 0)
             throw new InvalidOperationException("The core baseline marker was not found.");
 
-        sql = EarlyTrigger.Replace(sql[start..], string.Empty);
-        sql += """
+        var coreSql = EarlyTrigger.Replace(sql[start..], string.Empty);
+        var triggerSql = """
 
             DROP TRIGGER IF EXISTS trg_medication_updated ON public.medication;
             CREATE TRIGGER trg_medication_updated
@@ -122,14 +122,32 @@ public sealed class DatabaseMigrationRunner
                 AFTER INSERT ON public.vital_alert
                 FOR EACH ROW EXECUTE FUNCTION public.evaluate_severity_escalation();
             """;
+        sql = coreSql + triggerSql;
 
-        return new Migration(BaselineId, path, sql, ComputeChecksum(sql), IsBaseline: true);
+        var compatibleChecksums = BuildCompatibleChecksums(sql);
+        compatibleChecksums.Add(ComputeRawChecksum(coreSql + NormalizeLineEndings(triggerSql)));
+        compatibleChecksums.Add(ComputeRawChecksum(
+            NormalizeLineEndings(coreSql) + ToCrLf(triggerSql)));
+
+        return new Migration(
+            BaselineId,
+            path,
+            sql,
+            ComputeChecksum(sql),
+            compatibleChecksums,
+            IsBaseline: true);
     }
 
     private static Migration CreateMigration(string id, string path)
     {
         var sql = ExpandIncludes(path, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-        return new Migration(id, path, sql, ComputeChecksum(sql), IsBaseline: false);
+        return new Migration(
+            id,
+            path,
+            sql,
+            ComputeChecksum(sql),
+            BuildCompatibleChecksums(sql),
+            IsBaseline: false);
     }
 
     private static string ExpandIncludes(string path, HashSet<string> includeStack)
@@ -230,7 +248,7 @@ public sealed class DatabaseMigrationRunner
         foreach (var migration in migrations)
         {
             if (applied.TryGetValue(migration.Id, out var checksum) &&
-                !string.Equals(checksum, migration.Checksum, StringComparison.OrdinalIgnoreCase))
+                !ChecksumMatches(migration, checksum))
             {
                 throw new InvalidOperationException(
                     $"Applied migration '{migration.Id}' no longer matches its deployed SQL. " +
@@ -240,6 +258,31 @@ public sealed class DatabaseMigrationRunner
     }
 
     private static string ComputeChecksum(string sql) =>
+        ComputeRawChecksum(NormalizeLineEndings(sql));
+
+    private static bool ChecksumMatches(Migration migration, string appliedChecksum)
+        => migration.CompatibleChecksums.Contains(appliedChecksum);
+
+    private static HashSet<string> BuildCompatibleChecksums(string sql)
+    {
+        // Checksums created before line endings were normalized may contain either
+        // LF or CRLF. Accept only those byte-equivalent variants so real SQL edits
+        // continue to fail validation.
+        return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ComputeChecksum(sql),
+            ComputeRawChecksum(sql),
+            ComputeRawChecksum(ToCrLf(sql))
+        };
+    }
+
+    private static string NormalizeLineEndings(string sql) =>
+        sql.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
+    private static string ToCrLf(string sql) =>
+        NormalizeLineEndings(sql).Replace("\n", "\r\n", StringComparison.Ordinal);
+
+    private static string ComputeRawChecksum(string sql) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sql))).ToLowerInvariant();
 
     private static async Task AcquireLockAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
@@ -263,5 +306,6 @@ public sealed class DatabaseMigrationRunner
         string SourcePath,
         string Sql,
         string Checksum,
+        IReadOnlySet<string> CompatibleChecksums,
         bool IsBaseline);
 }

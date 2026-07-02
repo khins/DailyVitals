@@ -286,7 +286,7 @@ public sealed class DemoAccountSeeder
             INSERT INTO public.food_phosphorus_intake (
                 person_id, food_name, phosphorus_mg, calories, sodium_mg,
                 protein_g, potassium_mg, fluid_ml, binders, consumed_at,
-                notes, serving_description, estimated_by_ai, ai_provider,
+                meal_type, notes, serving_description, estimated_by_ai, ai_provider,
                 ai_confidence, source_notes
             )
             SELECT
@@ -300,7 +300,8 @@ public sealed class DemoAccountSeeder
                 meal.fluid_ml,
                 meal.binders,
                 CURRENT_DATE - day_number + meal.meal_time,
-                meal.notes,
+                meal.meal_type,
+                meal.meal_type,
                 meal.serving,
                 TRUE,
                 'OpenAI',
@@ -311,12 +312,12 @@ public sealed class DemoAccountSeeder
                 ('Oatmeal with blueberries', 120, 310, 180, 9.0, 280, 180, 0, TIME '08:00', 'Breakfast', '1 bowl'),
                 ('Turkey sandwich', 285, 520, 1050, 30.0, 510, 0, 1, TIME '12:30', 'Lunch', '1 sandwich'),
                 ('Grilled chicken with rice', 330, 610, 640, 42.0, 690, 0, 2, TIME '18:15', 'Dinner', '1 plate')
-            ) AS meal(food_name, phosphorus_mg, calories, sodium_mg, protein_g, potassium_mg, fluid_ml, binders, meal_time, notes, serving);
+            ) AS meal(food_name, phosphorus_mg, calories, sodium_mg, protein_g, potassium_mg, fluid_ml, binders, meal_time, meal_type, serving);
 
             INSERT INTO public.food_phosphorus_intake (
                 person_id, food_name, phosphorus_mg, calories, sodium_mg,
                 protein_g, potassium_mg, fluid_ml, binders, consumed_at,
-                notes, serving_description, estimated_by_ai, ai_provider,
+                meal_type, notes, serving_description, estimated_by_ai, ai_provider,
                 ai_confidence, source_notes
             )
             SELECT
@@ -330,6 +331,7 @@ public sealed class DemoAccountSeeder
                 240,
                 1,
                 CURRENT_DATE - day_number + TIME '12:45',
+                'Lunch',
                 'Higher sodium lunch item',
                 '1 cup',
                 TRUE,
