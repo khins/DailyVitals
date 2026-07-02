@@ -240,6 +240,36 @@
                 <article class="dashboard-card report-card">
                     <div class="card-heading">
                         <div>
+                            <span>Nutrition Pattern</span>
+                            <h2>Meal Sodium Analysis</h2>
+                        </div>
+                        <strong>Last 30 days</strong>
+                    </div>
+                    @if (_nutritionTotalSodium <= 0)
+                    {
+                        <p class="meal-sodium-note">Add foods with sodium values to see which meal periods contribute the most.</p>
+                    }
+                    else
+                    {
+                        <dl class="report-metric-list">
+                            @foreach (var meal in _mealSodiumSummaries)
+                            {
+                                <div>
+                                    <dt>@meal.Name</dt>
+                                    <dd>@meal.AverageMg.ToString("N0") mg (@meal.Percentage.ToString("N0")%)</dd>
+                                </div>
+                            }
+                        </dl>
+                        <p class="meal-sodium-note">
+                            Average per logged day using the meal selected on each food entry.
+                            Edit older entries marked Unassigned to include them accurately.
+                        </p>
+                    }
+                </article>
+
+                <article class="dashboard-card report-card">
+                    <div class="card-heading">
+                        <div>
                             <span>Phosphorus Goal Progress</span>
                             <h2>@PhosphorusAverageText</h2>
                         </div>
@@ -522,6 +552,7 @@
     private DateTime? _sodiumLowestDate;
     private int? _sodiumLowestMg;
     private readonly List<NutrientSource> _topSodiumSources = [];
+    private readonly List<MealSodiumSummary> _mealSodiumSummaries = [];
     private int _phosphorusTargetMg = 1000;
     private decimal _phosphorusAverage;
     private decimal _phosphorusAverageExcess;
@@ -929,6 +960,7 @@
         _sodiumDaysWithinGoal = daily.Count(x => x.Sodium <= sodiumLimit);
         _sodiumAverage = AveragePerActiveDay(_nutritionTotalSodium);
         _sodiumAverageExcess = Math.Max(0, _sodiumAverage - sodiumLimit);
+        BuildMealSodiumReport();
 
         var highestSodiumDay = daily
             .OrderByDescending(x => x.Sodium)
@@ -1049,6 +1081,40 @@
             .ThenBy(x => x.FoodName)
             .Take(4));
     }
+
+    private void BuildMealSodiumReport()
+    {
+        var totals = _recentNutrition
+            .Where(x => (x.SodiumMg ?? 0) > 0)
+            .GroupBy(x => NormalizeMealType(x.MealType))
+            .ToDictionary(group => group.Key, group => group.Sum(x => x.SodiumMg ?? 0));
+
+        _mealSodiumSummaries.Clear();
+        foreach (var name in new[] { "Breakfast", "Lunch", "Dinner", "Snacks", "Unassigned" })
+        {
+            var total = totals.GetValueOrDefault(name);
+            if (name == "Unassigned" && total == 0)
+                continue;
+
+            var percentage = _nutritionTotalSodium <= 0
+                ? 0
+                : Math.Round(total / _nutritionTotalSodium * 100m);
+
+            _mealSodiumSummaries.Add(new MealSodiumSummary(
+                name,
+                AveragePerActiveDay(total),
+                percentage));
+        }
+    }
+
+    private static string NormalizeMealType(string? mealType) => mealType switch
+    {
+        "Breakfast" => "Breakfast",
+        "Lunch" => "Lunch",
+        "Dinner" => "Dinner",
+        "Snack" => "Snacks",
+        _ => "Unassigned"
+    };
 
     private void BuildExerciseReport()
     {
@@ -1178,6 +1244,8 @@
     private sealed record ReportNote(string Title, string Detail);
 
     private sealed record NutrientSource(string FoodName, decimal Amount);
+
+    private sealed record MealSodiumSummary(string Name, decimal AverageMg, decimal Percentage);
 
     private sealed record NutrientReport(
         string Title,

@@ -188,6 +188,19 @@
                             <input id="consumed-at" class="form-input" type="datetime-local" value="@_consumedAtText" @onchange="SetConsumedAt" />
                         </div>
 
+                        <div class="field-group">
+                            <label for="meal-type">Meal</label>
+                            <InputSelect id="meal-type" class="form-input" @bind-Value="_form.MealType">
+                                <option value="">Select a meal</option>
+                                <option value="Breakfast">Breakfast</option>
+                                <option value="Lunch">Lunch</option>
+                                <option value="Dinner">Dinner</option>
+                                <option value="Snack">Snack</option>
+                            </InputSelect>
+                            <ValidationMessage For="() => _form.MealType" />
+                            <p class="field-hint">Used by meal-based nutrition reports; it is not inferred from entry time.</p>
+                        </div>
+
                         <div class="food-lookup-row">
                             <div class="field-group">
                                 <label for="food-name">Food Item</label>
@@ -425,6 +438,7 @@
                                 <thead>
                                     <tr>
                                         <th>Date</th>
+                                        <th>Meal</th>
                                         <th>Food Item</th>
                                         <th>Phos</th>
                                         <th>Calories</th>
@@ -444,6 +458,7 @@
                                     {
                                         <tr class="@(item.FoodPhosphorusIntakeId == _editingId ? "is-selected" : null)" @onclick="() => SelectEntryFromHistoryModal(item)">
                                             <td>@item.ConsumedAt.ToString("M/d/yyyy")</td>
+                                            <td>@DisplayValue(item.MealType)</td>
                                             <td>@item.FoodName</td>
                                             <td>@item.PhosphorusMg</td>
                                             <td>@item.Calories</td>
@@ -745,6 +760,7 @@
         _activeSection = NutritionSection.AddFood;
         _editingId = item.FoodPhosphorusIntakeId;
         _editingConsumedAt = item.ConsumedAt;
+        _form.MealType = item.MealType;
         _form.FoodName = item.FoodName;
         _form.PhosphorusMg = item.PhosphorusMg;
         _form.Calories = item.Calories;
@@ -896,6 +912,7 @@
     {
         _editingId = null;
         _editingConsumedAt = null;
+        _form.MealType = null;
         _form.FoodName = string.Empty;
         _form.PhosphorusMg = null;
         _form.Calories = null;
@@ -1044,7 +1061,8 @@
                     _form.EstimatedByAi ? "OpenAI" : null,
                     _form.AiConfidence,
                     _form.SourceNotes,
-                    LoginSession.UserName ?? string.Empty);
+                    LoginSession.UserName ?? string.Empty,
+                    _form.MealType);
             }
             else
             {
@@ -1066,7 +1084,8 @@
                     _form.EstimatedByAi ? "OpenAI" : null,
                     _form.AiConfidence,
                     _form.SourceNotes,
-                    LoginSession.UserName ?? string.Empty);
+                    LoginSession.UserName ?? string.Empty,
+                    _form.MealType);
             }
 
             LoadHistory();
@@ -1232,6 +1251,7 @@
             <thead>
                 <tr>
                     <th>Date</th>
+                    <th>Meal</th>
                     <th>Food Item</th>
                     <th>Phos</th>
                     <th>Calories</th>
@@ -1257,6 +1277,7 @@
                 {
                     <tr class="@(item.FoodPhosphorusIntakeId == _editingId ? "is-selected" : null)" @onclick="() => SelectEntry(item)">
                         <td>@item.ConsumedAt.ToString("M/d/yyyy h:mm tt")</td>
+                        <td>@DisplayValue(item.MealType)</td>
                         <td>@item.FoodName</td>
                         <td>@item.PhosphorusMg</td>
                         <td>@item.Calories</td>
@@ -1312,6 +1333,9 @@
 
     private sealed class NutritionForm
     {
+        [Required(ErrorMessage = "Select a meal.")]
+        public string? MealType { get; set; }
+
         [Required]
         public string FoodName { get; set; } = string.Empty;
 
