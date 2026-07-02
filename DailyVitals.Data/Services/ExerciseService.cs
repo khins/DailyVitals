@@ -58,7 +58,6 @@ namespace DailyVitals.Data.Services
             {
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
-                EnsureExerciseSessionColumns(conn);
 
                 using var cmd = new NpgsqlCommand(
                     "CALL sp_insert_exercise_session(" +
@@ -89,7 +88,6 @@ namespace DailyVitals.Data.Services
             {
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
-                EnsureExerciseSessionColumns(conn);
 
                 using var cmd = new NpgsqlCommand(
                     "CALL sp_insert_exercise_session(" +
@@ -192,7 +190,6 @@ namespace DailyVitals.Data.Services
 
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
-                EnsureExerciseSessionColumns(conn);
 
                 const string sql = @"
                     SELECT
@@ -254,7 +251,6 @@ namespace DailyVitals.Data.Services
             {
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
-                EnsureExerciseSessionColumns(conn);
 
                 const string sql = @"
                     UPDATE public.exercise_session
@@ -296,7 +292,6 @@ namespace DailyVitals.Data.Services
             {
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
-                EnsureExerciseSessionColumns(conn);
 
                 const string sql = @"
                     UPDATE public.exercise_session
@@ -343,7 +338,6 @@ namespace DailyVitals.Data.Services
             {
                 using var conn = DbConnectionFactory.Create();
                 conn.Open();
-                EnsureExerciseSessionColumns(conn);
 
                 const string sql = @"
                     DELETE FROM public.exercise_session
@@ -392,17 +386,6 @@ namespace DailyVitals.Data.Services
                 cmd.Parameters.AddWithValue("person_id", personId);
 
                 return Convert.ToInt32(cmd.ExecuteScalar());
-            }
-
-            private static void EnsureExerciseSessionColumns(NpgsqlConnection conn)
-            {
-                const string sql = @"
-                    ALTER TABLE public.exercise_session
-                        ADD COLUMN IF NOT EXISTS created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;";
-
-                using var cmd = new NpgsqlCommand(sql, conn);
-                cmd.ExecuteNonQuery();
             }
 
             private static string NormalizeExerciseName(string exerciseName)

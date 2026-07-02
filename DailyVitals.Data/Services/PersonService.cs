@@ -14,7 +14,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsurePersonColumns(conn);
 
             const string sql = @"
                 SELECT
@@ -68,7 +67,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsurePersonColumns(conn);
 
             const string sql = @"
                 SELECT
@@ -120,7 +118,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsurePersonColumns(conn);
 
             return PersonExists(conn, firstName, lastName, birthDate, heightFt);
         }
@@ -132,7 +129,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsurePersonColumns(conn);
 
             const string sql = @"
                 SELECT EXISTS (
@@ -186,7 +182,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsurePersonColumns(conn);
 
             if (birthDate.HasValue &&
                 heightFt.HasValue &&
@@ -247,7 +242,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsurePersonColumns(conn);
 
             const string sql = @"
                 UPDATE public.person
@@ -281,7 +275,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsurePersonColumns(conn);
 
             var blockers = GetPersonDeleteBlockers(conn, personId);
             if (blockers.Count > 0)
@@ -337,77 +330,6 @@ namespace DailyVitals.Data.Services
             using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("table_name", $"public.{tableName}");
             return cmd.ExecuteScalar() is true;
-        }
-
-        private static void EnsurePersonColumns(NpgsqlConnection conn)
-        {
-            const string sql = @"
-                ALTER TABLE public.person
-                    ADD COLUMN IF NOT EXISTS height_ft numeric(5, 2) NULL,
-                    ADD COLUMN IF NOT EXISTS birth_date date NULL,
-                    ADD COLUMN IF NOT EXISTS gender text NULL,
-                    ADD COLUMN IF NOT EXISTS is_diabetic boolean NOT NULL DEFAULT false,
-                    ADD COLUMN IF NOT EXISTS glucose_target_mg_dl int4 NULL,
-                    ADD COLUMN IF NOT EXISTS track_kidney_labs boolean NOT NULL DEFAULT false,
-                    ADD COLUMN IF NOT EXISTS track_weight_loss boolean NOT NULL DEFAULT false,
-                    ADD COLUMN IF NOT EXISTS created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
-
-                UPDATE public.person p
-                SET height_ft = latest.height_ft
-                FROM (
-                    SELECT DISTINCT ON (person_id)
-                        person_id,
-                        height_ft
-                    FROM public.weight
-                    WHERE height_ft IS NOT NULL
-                    ORDER BY person_id, reading_time DESC, weight_id DESC
-                ) latest
-                WHERE p.person_id = latest.person_id
-                  AND p.height_ft IS NULL;
-
-                DO $$
-                DECLARE
-                    child_table text;
-                    constraint_name text;
-                BEGIN
-                    FOREACH child_table IN ARRAY ARRAY[
-                        'blood_pressure',
-                        'blood_glucose',
-                        'weight',
-                        'kidney_lab_result',
-                        'food_phosphorus_intake',
-                        'food_phosphorus_food',
-                        'exercise_session',
-                        'medication',
-                        'nutrition_goal',
-                        'renal_diet_food'
-                    ]
-                    LOOP
-                        constraint_name := child_table || '_person_id_fkey';
-
-                        IF to_regclass('public.' || child_table) IS NOT NULL
-                           AND NOT EXISTS (
-                               SELECT 1
-                               FROM pg_constraint c
-                               JOIN pg_class t ON t.oid = c.conrelid
-                               JOIN pg_namespace n ON n.oid = t.relnamespace
-                               WHERE n.nspname = 'public'
-                                 AND t.relname = child_table
-                                 AND c.conname = constraint_name
-                           )
-                        THEN
-                            EXECUTE format(
-                                'ALTER TABLE public.%I ADD CONSTRAINT %I FOREIGN KEY (person_id) REFERENCES public.person(person_id) ON DELETE RESTRICT NOT VALID',
-                                child_table,
-                                constraint_name
-                            );
-                        END IF;
-                    END LOOP;
-                END $$;";
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.ExecuteNonQuery();
         }
 
     }

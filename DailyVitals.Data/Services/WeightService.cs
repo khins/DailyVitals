@@ -19,7 +19,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureWeightColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_insert_weight(@p_person_id, @p_weight_value, @p_weight_unit, @p_reading_time, @p_notes, @p_entered_by)",
@@ -46,7 +45,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureWeightColumns(conn);
 
             const string sql = @"
             SELECT
@@ -92,7 +90,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureWeightColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_delete_weight(@p_weight_id, @p_entered_by)",
@@ -108,7 +105,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureWeightColumns(conn);
 
             const string sql = @"
                 DELETE FROM public.weight
@@ -133,7 +129,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureWeightColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_update_weight(@id,@val,@unit,@time,@notes,@by)", conn);
@@ -160,7 +155,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureWeightColumns(conn);
 
             const string sql = @"
                 UPDATE public.weight
@@ -187,7 +181,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureWeightColumns(conn);
 
             const string sql = @"
                     SELECT
@@ -234,7 +227,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureWeightColumns(conn);
 
             const string sql = @"
                     SELECT reading_time, weight_value
@@ -261,31 +253,6 @@ namespace DailyVitals.Data.Services
             // Reverse so chart draws left → right chronologically
             list.Reverse();
             return list;
-        }
-
-        private static void EnsureWeightColumns(NpgsqlConnection conn)
-        {
-            const string sql = @"
-                ALTER TABLE public.weight
-                    ADD COLUMN IF NOT EXISTS created_at timestamp NULL,
-                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
-
-                UPDATE public.weight
-                SET created_at = COALESCE(created_at, reading_time, CURRENT_TIMESTAMP)
-                WHERE created_at IS NULL;
-
-                UPDATE public.weight
-                SET updated_at = COALESCE(updated_at, created_at, reading_time, CURRENT_TIMESTAMP)
-                WHERE updated_at IS NULL;
-
-                ALTER TABLE public.weight
-                    ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP,
-                    ALTER COLUMN created_at SET NOT NULL,
-                    ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP,
-                    ALTER COLUMN updated_at SET NOT NULL;";
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.ExecuteNonQuery();
         }
 
         private static void SetUpdatedAt(NpgsqlConnection conn, long weightId)

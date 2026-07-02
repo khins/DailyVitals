@@ -33,9 +33,26 @@ Some newer services create supporting tables or columns when first used. This be
 
 ## Local Configuration
 
-The shared data layer reads a connection string named `DailyVitals` through `System.Configuration.ConfigurationManager`. Keep machine-specific values out of commits.
+Keep machine-specific values out of commits. The web and desktop clients obtain the
+same named connection string through different configuration systems.
 
-Use this shape in the client project's local `App.config`, substituting your own values:
+### Web client
+
+Store the local web connection string with .NET user-secrets:
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DailyVitals" `
+  "Host=localhost;Port=5432;Database=DailyVitals;Username=postgres;Password=YOUR_LOCAL_PASSWORD" `
+  --project DailyVitals.Web\DailyVitals.Web.csproj
+```
+
+Deployment environments can instead provide either
+`ConnectionStrings__DailyVitals` or `DAILYVITALS_CONNECTION_STRING`.
+
+### WPF client
+
+Create a machine-local `DailyVitalsApp\App.config` using
+`DailyVitalsApp\App.config.example` as the template:
 
 ```xml
 <?xml version="1.0" encoding="utf-8" ?>
@@ -50,14 +67,25 @@ Use this shape in the client project's local `App.config`, substituting your own
 </configuration>
 ```
 
-Prefer an environment variable for the OpenAI key:
+Store the web client's OpenAI key with .NET user-secrets:
 
 ```powershell
-$env:OPENAI_API_KEY = "YOUR_API_KEY"
-$env:OPENAI_MODEL = "gpt-5.4-mini"
+dotnet user-secrets set "OpenAI:ApiKey" "YOUR_API_KEY" `
+  --project DailyVitals.Web\DailyVitals.Web.csproj
 ```
 
-The code also supports an `OpenAiApiKey` application setting for local use, but API keys must never be committed.
+For the WPF client, set the supported Windows user environment variable and restart
+the client after changing it:
+
+```powershell
+[Environment]::SetEnvironmentVariable("OPENAI_API_KEY", "YOUR_API_KEY", "User")
+[Environment]::SetEnvironmentVariable("OPENAI_MODEL", "gpt-5.4-mini", "User")
+```
+
+The desktop code retains an `OpenAiApiKey` application-setting fallback, but API
+keys must never be committed. Both client `App.config` files are ignored by Git;
+only the safe example belongs in source control. Do not store API keys in the
+`database` folder or another project file.
 
 The web login can be seeded for local development through `DailyVitalsLogin:UserName` and `DailyVitalsLogin:Password` configuration. Use development-only values and do not carry this fallback into production.
 
@@ -75,6 +103,16 @@ dotnet build DailyVitals.Web\DailyVitals.Web.csproj -o "$env:TEMP\DailyVitalsWeb
 
 ## Run the Web Client
 
+Apply migrations explicitly when you want to test the same workflow used by a
+deployment:
+
+```powershell
+dotnet run --project DailyVitals.Web\DailyVitals.Web.csproj -- --migrate-only
+```
+
+Development also sets `DatabaseMigrations:RunOnStartup` to `true`, so a normal run
+applies any pending migration before demo seeding and before accepting requests.
+
 ```powershell
 dotnet run --project DailyVitals.Web\DailyVitals.Web.csproj
 ```
@@ -82,6 +120,9 @@ dotnet run --project DailyVitals.Web\DailyVitals.Web.csproj
 Use the local URL printed by ASP.NET Core. Sign in with the development login connected to your local person record.
 
 ## Run the WPF Client
+
+Run the web project's migrate-only command first. Desktop data services no longer
+create or alter tables during user operations.
 
 ```powershell
 dotnet run --project DailyVitalsApp\DailyVitals.App.csproj

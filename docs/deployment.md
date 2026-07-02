@@ -40,7 +40,46 @@ Use environment-specific secret management for:
 - Production identity-provider credentials
 - Encryption or key-store credentials
 
-Do not deploy development login fallback values or local `App.config` secrets.
+Provide the PostgreSQL connection with the standard ASP.NET Core environment
+variable `ConnectionStrings__DailyVitals` or the deployment-specific alias
+`DAILYVITALS_CONNECTION_STRING`. The web project does not package or require an
+`App.config` file.
+
+Provide the OpenAI key through the hosting platform's secret manager using
+`OpenAI__ApiKey` or `OPENAI_API_KEY`. `OpenAI__Model` or `OPENAI_MODEL` can override
+the non-secret model default. Never copy a developer user-secrets file or a local
+environment file into the deployment artifact.
+
+Do not deploy development login fallback values or local `App.config` secrets. The
+WPF `App.config` remains machine-local and must never be copied into a web artifact.
+The repository `.dockerignore` provides a second boundary for local config files,
+user-secrets files, environment files, logs, and build output. Keep those exclusions
+when changing the container build context.
+
+## Data Protection Keys
+
+Production refuses to start until durable, encrypted ASP.NET Core Data Protection
+storage is configured. Provide these settings through the hosting platform:
+
+- `DataProtection__KeysPath`: an absolute path on a persistent volume, such as
+  `/var/lib/dailyvitals/keys` or `D:\DailyVitals\Keys`.
+- `DataProtection__CertificatePath`: an absolute path to a mounted PKCS#12 (`.pfx`)
+  certificate containing its private key.
+- `DataProtection__CertificatePassword`: the certificate password, supplied by the
+  platform's secret manager (omit only when the certificate has no password).
+- `DataProtection__ApplicationName`: optional isolation name; keep the default
+  `DailyVitals.Web` identical across all replicas.
+
+Mount the key directory read/write and the certificate read-only. Both must remain
+available across restarts and deployments; all replicas must share the same key
+directory, certificate, password, and application name. Back up the key directory
+and certificate separately. Losing either one invalidates existing authentication
+cookies and can make other protected payloads unreadable.
+
+After deployment, sign in, restart or replace the application instance, and verify
+that the same authentication cookie remains valid. Also confirm that new key-ring
+XML files are present on the persistent volume and contain encrypted certificate
+payloads rather than plaintext master keys.
 
 ## Database Release Process
 
@@ -48,21 +87,34 @@ Before application rollout:
 
 1. Back up the target database.
 2. Validate migrations against a production-like copy.
-3. Apply pending migrations once through a controlled deployment step.
+3. From the published application directory, apply pending migrations once:
+
+   ```powershell
+   dotnet DailyVitals.Web.dll --migrate-only
+   ```
+
 4. Verify indexes and expected columns.
 5. Start the application only after migration success.
 6. Run person-scoped smoke tests using synthetic or approved test data.
 
-Runtime table creation should be removed or disabled once migrations become authoritative.
+The runner records the migration ID, SHA-256 checksum, and application time in
+`public.dailyvitals_schema_migration`. It serializes concurrent migration attempts
+with a PostgreSQL advisory lock and applies each migration in its own transaction.
+Never edit an applied migration; add a new ordered SQL file under
+`database/migrations` instead.
+
+Production defaults to `DatabaseMigrations:RunOnStartup=false`. Startup fails with
+the pending migration IDs when the deployment step was skipped. Development enables
+automatic migration application in `appsettings.Development.json`.
 
 ## Production Checklist
 
 ### Identity and authorization
 
-- Replace local fallback authentication.
-- Use secure, HTTP-only server authentication cookies or an approved identity provider.
-- Enforce authorization for every person-owned operation.
-- Configure lockout, session revocation, and audit events.
+- DailyVitals.Web uses encrypted, HTTP-only ASP.NET Core authentication cookies with
+  server-issued person and demo claims.
+- Health-data routes require an authenticated principal.
+- Before using real health data, add account lockout, session revocation, and audit events.
 
 ### Network and storage
 

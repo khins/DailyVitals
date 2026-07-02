@@ -13,7 +13,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureKidneyLabResultColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_insert_kidney_lab_result(" +
@@ -35,7 +34,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureKidneyLabResultColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_update_kidney_lab_result(" +
@@ -54,7 +52,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureKidneyLabResultColumns(conn);
 
             const string sql = @"
                 WITH updated AS (
@@ -129,7 +126,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureKidneyLabResultColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_delete_kidney_lab_result(@p_kidney_lab_result_id, @p_entered_by)",
@@ -144,7 +140,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureKidneyLabResultColumns(conn);
 
             const string sql = @"
                 DELETE FROM public.kidney_lab_result
@@ -164,7 +159,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureKidneyLabResultColumns(conn);
 
             const string sql = @"
                 SELECT kidney_lab_result_id,
@@ -256,18 +250,5 @@ namespace DailyVitals.Data.Services
         private static DateTime NormalizeMonth(DateTime value) =>
             new(value.Year, value.Month, 1);
 
-        private static void EnsureKidneyLabResultColumns(NpgsqlConnection conn)
-        {
-            const string sql = @"
-                ALTER TABLE public.kidney_lab_result
-                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
-
-                UPDATE public.kidney_lab_result
-                SET updated_at = created_at
-                WHERE updated_at IS NULL;";
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.ExecuteNonQuery();
-        }
     }
 }

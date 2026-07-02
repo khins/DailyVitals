@@ -1,20 +1,41 @@
 using DailyVitals.Web.Components;
+using DailyVitals.Web.Configuration;
 using DailyVitals.Web.Services;
+using DailyVitals.Data.Configuration;
+using DailyVitals.Data.Migrations;
 using DailyVitals.Data.Services;
 using DailyVitals.Data.Services.DailyVitals.App.Services;
-using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "Keys");
-Directory.CreateDirectory(dataProtectionKeysPath);
+DbConnectionFactory.Configure(builder.Configuration.GetConnectionString("DailyVitals"));
+OpenAiConfiguration.Configure(
+    builder.Configuration["OpenAI:ApiKey"],
+    builder.Configuration["OpenAI:Model"]);
 
 // Add services to the container.
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+builder.Services.AddDailyVitalsDataProtection(builder.Configuration, builder.Environment);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/";
+        options.AccessDeniedPath = "/";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
+        options.SlidingExpiration = true;
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<LoginUserService>();
 builder.Services.AddScoped<BloodPressureService>();
 builder.Services.AddScoped<BloodGlucoseService>();
@@ -31,9 +52,38 @@ builder.Services.AddScoped<RenalDietFoodService>();
 builder.Services.AddScoped<PersonService>();
 builder.Services.AddScoped<LocalLoginService>();
 builder.Services.AddScoped<LocalLoginSession>();
+builder.Services.AddSingleton<AuthTicketService>();
 builder.Services.AddScoped<DemoAccountSeeder>();
 
 var app = builder.Build();
+
+var migrationRunner = new DatabaseMigrationRunner();
+if (args.Contains("--migrate-only", StringComparer.OrdinalIgnoreCase))
+{
+    var appliedMigrations = await migrationRunner.RunAsync();
+    app.Logger.LogInformation(
+        "Database migration completed. Applied {MigrationCount} migration(s): {MigrationIds}",
+        appliedMigrations.Count,
+        string.Join(", ", appliedMigrations));
+    return;
+}
+
+if (builder.Configuration.GetValue("DatabaseMigrations:RunOnStartup", builder.Environment.IsDevelopment()))
+{
+    var appliedMigrations = await migrationRunner.RunAsync();
+    if (appliedMigrations.Count > 0)
+        app.Logger.LogInformation("Applied database migrations: {MigrationIds}", string.Join(", ", appliedMigrations));
+}
+else
+{
+    var pendingMigrations = await migrationRunner.GetPendingMigrationIdsAsync();
+    if (pendingMigrations.Count > 0)
+    {
+        throw new InvalidOperationException(
+            $"Database has pending migrations: {string.Join(", ", pendingMigrations)}. " +
+            "Run DailyVitals.Web with --migrate-only before starting the application.");
+    }
+}
 
 if (builder.Configuration.GetValue("DemoMode:Enabled", false))
 {
@@ -58,10 +108,51 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
+
+app.MapPost("/auth/session", async (
+    AuthSessionRequest request,
+    HttpContext httpContext,
+    AuthTicketService ticketService) =>
+{
+    if (!ticketService.TryRedeem(request.Ticket, out var ticket))
+        return Results.Unauthorized();
+
+    var claims = new[]
+    {
+        new Claim(ClaimTypes.Name, ticket.UserName),
+        new Claim(LocalLoginSession.AuthClaimTypes.PersonId, ticket.PersonId.ToString()),
+        new Claim(LocalLoginSession.AuthClaimTypes.IsDemo, ticket.IsDemo.ToString()),
+        new Claim(LocalLoginSession.AuthClaimTypes.RememberDevice, ticket.RememberDevice.ToString())
+    };
+    var principal = new ClaimsPrincipal(
+        new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
+    var properties = new AuthenticationProperties
+    {
+        IsPersistent = ticket.RememberDevice,
+        AllowRefresh = true,
+        ExpiresUtc = ticket.RememberDevice ? DateTimeOffset.UtcNow.AddDays(30) : null
+    };
+
+    await httpContext.SignInAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme,
+        principal,
+        properties);
+    return Results.NoContent();
+}).DisableAntiforgery();
+
+app.MapPost("/auth/signout", async (HttpContext httpContext) =>
+{
+    await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    return Results.NoContent();
+}).DisableAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+internal sealed record AuthSessionRequest(string? Ticket);

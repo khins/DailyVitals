@@ -18,7 +18,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodGlucoseColumns(conn);
 
             using var cmd = new NpgsqlCommand(
               "SELECT sp_insert_blood_glucose(@p_person_id, @p_glucose_value, @p_reading_time, @p_notes, @p_entered_by)",
@@ -48,7 +47,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodGlucoseColumns(conn);
 
             const string sql = @"
                 WITH updated AS (
@@ -105,7 +103,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodGlucoseColumns(conn);
 
             const string sql = @"
                 SELECT
@@ -147,7 +144,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodGlucoseColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_delete_blood_glucose(@p_glucose_id, @p_entered_by)",
@@ -163,7 +159,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodGlucoseColumns(conn);
 
             const string sql = @"
                 DELETE FROM public.blood_glucose
@@ -181,7 +176,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodGlucoseColumns(conn);
 
             const string sql = @"
                     SELECT glucose_id,
@@ -214,25 +208,6 @@ namespace DailyVitals.Data.Services
                 UpdatedAt = reader.IsDBNull(5) ? null : reader.GetDateTime(5)
             };
         }
-
-        private static void EnsureBloodGlucoseColumns(NpgsqlConnection conn)
-        {
-            const string sql = @"
-                ALTER TABLE public.blood_glucose
-                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
-
-                UPDATE public.blood_glucose
-                SET updated_at = created_at
-                WHERE updated_at IS NULL;
-
-                ALTER TABLE public.blood_glucose
-                    ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP,
-                    ALTER COLUMN updated_at SET NOT NULL;";
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.ExecuteNonQuery();
-        }
-
 
     }
 
