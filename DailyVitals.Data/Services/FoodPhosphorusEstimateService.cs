@@ -1,6 +1,6 @@
 using DailyVitals.Domain.Models;
+using DailyVitals.Data.Configuration;
 using System;
-using System.Configuration;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net;
@@ -20,13 +20,11 @@ namespace DailyVitals.Data.Services
             if (string.IsNullOrWhiteSpace(foodDescription))
                 throw new InvalidOperationException("Enter a food item before estimating phosphorus.");
 
-            var apiKey = GetSetting("OpenAiApiKey", "OPENAI_API_KEY");
+            var apiKey = OpenAiConfiguration.GetApiKey();
             if (string.IsNullOrWhiteSpace(apiKey))
-                throw new InvalidOperationException("OpenAI API key is missing. Set OPENAI_API_KEY or add OpenAiApiKey to App.config.");
+                throw new InvalidOperationException("OpenAI API key is missing. Configure OpenAI:ApiKey or set OPENAI_API_KEY.");
 
-            var model = GetSetting("OpenAiModel", "OPENAI_MODEL");
-            if (string.IsNullOrWhiteSpace(model))
-                model = "gpt-5.4-mini";
+            var model = OpenAiConfiguration.GetModel();
 
             var requestBody = new
             {
@@ -164,15 +162,6 @@ namespace DailyVitals.Data.Services
             }
 
             throw new InvalidOperationException("OpenAI response did not include estimate text.");
-        }
-
-        private static string? GetSetting(string appSettingKey, string environmentVariableKey)
-        {
-            var value = Environment.GetEnvironmentVariable(environmentVariableKey);
-            if (!string.IsNullOrWhiteSpace(value))
-                return value;
-
-            return ConfigurationManager.AppSettings[appSettingKey];
         }
 
         private static bool IsInsufficientQuotaResponse(HttpStatusCode statusCode, string responseText)

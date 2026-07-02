@@ -18,7 +18,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFluidIntakeTable(conn);
 
             const string sql = @"
                 WITH inserted AS (
@@ -85,7 +84,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFluidIntakeTable(conn);
 
             const string sql = @"
                 WITH updated AS (
@@ -139,7 +137,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFluidIntakeTable(conn);
 
             const string sql = @"
                 SELECT
@@ -181,7 +178,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFluidIntakeTable(conn);
 
             const string sql = @"
                 DELETE FROM public.fluid_intake
@@ -210,24 +206,5 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
         }
 
-        private static void EnsureFluidIntakeTable(NpgsqlConnection conn)
-        {
-            const string sql = @"
-                CREATE TABLE IF NOT EXISTS public.fluid_intake (
-                    fluid_intake_id bigserial NOT NULL,
-                    person_id int8 NOT NULL,
-                    consumed_at timestamp NOT NULL,
-                    fluid_ml int4 NOT NULL,
-                    beverage_name varchar(120) NOT NULL,
-                    notes text NULL,
-                    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at timestamp NULL,
-                    CONSTRAINT fluid_intake_pkey PRIMARY KEY (fluid_intake_id),
-                    CONSTRAINT fluid_intake_fluid_ml_check CHECK (fluid_ml > 0)
-                );";
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.ExecuteNonQuery();
-        }
     }
 }

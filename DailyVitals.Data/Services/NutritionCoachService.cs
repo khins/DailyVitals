@@ -3,7 +3,6 @@ using DailyVitals.Domain.Models;
 using Npgsql;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -76,13 +75,11 @@ namespace DailyVitals.Data.Services
             if (snapshot.DaysLogged == 0)
                 throw new InvalidOperationException("Log at least one day of nutrition before generating a coach review.");
 
-            var apiKey = GetSetting("OpenAiApiKey", "OPENAI_API_KEY");
+            var apiKey = OpenAiConfiguration.GetApiKey();
             if (string.IsNullOrWhiteSpace(apiKey))
-                throw new InvalidOperationException("OpenAI API key is missing. Set OPENAI_API_KEY or add OpenAiApiKey to App.config.");
+                throw new InvalidOperationException("OpenAI API key is missing. Configure OpenAI:ApiKey or set OPENAI_API_KEY.");
 
-            var model = GetSetting("OpenAiModel", "OPENAI_MODEL");
-            if (string.IsNullOrWhiteSpace(model))
-                model = "gpt-5.4-mini";
+            var model = OpenAiConfiguration.GetModel();
 
             var requestBody = new
             {
@@ -207,7 +204,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureReviewTable(conn);
 
             const string sql = @"
                 SELECT
@@ -324,7 +320,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureReviewTable(conn);
 
             const string sql = @"
                 INSERT INTO public.nutrition_coach_review (
@@ -383,33 +378,6 @@ namespace DailyVitals.Data.Services
             };
         }
 
-        private static void EnsureReviewTable(NpgsqlConnection conn)
-        {
-            const string sql = @"
-                CREATE TABLE IF NOT EXISTS public.nutrition_coach_review (
-                    nutrition_coach_review_id bigserial NOT NULL,
-                    person_id int8 NOT NULL,
-                    period_start date NOT NULL,
-                    period_end date NOT NULL,
-                    days_logged int4 NOT NULL,
-                    model text NOT NULL,
-                    snapshot_json text NOT NULL,
-                    api_response_text text NOT NULL,
-                    review_json text NULL,
-                    http_status int4 NOT NULL,
-                    is_success boolean NOT NULL,
-                    error_message text NULL,
-                    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT nutrition_coach_review_pkey PRIMARY KEY (nutrition_coach_review_id)
-                );
-
-                CREATE INDEX IF NOT EXISTS ix_nutrition_coach_review_person_period
-                    ON public.nutrition_coach_review (person_id, period_end DESC, created_at DESC);";
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.ExecuteNonQuery();
-        }
-
         private static string ExtractResponseText(string responseText)
         {
             var response = JsonSerializer.Deserialize<OpenAiResponse>(
@@ -438,14 +406,6 @@ namespace DailyVitals.Data.Services
             }
 
             throw new InvalidOperationException("OpenAI response did not include coach review text.");
-        }
-
-        private static string? GetSetting(string appSettingKey, string environmentVariableKey)
-        {
-            var value = Environment.GetEnvironmentVariable(environmentVariableKey);
-            return string.IsNullOrWhiteSpace(value)
-                ? ConfigurationManager.AppSettings[appSettingKey]
-                : value;
         }
 
         private sealed class OpenAiResponse

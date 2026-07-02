@@ -164,9 +164,7 @@
                 _model.Password!);
 
             await LoginSession.SignInAsync(loginUser.UserName, loginUser.PersonId, rememberDevice: true);
-            _accountCreated = true;
-            _messageClass = "login-message login-message--success-with-icon";
-            _message = "Account successfully created. Visit Profile to adjust tracking attributes and health targets.";
+            Navigation.NavigateTo("/profile", forceLoad: true, replace: true);
         }
         catch (Exception ex)
         {

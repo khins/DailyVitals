@@ -5,16 +5,31 @@ namespace DailyVitals.Data.Configuration
 {
     public static class DbConnectionFactory
     {
+        private const string DeploymentConnectionStringVariable = "DAILYVITALS_CONNECTION_STRING";
+        private const string AspNetConnectionStringVariable = "ConnectionStrings__DailyVitals";
+        private static string? _configuredConnectionString;
+
+        public static void Configure(string? connectionString)
+        {
+            _configuredConnectionString = string.IsNullOrWhiteSpace(connectionString)
+                ? null
+                : connectionString;
+        }
+
         public static NpgsqlConnection Create()
         {
             var connectionString =
-                ConfigurationManager
+                Environment.GetEnvironmentVariable(DeploymentConnectionStringVariable)
+                ?? _configuredConnectionString
+                ?? Environment.GetEnvironmentVariable(AspNetConnectionStringVariable)
+                ?? ConfigurationManager
                     .ConnectionStrings["DailyVitals"]
                     ?.ConnectionString;
 
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ConfigurationErrorsException(
-                    "Connection string 'DailyVitals' not found."
+                    $"Connection string 'DailyVitals' not found. Set {DeploymentConnectionStringVariable}, " +
+                    $"{AspNetConnectionStringVariable}, ASP.NET configuration, or a desktop App.config."
                 );
 
             return new NpgsqlConnection(connectionString);

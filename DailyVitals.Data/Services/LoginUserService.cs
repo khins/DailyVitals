@@ -21,7 +21,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             const string sql = @"
                 SELECT
@@ -91,7 +90,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             if (TryGetLoginUserId(conn, userName.Trim(), out var loginUserId))
             {
@@ -109,7 +107,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             if (TryGetLoginUserId(conn, userName.Trim(), out var existingLoginUserId))
             {
@@ -133,7 +130,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             if (TryGetLoginUserId(conn, userName.Trim(), out _))
                 throw new InvalidOperationException("That email is already in use.");
@@ -160,7 +156,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             long loginUserId;
             if (TryGetLoginUserId(conn, userName.Trim(), out var existingLoginUserId))
@@ -209,7 +204,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             const string sql = @"
                 SELECT COALESCE(is_demo, FALSE)
@@ -235,7 +229,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             if (IsDemoPerson(conn, personId))
                 throw new InvalidOperationException("Demo Mode is read-only.");
@@ -279,7 +272,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             return TryGetLoginUserId(conn, userName.Trim(), out _);
         }
@@ -318,7 +310,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             const string sql = @"
                 SELECT lu.user_name
@@ -367,7 +358,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             const string sql = @"
                 SELECT lu.login_user_id, lu.person_id, p.person_id, lu.is_demo
@@ -419,7 +409,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             const string sql = @"
                 SELECT login_user_id, person_id, user_name, is_active, is_demo, created_at, updated_at, last_login_at
@@ -451,7 +440,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureLoginUserTable(conn);
 
             const string sql = @"
                 SELECT EXISTS (
@@ -620,61 +608,6 @@ namespace DailyVitals.Data.Services
 
             var result = cmd.ExecuteScalar();
             return result is long personId ? personId : null;
-        }
-
-        private static void EnsureLoginUserTable(NpgsqlConnection conn)
-        {
-            const string sql = @"
-                CREATE TABLE IF NOT EXISTS public.login_user (
-                    login_user_id bigserial NOT NULL,
-                    person_id int8 NULL,
-                    user_name varchar(100) NOT NULL,
-                    password_hash text NOT NULL,
-                    password_salt text NOT NULL,
-                    password_iterations int4 NOT NULL,
-                    password_algorithm varchar(50) NOT NULL,
-                    is_active boolean NOT NULL DEFAULT true,
-                    is_demo boolean NOT NULL DEFAULT false,
-                    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at timestamp NULL,
-                    last_login_at timestamp NULL,
-                    CONSTRAINT login_user_pkey PRIMARY KEY (login_user_id)
-                );
-
-                CREATE UNIQUE INDEX IF NOT EXISTS login_user_user_name_lower_key
-                    ON public.login_user (lower(user_name));
-
-                ALTER TABLE public.login_user
-                    ADD COLUMN IF NOT EXISTS person_id int8 NULL,
-                    ADD COLUMN IF NOT EXISTS password_algorithm varchar(50) NOT NULL DEFAULT 'PBKDF2-SHA256',
-                    ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true,
-                    ADD COLUMN IF NOT EXISTS is_demo boolean NOT NULL DEFAULT false,
-                    ADD COLUMN IF NOT EXISTS created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL,
-                    ADD COLUMN IF NOT EXISTS last_login_at timestamp NULL;
-
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (
-                        SELECT 1
-                        FROM pg_constraint c
-                        JOIN pg_class t ON t.oid = c.conrelid
-                        JOIN pg_namespace n ON n.oid = t.relnamespace
-                        WHERE n.nspname = 'public'
-                          AND t.relname = 'login_user'
-                          AND c.conname = 'login_user_person_id_fkey'
-                    ) THEN
-                        ALTER TABLE public.login_user
-                            ADD CONSTRAINT login_user_person_id_fkey
-                            FOREIGN KEY (person_id)
-                            REFERENCES public.person(person_id)
-                            ON DELETE RESTRICT
-                            NOT VALID;
-                    END IF;
-                END $$;";
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.ExecuteNonQuery();
         }
 
         private static void RecordSuccessfulLogin(NpgsqlConnection conn, long loginUserId)

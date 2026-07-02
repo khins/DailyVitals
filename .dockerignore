@@ -1,0 +1,16 @@
+.git
+.gitignore
+.vs
+.vscode
+**/bin
+**/obj
+**/artifacts
+**/App.config
+**/App_Data
+**/secrets.json
+.env
+.env.*
+!.env.example
+database/API Key.txt
+*.user
+*.log

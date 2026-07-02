@@ -94,6 +94,8 @@ StyleCopReport.xml
 *_wpftmp.csproj
 *.log
 DailyVitals.Web/App_Data/
+DailyVitals.Web/App.config
+DailyVitalsApp/App.config
 *.vspscc
 *.vssscc
 .builds
@@ -368,3 +370,7 @@ FodyWeavers.xsd
 SodiumBackfill.csproj
 Program.cs
 database/API Key.txt
+.env
+.env.*
+!.env.example
+**/secrets.json

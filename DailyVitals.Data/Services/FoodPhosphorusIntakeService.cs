@@ -30,7 +30,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFoodPhosphorusIntakeColumns(conn);
             var foodProfileId = UpsertFoodProfile(
                 conn,
                 personId,
@@ -177,7 +176,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFoodPhosphorusIntakeColumns(conn);
             var foodProfileId = UpsertFoodProfile(
                 conn,
                 personId,
@@ -290,7 +288,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFoodPhosphorusIntakeColumns(conn);
 
             const string sql = @"
                 SELECT
@@ -588,7 +585,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFoodPhosphorusIntakeColumns(conn);
 
             const string sql = @"
                 SELECT note_text
@@ -605,7 +601,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFoodPhosphorusIntakeColumns(conn);
 
             var foodProfileId = UpsertFoodProfile(
                 conn,
@@ -637,7 +632,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFoodPhosphorusIntakeColumns(conn);
 
             const string sql = @"
                 INSERT INTO public.food_phosphorus_food_note (
@@ -684,7 +678,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFoodPhosphorusIntakeColumns(conn);
 
             const string sql = @"
                 WITH calculated_intake AS (
@@ -793,7 +786,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureFoodPhosphorusIntakeColumns(conn);
 
             const string sql = @"
                 DELETE FROM public.food_phosphorus_intake

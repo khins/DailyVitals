@@ -9,6 +9,17 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <UserSecretsId>DailyVitals.Web-Deployment</UserSecretsId>
+    <DefaultItemExcludes>$(DefaultItemExcludes);App.config;artifacts\**;server*.log</DefaultItemExcludes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="App.config" />
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+    <Content Include="..\database\**\*.sql"
+             Link="Database\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

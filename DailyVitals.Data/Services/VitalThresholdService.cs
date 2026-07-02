@@ -14,7 +14,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureVitalThresholdTable(conn);
 
             const string sql = @"
                 SELECT threshold_id,
@@ -45,7 +44,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureVitalThresholdTable(conn);
 
             const string deactivateSql = @"
                 UPDATE public.vital_threshold
@@ -106,23 +104,5 @@ namespace DailyVitals.Data.Services
             };
         }
 
-        private static void EnsureVitalThresholdTable(NpgsqlConnection conn)
-        {
-            const string sql = @"
-                CREATE TABLE IF NOT EXISTS public.vital_threshold (
-                    threshold_id bigserial NOT NULL,
-                    vital_type varchar(50) NOT NULL,
-                    person_id int8 NULL,
-                    min_value numeric NULL,
-                    max_value numeric NULL,
-                    severity varchar(20) NOT NULL DEFAULT 'medium',
-                    is_active bool NOT NULL DEFAULT true,
-                    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT vital_threshold_pkey PRIMARY KEY (threshold_id)
-                );";
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.ExecuteNonQuery();
-        }
     }
 }

@@ -18,7 +18,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodPressureColumns(conn);
 
             using var cmd = new NpgsqlCommand(
                 "SELECT sp_insert_blood_pressure(@p_person_id, @p_systolic, @p_diastolic, @p_pulse, @p_reading_time, @p_notes, @p_entered_by)",
@@ -45,7 +44,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodPressureColumns(conn);
 
             const string sql = @"
                     SELECT bp_id, systolic, diastolic, pulse, reading_time, notes, created_at, updated_at
@@ -86,7 +84,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodPressureColumns(conn);
 
             const string sql = @"
                     UPDATE blood_pressure
@@ -122,7 +119,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodPressureColumns(conn);
 
             const string sql = @"
                     UPDATE blood_pressure
@@ -154,7 +150,6 @@ namespace DailyVitals.Data.Services
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodPressureColumns(conn);
 
             const string sql = @"
                     SELECT bp_id, systolic, diastolic, pulse, reading_time, notes, created_at, updated_at
@@ -189,7 +184,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodPressureColumns(conn);
 
             const string sql = @"
                     DELETE FROM blood_pressure
@@ -206,7 +200,6 @@ namespace DailyVitals.Data.Services
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
-            EnsureBloodPressureColumns(conn);
 
             const string sql = @"
                     DELETE FROM blood_pressure
@@ -254,26 +247,6 @@ namespace DailyVitals.Data.Services
 
             return list;
         }
-
-        private static void EnsureBloodPressureColumns(NpgsqlConnection conn)
-        {
-            const string sql = @"
-                ALTER TABLE public.blood_pressure
-                    ADD COLUMN IF NOT EXISTS updated_at timestamp NULL;
-
-                UPDATE public.blood_pressure
-                SET updated_at = created_at
-                WHERE updated_at IS NULL;
-
-                ALTER TABLE public.blood_pressure
-                    ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP,
-                    ALTER COLUMN updated_at SET NOT NULL;";
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.ExecuteNonQuery();
-        }
-
-
 
     }
 }

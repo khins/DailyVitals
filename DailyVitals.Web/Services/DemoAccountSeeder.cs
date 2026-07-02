@@ -57,8 +57,6 @@ public sealed class DemoAccountSeeder
             bypassCmd.ExecuteNonQuery();
         }
 
-        EnsureSupportingTables(conn, transaction);
-
         using (var profileCmd = new NpgsqlCommand(@"
             UPDATE public.person
             SET height_ft = 5.75,
@@ -77,7 +75,6 @@ public sealed class DemoAccountSeeder
 
         if (SeedIsCurrent(conn, transaction, personId))
         {
-            EnsureReadOnlyProtection(conn, transaction);
             transaction.Commit();
             return;
         }
@@ -92,8 +89,6 @@ public sealed class DemoAccountSeeder
         SeedRenalFoods(conn, transaction, personId);
         SeedCoachReview(conn, transaction, personId);
         SaveSeedState(conn, transaction, personId);
-        EnsureReadOnlyProtection(conn, transaction);
-
         transaction.Commit();
     }
 

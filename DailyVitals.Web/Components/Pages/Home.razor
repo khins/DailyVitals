@@ -158,7 +158,7 @@
             loginUser.PersonId,
             _model.RememberMe,
             loginUser.IsDemo);
-        Navigation.NavigateTo("/dashboard", replace: true);
+        Navigation.NavigateTo("/dashboard", forceLoad: true, replace: true);
     }
 
     private void UseDemoCredentials()
