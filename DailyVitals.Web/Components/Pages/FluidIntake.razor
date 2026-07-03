@@ -80,6 +80,17 @@
                 </div>
             </section>
 
+            <aside class="renal-fluid-notice" role="note" aria-labelledby="renal-fluid-notice-title">
+                <svg class="renal-fluid-notice-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 3 2.7 20h18.6L12 3Zm0 5.2c.6 0 1 .4 1 1v5.2a1 1 0 0 1-2 0V9.2c0-.6.4-1 1-1Zm0 9.8a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Z" />
+                </svg>
+                <div>
+                    <h2 id="renal-fluid-notice-title">Important for Kidney Disease and Dialysis</h2>
+                    <p>Fluid needs and limits can differ substantially for people on dialysis or managing advanced chronic kidney disease. Too much fluid can contribute to fluid overload, breathing problems, blood pressure changes, heart strain, and rapid weight gain between treatments.</p>
+                    <p><strong>Do not use general hydration targets to set your intake.</strong> Follow the daily fluid limit prescribed by your nephrologist or care team based on your treatment plan, urine output, and target dry weight.</p>
+                </div>
+            </aside>
+
             <section class="entry-grid">
                 <article class="dashboard-card entry-panel">
                     <div class="card-heading">
@@ -89,13 +100,17 @@
                         </div>
                     </div>
 
-                    <EditForm Model="_form" FormName="fluid-intake-form" OnValidSubmit="SaveEntry" class="bp-form">
+                    <EditForm Model="_form" class="bp-form">
                         <DataAnnotationsValidator />
 
                         <div class="form-row">
                             <label for="consumed-at">Time</label>
                             <input id="consumed-at" class="form-input" type="datetime-local" value="@_consumedAtText" @onchange="SetConsumedAt" />
                         </div>
+                        @if (_editingId.HasValue)
+                        {
+                            <p class="field-hint">Change the time to save a new intake; keep it unchanged to update this entry.</p>
+                        }
 
                         <div class="glucose-number-grid">
                             <div class="field-group">
@@ -103,15 +118,29 @@
                                 <InputText id="beverage" class="form-input" @bind-Value="_form.BeverageName" />
                                 <ValidationMessage For="() => _form.BeverageName" />
                             </div>
+                        </div>
+
+                        <div class="fluid-amount-grid">
+                            <div class="field-group">
+                                <label for="fluid-amount">Amount</label>
+                                <InputNumber id="fluid-amount" class="form-input" step="0.1" @bind-Value="_form.Amount" />
+                                <ValidationMessage For="() => _form.Amount" />
+                            </div>
 
                             <div class="field-group">
-                                <label for="fluid-ml">Amount (mL)</label>
-                                <InputNumber id="fluid-ml" class="form-input" @bind-Value="_form.FluidMl" />
-                                <ValidationMessage For="() => _form.FluidMl" />
+                                <label for="fluid-unit">Unit</label>
+                                <InputSelect id="fluid-unit" class="form-input" @bind-Value="_form.Unit">
+                                    <option value="fl oz">fl oz</option>
+                                    <option value="mL">mL</option>
+                                </InputSelect>
                             </div>
                         </div>
 
-                        <p class="helper-text">Quick reference: 8 fl oz is about 237 mL, 12 fl oz is about 355 mL, and 16 fl oz is about 473 mL.</p>
+                        <p class="helper-text">Enter the amount printed on your container. Fluid ounces are converted to mL automatically.</p>
+                        @if (!string.IsNullOrWhiteSpace(FluidConversionPreview))
+                        {
+                            <p class="field-hint fluid-conversion-preview">@FluidConversionPreview</p>
+                        }
 
                         <div class="field-group">
                             <label for="notes">Notes</label>
@@ -126,17 +155,9 @@
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewEntry" disabled="@LoginSession.IsDemo">New</button>
                             <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(LoginSession.IsDemo || !_editingId.HasValue)">Delete</button>
-                            <button type="submit" class="primary-action">Save</button>
+                            <button type="button" class="primary-action" @onclick="SaveEntry">Save</button>
                         </div>
 
-                        @if (!string.IsNullOrWhiteSpace(_formToast))
-                        {
-                            <div class="profile-toast form-toast" role="status">
-                                <span class="profile-toast-icon" aria-hidden="true">✓</span>
-                                <span>@_formToast</span>
-                                <button type="button" aria-label="Dismiss fluid intake update message" @onclick="DismissFormToast">×</button>
-                            </div>
-                        }
                     </EditForm>
                 </article>
 
@@ -148,6 +169,21 @@
                         </div>
                         <strong>@_history.Count entries</strong>
                     </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_formToast))
+                    {
+                        <div class="profile-toast history-toast @(_formToastIsError ? "profile-toast--error" : null)" role="status">
+                            <span class="profile-toast-icon" aria-hidden="true">@(_formToastIsError ? "!" : "✓")</span>
+                            <span class="history-toast-copy">
+                                <strong>@_formToast</strong>
+                                @if (!string.IsNullOrWhiteSpace(FormToastTimestampText))
+                                {
+                                    <small>@FormToastTimestampText</small>
+                                }
+                            </span>
+                            <button type="button" aria-label="Dismiss fluid intake message" @onclick="DismissFormToast">×</button>
+                        </div>
+                    }
 
                     @if (_history.Count == 0)
                     {
@@ -174,7 +210,13 @@
                                         <tr class="@(entry.FluidIntakeId == _editingId ? "is-selected" : null)" @onclick="() => SelectEntry(entry)">
                                             <td>@entry.ConsumedAt.ToString("M/d/yyyy h:mm tt")</td>
                                             <td>@entry.BeverageName</td>
-                                            <td>@entry.FluidMl.ToString("N0") mL</td>
+                                            <td>
+                                                <span>@entry.EnteredAmount.ToString("0.##") @entry.EnteredUnit</span>
+                                                @if (entry.EnteredUnit == FluidOuncesUnit)
+                                                {
+                                                    <small class="fluid-normalized-amount">@entry.FluidMl.ToString("N0") mL</small>
+                                                }
+                                            </td>
                                             <td>@entry.Notes</td>
                                         </tr>
                                     }
@@ -215,6 +257,7 @@
     private readonly FluidForm _form = new();
     private readonly List<FluidIntakeEntry> _history = [];
     private long? _editingId;
+    private DateTime? _editingConsumedAt;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
     private bool _showKidneyLabs = true;
@@ -223,6 +266,9 @@
     private string? _message;
     private string _messageClass = "page-message";
     private string? _formToast;
+    private DateTime? _formToastTimestamp;
+    private string _formToastTimestampLabel = "Saved at";
+    private bool _formToastIsError;
 
     protected override void OnInitialized()
     {
@@ -268,8 +314,26 @@
         : $"{TodayFluidMl / 1000m:0.##} kg / {TodayFluidMl / 1000m * 2.20462m:0.##} lb";
 
     private string DeleteEntrySummary => _editingId.HasValue
-        ? $"{_form.BeverageName}, {_form.FluidMl:N0} mL, {_consumedAtText}"
+        ? $"{_form.BeverageName}, {GetConvertedFluidMl():N0} mL, {_consumedAtText}"
         : "No fluid intake selected.";
+
+    private string FluidConversionPreview
+    {
+        get
+        {
+            if (!_form.Amount.HasValue || _form.Amount.Value <= 0)
+                return string.Empty;
+
+            var convertedMl = GetConvertedFluidMl();
+            return _form.Unit == FluidOuncesUnit
+                ? $"{_form.Amount.Value:0.#} fl oz will be stored as {convertedMl:N0} mL."
+                : $"This entry will be stored as {convertedMl:N0} mL.";
+        }
+    }
+
+    private string FormToastTimestampText => _formToastTimestamp.HasValue
+        ? $"{_formToastTimestampLabel}: {_formToastTimestamp.Value:g}"
+        : string.Empty;
 
     private string AuditText
     {
@@ -298,9 +362,11 @@
     private void SelectEntry(FluidIntakeEntry entry, bool clearToast = true)
     {
         _editingId = entry.FluidIntakeId;
+        _editingConsumedAt = TruncateToMinute(entry.ConsumedAt);
         _consumedAtText = ToDateTimeLocal(entry.ConsumedAt);
         _form.BeverageName = entry.BeverageName;
-        _form.FluidMl = entry.FluidMl;
+        _form.Amount = entry.EnteredAmount;
+        _form.Unit = entry.EnteredUnit;
         _form.Notes = entry.Notes ?? string.Empty;
         _createdAt = entry.CreatedAt;
         _updatedAt = entry.UpdatedAt;
@@ -326,9 +392,11 @@
     private void ResetForm()
     {
         _editingId = null;
+        _editingConsumedAt = null;
         _consumedAtText = ToDateTimeLocal(DateTime.Now);
         _form.BeverageName = "Water";
-        _form.FluidMl = null;
+        _form.Amount = null;
+        _form.Unit = FluidOuncesUnit;
         _form.Notes = string.Empty;
         _createdAt = null;
         _updatedAt = null;
@@ -350,21 +418,44 @@
             return;
         }
 
+        var beverageName = _form.BeverageName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(beverageName))
+        {
+            ShowError("Enter a beverage before saving.");
+            return;
+        }
+
+        if (beverageName.Length > 120)
+        {
+            ShowError("Beverage must be 120 characters or less.");
+            return;
+        }
+
         if (!TryGetConsumedAt(out var consumedAt))
             return;
 
-        var beverageName = _form.BeverageName?.Trim() ?? string.Empty;
+        if (!TryGetFluidMl(out var fluidMl))
+            return;
+
         var notes = _form.Notes?.Trim();
+        var shouldInsert = !_editingId.HasValue ||
+            !_editingConsumedAt.HasValue ||
+            _editingConsumedAt.Value != TruncateToMinute(consumedAt);
+        var wasEditing = _editingId.HasValue;
+        long? savedId = shouldInsert ? null : _editingId;
+        var successMessage = string.Empty;
 
         try
         {
-            if (_editingId.HasValue)
+            if (!shouldInsert)
             {
                 var updated = FluidService.UpdateForPerson(
-                    _editingId.Value,
+                    _editingId!.Value,
                     LoginSession.PersonId.Value,
                     consumedAt,
-                    _form.FluidMl!.Value,
+                    fluidMl,
+                    _form.Amount!.Value,
+                    _form.Unit,
                     beverageName,
                     notes,
                     LoginSession.UserName ?? string.Empty);
@@ -375,26 +466,39 @@
                     return;
                 }
 
-                ShowSuccess("Fluid intake updated.");
+                successMessage = "Fluid intake updated.";
             }
             else
             {
-                _editingId = FluidService.Insert(
+                savedId = FluidService.Insert(
                     LoginSession.PersonId.Value,
                     consumedAt,
-                    _form.FluidMl!.Value,
+                    fluidMl,
+                    _form.Amount!.Value,
+                    _form.Unit,
                     beverageName,
                     notes,
                     LoginSession.UserName ?? string.Empty);
 
-                ShowSuccess("Fluid intake saved.");
+                successMessage = wasEditing
+                    ? "Fluid intake saved as a new entry because the intake time changed."
+                    : "Fluid intake saved.";
             }
 
             LoadHistory();
 
-            var selected = _history.FirstOrDefault(x => x.FluidIntakeId == _editingId);
-            if (selected is not null)
-                SelectEntry(selected, clearToast: false);
+            var selected = _history.FirstOrDefault(x => x.FluidIntakeId == savedId);
+            if (selected is null)
+            {
+                ShowError("The fluid intake was saved, but it could not be reloaded in history. Refresh the page and try again.");
+                return;
+            }
+
+            SelectEntry(selected, clearToast: false);
+            ShowSuccess(
+                successMessage,
+                shouldInsert ? selected.CreatedAt : selected.UpdatedAt ?? selected.CreatedAt,
+                shouldInsert ? "Saved at" : "Updated at");
         }
         catch (Exception ex)
         {
@@ -448,7 +552,7 @@
 
             LoadHistory();
             ResetForm();
-            ShowSuccess("Fluid intake deleted.");
+            ShowSuccess("Fluid intake deleted.", DateTime.Now, "Deleted at");
         }
         catch (Exception ex)
         {
@@ -465,23 +569,30 @@
         return false;
     }
 
-    private void ShowSuccess(string message)
+    private void ShowSuccess(string message, DateTime? timestamp = null, string timestampLabel = "Saved at")
     {
         _messageClass = "page-message";
         _message = null;
         _formToast = message;
+        _formToastTimestamp = timestamp;
+        _formToastTimestampLabel = timestampLabel;
+        _formToastIsError = false;
     }
 
     private void ShowError(string message)
     {
         _messageClass = "page-message page-message--error";
         _message = message;
-        _formToast = null;
+        _formToast = message;
+        _formToastTimestamp = null;
+        _formToastIsError = true;
     }
 
     private void DismissFormToast()
     {
         _formToast = null;
+        _formToastTimestamp = null;
+        _formToastIsError = false;
     }
 
     private async Task SignOut()
@@ -492,6 +603,38 @@
 
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
 
+    private static DateTime TruncateToMinute(DateTime value) =>
+        new(value.Year, value.Month, value.Day, value.Hour, value.Minute, 0, value.Kind);
+
+    private const string FluidOuncesUnit = "fl oz";
+    private const string MillilitersUnit = "mL";
+    private const decimal MillilitersPerUsFluidOunce = 29.5735295625m;
+
+    private decimal GetConvertedFluidMl()
+    {
+        var amount = _form.Amount ?? 0m;
+        var milliliters = _form.Unit == FluidOuncesUnit
+            ? amount * MillilitersPerUsFluidOunce
+            : amount;
+
+        return Math.Round(milliliters, 0, MidpointRounding.AwayFromZero);
+    }
+
+    private bool TryGetFluidMl(out int fluidMl)
+    {
+        fluidMl = 0;
+        var convertedMl = GetConvertedFluidMl();
+
+        if (convertedMl < 1m || convertedMl > 10000m)
+        {
+            ShowError("Fluid amount must convert to between 1 and 10,000 mL.");
+            return false;
+        }
+
+        fluidMl = decimal.ToInt32(convertedMl);
+        return true;
+    }
+
     private sealed class FluidForm
     {
         [Required(ErrorMessage = "Enter a beverage.")]
@@ -499,8 +642,10 @@
         public string? BeverageName { get; set; }
 
         [Required(ErrorMessage = "Enter the fluid amount.")]
-        [Range(1, 10000, ErrorMessage = "Fluid amount must be greater than 0.")]
-        public int? FluidMl { get; set; }
+        [Range(typeof(decimal), "0.1", "10000", ErrorMessage = "Fluid amount must be greater than 0.")]
+        public decimal? Amount { get; set; }
+
+        public string Unit { get; set; } = FluidOuncesUnit;
 
         public string? Notes { get; set; }
     }
