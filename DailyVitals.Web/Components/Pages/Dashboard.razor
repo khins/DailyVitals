@@ -4,12 +4,14 @@
 @using DailyVitals.Data.Services
 @using DailyVitals.Data.Services.DailyVitals.App.Services
 @using DailyVitals.Domain.Models
+@using FluidIntakeEntry = DailyVitals.Domain.Models.FluidIntake
 @using DailyVitals.Web.Services
 @inject BloodPressureService BloodPressureService
 @inject BloodGlucoseService BloodGlucoseService
 @inject WeightService WeightService
 @inject ExerciseService ExerciseService
 @inject FoodPhosphorusIntakeService FoodService
+@inject FluidIntakeService FluidService
 @inject NutritionGoalService NutritionGoalService
 @inject KidneyLabResultService KidneyLabService
 @inject PersonService PersonService
@@ -192,6 +194,79 @@
                     </div>
                 </article>
 
+                <article class="dashboard-card fluid-summary-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span class="fluid-heading-label">
+                                Hydration
+                                <svg class="fluid-droplet-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M12 2.5S5.5 10.1 5.5 15a6.5 6.5 0 0 0 13 0C18.5 10.1 12 2.5 12 2.5Z" />
+                                </svg>
+                            </span>
+                            <h2>Today's Hydration</h2>
+                        </div>
+                        <strong>@TodayFluidEntryText</strong>
+                    </div>
+
+                    @if (TodayFluidCount == 0)
+                    {
+                        <div class="empty-state compact-empty fluid-summary-empty">
+                            <h2>No fluid entered today</h2>
+                            <p>Add a beverage to begin today's running total.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="fluid-summary-content">
+                            <div class="fluid-summary-main">
+                                <div class="metric-value fluid-total-value">
+                                    @TodayFluidMl.ToString("N0")
+                                    <span>mL</span>
+                                    <span class="fluid-us-conversion">/ @TodayFluidCupText</span>
+                                </div>
+                                <p>@TodayFluidSummaryText</p>
+
+                                @if (FluidTargetMl.HasValue)
+                                {
+                                    <div class="fluid-progress-summary">
+                                        <div class="fluid-progress-heading">
+                                            <strong>@TodayFluidMl.ToString("N0") / @FluidTargetMl.Value.ToString("N0") mL</strong>
+                                            <span>@FluidProgressPercent%</span>
+                                        </div>
+                                        <div class="fluid-progress-track" role="progressbar" aria-label="Daily fluid target progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@FluidProgressBarPercent">
+                                            <span style="width: @($"{FluidProgressBarPercent}%")"></span>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="fluid-target-missing">No daily fluid target is configured.</p>
+                                }
+                            </div>
+                            <a class="secondary-link" href="fluid-intake">View Fluid Intake</a>
+                        </div>
+
+                        <div class="fluid-stat-grid">
+                            <div>
+                                <span>Remaining</span>
+                                <strong>@FluidRemainingText</strong>
+                            </div>
+                            <div>
+                                <span>Entries</span>
+                                <strong>@TodayFluidEntryText</strong>
+                            </div>
+                            <div>
+                                <span>Yesterday</span>
+                                <strong>@YesterdayFluidText</strong>
+                            </div>
+                            <div>
+                                <span>7-Day Average</span>
+                                <strong>@SevenDayFluidAverageText</strong>
+                            </div>
+                        </div>
+                    }
+                </article>
+
                 <article class="dashboard-card activity-panel">
                     <div class="card-heading">
                         <div>
@@ -304,6 +379,7 @@
     private readonly List<WeightReading> _weightHistory = [];
     private readonly List<ExerciseSession> _exerciseHistory = [];
     private readonly List<FoodPhosphorusRunningTotal> _nutritionRows = [];
+    private readonly List<FluidIntakeEntry> _fluidHistory = [];
     private readonly List<KidneyLabResult> _kidneyLabHistory = [];
     private Person? _person;
     private NutritionGoal? _nutritionGoal;
@@ -372,10 +448,11 @@
             if (_weightHistory.Count > 0) sectionsWithData++;
             if (_exerciseHistory.Count > 0) sectionsWithData++;
             if (TodayNutritionRows.Any()) sectionsWithData++;
+            if (TodayFluidCount > 0) sectionsWithData++;
 
             return sectionsWithData == 0
                 ? "No entries yet"
-                : $"{sectionsWithData} of 5 sections active";
+                : $"{sectionsWithData} of 6 sections active";
         }
     }
 
@@ -414,7 +491,7 @@
         get
         {
             if (!HasDashboardData)
-                return "Add a blood pressure, glucose, weight, exercise, or nutrition entry to build this person's dashboard.";
+                return "Add a blood pressure, glucose, weight, exercise, nutrition, or fluid entry to build this person's dashboard.";
 
             var latest = RecentEntries.FirstOrDefault();
             return latest is null
@@ -436,7 +513,8 @@
         _bloodGlucoseHistory.Count > 0 ||
         _weightHistory.Count > 0 ||
         _exerciseHistory.Count > 0 ||
-        TodayNutritionRows.Any();
+        TodayNutritionRows.Any() ||
+        TodayFluidCount > 0;
 
     private string BloodPressureStatus
     {
@@ -482,6 +560,7 @@
             _weightHistory.Clear();
             _exerciseHistory.Clear();
             _nutritionRows.Clear();
+            _fluidHistory.Clear();
             _kidneyLabHistory.Clear();
             _nutritionGoal = null;
             _person = null;
@@ -501,6 +580,7 @@
             _weightHistory.AddRange(WeightService.GetHistory(personId));
             _exerciseHistory.AddRange(ExerciseService.GetHistory(personId));
             _nutritionRows.AddRange(FoodService.GetRunningDailyTotals(personId));
+            _fluidHistory.AddRange(FluidService.GetHistory(personId));
             if (ShowKidneyLabs)
                 _kidneyLabHistory.AddRange(KidneyLabService.GetHistory(personId));
             _nutritionGoal = NutritionGoalService.GetActiveGoal(personId, DateTime.Today);
@@ -723,6 +803,78 @@
 
     private IEnumerable<FoodPhosphorusRunningTotal> TodayNutritionRows =>
         _nutritionRows.Where(x => x.IntakeDate.Date == DateTime.Today);
+
+    private IEnumerable<FluidIntakeEntry> TodayFluidEntries =>
+        _fluidHistory.Where(x => x.ConsumedAt.Date == DateTime.Today);
+
+    private int TodayFluidMl => TodayFluidEntries.Sum(x => x.FluidMl);
+
+    private int TodayFluidCount => TodayFluidEntries.Count();
+
+    private decimal TodayFluidCups =>
+        Math.Round(TodayFluidMl / 236.588m, 1, MidpointRounding.AwayFromZero);
+
+    private string TodayFluidCupText =>
+        $"{TodayFluidCups:0.#} {(TodayFluidCups == 1m ? "cup" : "cups")}";
+
+    private string TodayFluidEntryText =>
+        $"{TodayFluidCount} {(TodayFluidCount == 1 ? "entry" : "entries")}";
+
+    private string TodayFluidSummaryText =>
+        $"{TodayFluidMl / 1000m:0.##} liters logged across {TodayFluidEntryText}.";
+
+    private int? FluidTargetMl => _nutritionGoal?.FluidLimitMl is > 0
+        ? _nutritionGoal.FluidLimitMl
+        : null;
+
+    private int FluidProgressPercent => FluidTargetMl.HasValue
+        ? (int)Math.Round(TodayFluidMl * 100m / FluidTargetMl.Value, MidpointRounding.AwayFromZero)
+        : 0;
+
+    private int FluidProgressBarPercent => Math.Clamp(FluidProgressPercent, 0, 100);
+
+    private string FluidRemainingText
+    {
+        get
+        {
+            if (!FluidTargetMl.HasValue)
+                return "Target not set";
+
+            var difference = FluidTargetMl.Value - TodayFluidMl;
+            return difference >= 0
+                ? $"{difference:N0} mL"
+                : $"{Math.Abs(difference):N0} mL over";
+        }
+    }
+
+    private int YesterdayFluidMl => _fluidHistory
+        .Where(x => x.ConsumedAt.Date == DateTime.Today.AddDays(-1))
+        .Sum(x => x.FluidMl);
+
+    private string YesterdayFluidText => YesterdayFluidMl > 0
+        ? $"{YesterdayFluidMl:N0} mL"
+        : "No entries";
+
+    private int SevenDayFluidAverageMl
+    {
+        get
+        {
+            var startDate = DateTime.Today.AddDays(-6);
+            var dailyTotals = _fluidHistory
+                .Where(x => x.ConsumedAt.Date >= startDate && x.ConsumedAt.Date <= DateTime.Today)
+                .GroupBy(x => x.ConsumedAt.Date)
+                .Select(group => group.Sum(x => x.FluidMl))
+                .ToList();
+
+            return dailyTotals.Count == 0
+                ? 0
+                : (int)Math.Round(dailyTotals.Average(), MidpointRounding.AwayFromZero);
+        }
+    }
+
+    private string SevenDayFluidAverageText => SevenDayFluidAverageMl > 0
+        ? $"{SevenDayFluidAverageMl:N0} mL"
+        : "No entries";
 
     private decimal TodayPhosphorusMg => TodayNutritionRows.Sum(x => x.NetItemPhosphorusMg);
 

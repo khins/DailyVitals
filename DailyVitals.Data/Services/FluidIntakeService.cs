@@ -12,65 +12,77 @@ namespace DailyVitals.Data.Services
             long personId,
             DateTime consumedAt,
             int fluidMl,
+            decimal enteredAmount,
+            string enteredUnit,
             string beverageName,
             string? notes,
             string enteredBy)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            using var transaction = conn.BeginTransaction();
 
-            const string sql = @"
-                WITH inserted AS (
-                    INSERT INTO public.fluid_intake (
-                        person_id,
-                        consumed_at,
-                        fluid_ml,
-                        beverage_name,
-                        notes
-                    )
-                    VALUES (
-                        @person_id,
-                        @consumed_at,
-                        @fluid_ml,
-                        TRIM(@beverage_name),
-                        @notes
-                    )
-                    RETURNING fluid_intake_id
-                ),
-                logged AS (
-                    INSERT INTO public.data_entry_log (
-                        table_name,
-                        record_id,
-                        action_type,
-                        entered_by,
-                        change_details
-                    )
-                    SELECT
-                        'fluid_intake',
-                        fluid_intake_id,
-                        'INSERT',
-                        @entered_by,
-                        jsonb_build_object(
-                            'consumed_at', @consumed_at,
-                            'fluid_ml', @fluid_ml,
-                            'beverage_name', @beverage_name,
-                            'notes', @notes
-                        )
-                    FROM inserted
-                    RETURNING 1
+            const string insertSql = @"
+                INSERT INTO public.fluid_intake (
+                    person_id,
+                    consumed_at,
+                    fluid_ml,
+                    entered_amount,
+                    entered_unit,
+                    beverage_name,
+                    notes
                 )
-                SELECT fluid_intake_id
-                FROM inserted;";
+                VALUES (
+                    @person_id,
+                    @consumed_at,
+                    @fluid_ml,
+                    @entered_amount,
+                    @entered_unit,
+                    TRIM(@beverage_name),
+                    @notes
+                )
+                RETURNING fluid_intake_id;";
 
-            using var cmd = new NpgsqlCommand(sql, conn);
-            AddCommonParameters(cmd, personId, consumedAt, fluidMl, beverageName, notes);
-            cmd.Parameters.AddWithValue("entered_by", enteredBy);
+            using var insertCommand = new NpgsqlCommand(insertSql, conn, transaction);
+            AddCommonParameters(insertCommand, personId, consumedAt, fluidMl, enteredAmount, enteredUnit, beverageName, notes);
 
-            var result = cmd.ExecuteScalar();
+            var result = insertCommand.ExecuteScalar();
             if (result is null or DBNull)
                 throw new InvalidOperationException("Fluid intake insert failed. No ID returned.");
 
-            return Convert.ToInt64(result);
+            var fluidIntakeId = Convert.ToInt64(result);
+
+            const string logSql = @"
+                INSERT INTO public.data_entry_log (
+                    table_name,
+                    record_id,
+                    action_type,
+                    entered_by,
+                    change_details
+                )
+                VALUES (
+                    'fluid_intake',
+                    @fluid_intake_id,
+                    'INSERT',
+                    @entered_by,
+                    jsonb_build_object(
+                        'consumed_at', @consumed_at,
+                        'fluid_ml', @fluid_ml,
+                        'entered_amount', @entered_amount,
+                        'entered_unit', @entered_unit,
+                        'beverage_name', @beverage_name,
+                        'notes', @notes
+                    )
+                );";
+
+            using var logCommand = new NpgsqlCommand(logSql, conn, transaction);
+            AddCommonParameters(logCommand, personId, consumedAt, fluidMl, enteredAmount, enteredUnit, beverageName, notes);
+            logCommand.Parameters.AddWithValue("fluid_intake_id", fluidIntakeId);
+            logCommand.Parameters.AddWithValue("entered_by", enteredBy);
+            logCommand.ExecuteNonQuery();
+
+            transaction.Commit();
+            return fluidIntakeId;
         }
 
         public bool UpdateForPerson(
@@ -78,6 +90,8 @@ namespace DailyVitals.Data.Services
             long personId,
             DateTime consumedAt,
             int fluidMl,
+            decimal enteredAmount,
+            string enteredUnit,
             string beverageName,
             string? notes,
             string updatedBy)
@@ -91,6 +105,8 @@ namespace DailyVitals.Data.Services
                     SET
                         consumed_at = @consumed_at,
                         fluid_ml = @fluid_ml,
+                        entered_amount = @entered_amount,
+                        entered_unit = @entered_unit,
                         beverage_name = TRIM(@beverage_name),
                         notes = @notes,
                         updated_at = CURRENT_TIMESTAMP
@@ -114,6 +130,8 @@ namespace DailyVitals.Data.Services
                         jsonb_build_object(
                             'consumed_at', @consumed_at,
                             'fluid_ml', @fluid_ml,
+                            'entered_amount', @entered_amount,
+                            'entered_unit', @entered_unit,
                             'beverage_name', @beverage_name,
                             'notes', @notes
                         )
@@ -125,7 +143,7 @@ namespace DailyVitals.Data.Services
 
             using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("fluid_intake_id", fluidIntakeId);
-            AddCommonParameters(cmd, personId, consumedAt, fluidMl, beverageName, notes);
+            AddCommonParameters(cmd, personId, consumedAt, fluidMl, enteredAmount, enteredUnit, beverageName, notes);
             cmd.Parameters.AddWithValue("updated_by", updatedBy);
 
             return cmd.ExecuteScalar() is not null and not DBNull;
@@ -144,6 +162,8 @@ namespace DailyVitals.Data.Services
                     person_id,
                     consumed_at::timestamp,
                     fluid_ml,
+                    entered_amount,
+                    entered_unit,
                     beverage_name,
                     notes,
                     created_at,
@@ -164,10 +184,12 @@ namespace DailyVitals.Data.Services
                     PersonId = reader.GetInt64(1),
                     ConsumedAt = reader.GetDateTime(2),
                     FluidMl = reader.GetInt32(3),
-                    BeverageName = reader.GetString(4),
-                    Notes = reader.IsDBNull(5) ? null : reader.GetString(5),
-                    CreatedAt = reader.GetDateTime(6),
-                    UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
+                    EnteredAmount = reader.GetDecimal(4),
+                    EnteredUnit = reader.GetString(5),
+                    BeverageName = reader.GetString(6),
+                    Notes = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    CreatedAt = reader.GetDateTime(8),
+                    UpdatedAt = reader.IsDBNull(9) ? null : reader.GetDateTime(9)
                 });
             }
 
@@ -196,12 +218,16 @@ namespace DailyVitals.Data.Services
             long personId,
             DateTime consumedAt,
             int fluidMl,
+            decimal enteredAmount,
+            string enteredUnit,
             string beverageName,
             string? notes)
         {
             cmd.Parameters.AddWithValue("person_id", personId);
             cmd.Parameters.AddWithValue("consumed_at", consumedAt);
             cmd.Parameters.AddWithValue("fluid_ml", fluidMl);
+            cmd.Parameters.AddWithValue("entered_amount", enteredAmount);
+            cmd.Parameters.AddWithValue("entered_unit", enteredUnit);
             cmd.Parameters.AddWithValue("beverage_name", beverageName);
             cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
         }
