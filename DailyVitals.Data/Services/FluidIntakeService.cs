@@ -36,8 +36,8 @@ namespace DailyVitals.Data.Services
                     @person_id,
                     @consumed_at,
                     @fluid_ml,
-                    @entered_amount,
-                    @entered_unit,
+                    @fluid_ml,
+                    'mL',
                     TRIM(@beverage_name),
                     @notes
                 )
@@ -51,6 +51,30 @@ namespace DailyVitals.Data.Services
                 throw new InvalidOperationException("Fluid intake insert failed. No ID returned.");
 
             var fluidIntakeId = Convert.ToInt64(result);
+
+            // Normalize the initial insert to mL, then preserve the user's original
+            // amount and unit in the same transaction. This keeps calculations
+            // consistent while following the database path proven reliable for
+            // new records; no intermediate mL-only row is ever committed.
+            if (!string.Equals(enteredUnit, "mL", StringComparison.Ordinal))
+            {
+                const string sourceUnitSql = @"
+                    UPDATE public.fluid_intake
+                    SET
+                        entered_amount = @entered_amount,
+                        entered_unit = @entered_unit
+                    WHERE fluid_intake_id = @fluid_intake_id
+                      AND person_id = @person_id;";
+
+                using var sourceUnitCommand = new NpgsqlCommand(sourceUnitSql, conn, transaction);
+                sourceUnitCommand.Parameters.AddWithValue("entered_amount", enteredAmount);
+                sourceUnitCommand.Parameters.AddWithValue("entered_unit", enteredUnit);
+                sourceUnitCommand.Parameters.AddWithValue("fluid_intake_id", fluidIntakeId);
+                sourceUnitCommand.Parameters.AddWithValue("person_id", personId);
+
+                if (sourceUnitCommand.ExecuteNonQuery() != 1)
+                    throw new InvalidOperationException("Fluid intake source unit could not be saved.");
+            }
 
             const string logSql = @"
                 INSERT INTO public.data_entry_log (

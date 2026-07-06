@@ -1,50 +1,51 @@
-Deployment Blockers
-Before putting real health information online, address these:
-Connection configuration - resolved
-DailyVitals accepts ASP.NET configuration plus DAILYVITALS_CONNECTION_STRING and
-ConnectionStrings__DailyVitals environment variables, with App.config retained only
-as a desktop-development fallback.
+Deployment verdict: not production-ready for real health data
+Confirmed:
+Release build and publish succeed.
+Database reachable on PostgreSQL 18.1.
+All 14 migrations applied; none pending.
+Runtime database sessions use TLS and the non-superuser dailyvitals_app role.
+Web startup rejects unencrypted or superuser runtime database connections.
+Anonymous /health/live and /health/ready operational probes are available.
+Protected health routes redirect unauthenticated users.
+Publish excludes local secrets, keys, logs, and development settings.
+No known vulnerable NuGet packages.
 
-Local secrets - resolved
-Local database and API credentials are excluded from Git, Docker build context, and
-web publish output. DailyVitals.Web uses .NET user-secrets or environment variables;
-machine-local App.config files are no longer tracked.
+Blocking issues:
+Production requires persistent Data Protection keys/certificate, currently unconfigured.
+Step 1 is fixed.
+Runtime database role: dailyvitals_app—non-superuser and least-privileged.
+PostgreSQL TLS enabled and verified.
+Administrative connection isolated to migrations.
+Web startup now rejects superuser or unencrypted runtime connections.
+Migration check: 0 pending.
+Release build: 0 warnings/errors.
+Web startup test: HTTP 200.
+Changes are in [Configuration.cs](C:\\Users\\Kevin\\source\\repos\\DailyVitalsApp\\DailyVitals.Data\\Configuration.cs), [Program.cs](C:\\Users\\Kevin\\source\\repos\\DailyVitalsApp\\DailyVitals.Web\\Program.cs), and [deployment.md](C:\\Users\\Kevin\\source\\repos\\DailyVitalsApp\\docs\\deployment.md).
+Restart the existing web server so it loads the new secrets. Production should use a trusted certificate with SSL Mode=VerifyFull; the local self-signed certificate is development-only. PostgreSQL TLS guidance
 
-Authentication - resolved
-DailyVitals.Web now uses ASP.NET Core cookie authentication. Username, person_id, and demo access
-are server-issued claims in an encrypted HTTP-only cookie; health routes require
-authorization. Browser local/session storage is no longer trusted.
+No health/readiness endpoints
+Resolved testing with:
+     http://localhost:5085/health/ready
+     http://localhost:5085/health/live
 
-Database migrations - resolved
-Schema changes are tracked as ordered SQL migrations with checksums, advisory locking,
-and transactional execution. Data services no longer invoke schema setup during
-requests. Production uses `dotnet DailyVitals.Web.dll --migrate-only`; application
-startup refuses to continue when migrations are pending.
+No CI, automated tests, or deployment packaging.
+23 handlers expose raw exception details to users.
+No login rate limiting, account lockout, or session revocation.
+Public template routes /counter and /weather remain.
+Demo password is packaged in [appsettings.json](C:/Users/Kevin/source/repos/DailyVitalsApp/DailyVitals.Web/appsettings.json).
+Missing several security headers; AllowedHosts is unrestricted.
+[Security documentation](C:/Users/Kevin/source/repos/DailyVitalsApp/docs/security-and-privacy.md) describes an outdated authentication model.
+Current weight/fluid fixes are still uncommitted.
+Authenticated visual/CRUD automation could not be completed because the browser-testing connection was unavailable. The local server is only running Debug over HTTP on port 5085.
 
-Durable encryption keys - resolved
-Production startup now requires an absolute DataProtection__KeysPath backed by a
-persistent volume and an absolute DataProtection__CertificatePath pointing to a
-PKCS#12 certificate with a private key. The key ring is encrypted with that
-certificate, and startup fails rather than silently using ephemeral deployment
-storage. Development retains the ignored App_Data fallback.
-
-Recommended Architecture
-First release:
-Browser -> HTTPS -> DailyVitals.Web -> Managed/private PostgreSQL
-                              |
-                              +-> OpenAI API
-Future WPF release:
-Browser/WPF -> HTTPS -> DailyVitals.Api -> DailyVitals.Data -> PostgreSQL
-Keep DailyVitals.Domain or a new DailyVitals.Contracts project shared. Keep DailyVitals.Data exclusively on the server. Never distribute production database credentials inside the WPF application.
-First Deployment Sprint
-I recommend starting with a read-only Demo Mode deployment containing only synthetic data:
-Add environment-variable database configuration.
-Add production-safe configuration validation.
-Validate the baseline and migration runner against a production-like database copy.
-Add /health readiness and liveness endpoints.
-Add a Dockerfile and strict .dockerignore.
-Provision a separate staging PostgreSQL database.
-Deploy Demo Mode without the OpenAI key.
-Verify HTTPS, persistent keys, logs, backups, and read-only enforcement.
-Verify cookie sign-in, sign-out, expiration, and route authorization in staging.
-This gives you a working public portfolio deployment while keeping real health data out of the first infrastructure experiment. The existing [deployment guide](C:\\Users\\Kevin\\source\\repos\\DailyVitalsApp\\docs\\deployment.md) already points in this direction; the next step is choosing whether your server will be Windows/IIS, Linux/Docker, or a managed application platform.
+My recommended order
+1. Commit current work
+2. Remove demo password from appsettings.json
+3. Fix raw exception exposure
+4. Remove /counter and /weather
+5. Add login rate limiting / lockout
+6. Add CI
+7. Add first unit tests
+8. Add Dockerfile / deployment packaging
+9. Add security headers
+10. Update security documentation

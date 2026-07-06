@@ -7,13 +7,19 @@ namespace DailyVitals.Data.Configuration
     {
         private const string DeploymentConnectionStringVariable = "DAILYVITALS_CONNECTION_STRING";
         private const string AspNetConnectionStringVariable = "ConnectionStrings__DailyVitals";
+        private const string MigrationConnectionStringVariable = "DAILYVITALS_MIGRATION_CONNECTION_STRING";
+        private const string AspNetMigrationConnectionStringVariable = "ConnectionStrings__DailyVitalsMigrations";
         private static string? _configuredConnectionString;
+        private static string? _configuredMigrationConnectionString;
 
-        public static void Configure(string? connectionString)
+        public static void Configure(string? connectionString, string? migrationConnectionString = null)
         {
             _configuredConnectionString = string.IsNullOrWhiteSpace(connectionString)
                 ? null
                 : connectionString;
+            _configuredMigrationConnectionString = string.IsNullOrWhiteSpace(migrationConnectionString)
+                ? null
+                : migrationConnectionString;
         }
 
         public static NpgsqlConnection Create()
@@ -33,6 +39,48 @@ namespace DailyVitals.Data.Configuration
                 );
 
             return new NpgsqlConnection(connectionString);
+        }
+
+        public static NpgsqlConnection CreateMigration()
+        {
+            var connectionString =
+                Environment.GetEnvironmentVariable(MigrationConnectionStringVariable)
+                ?? _configuredMigrationConnectionString
+                ?? Environment.GetEnvironmentVariable(AspNetMigrationConnectionStringVariable)
+                ?? ConfigurationManager
+                    .ConnectionStrings["DailyVitalsMigrations"]
+                    ?.ConnectionString;
+
+            return string.IsNullOrWhiteSpace(connectionString)
+                ? Create()
+                : new NpgsqlConnection(connectionString);
+        }
+
+        public static async Task ValidateRuntimeSecurityAsync(
+            CancellationToken cancellationToken = default)
+        {
+            await using var connection = Create();
+            await connection.OpenAsync(cancellationToken);
+            await using var command = new NpgsqlCommand(
+                """
+                SELECT r.rolsuper, s.ssl
+                FROM pg_roles r
+                CROSS JOIN pg_stat_ssl s
+                WHERE r.rolname = current_user
+                  AND s.pid = pg_backend_pid()
+                """,
+                connection);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+            if (!await reader.ReadAsync(cancellationToken))
+                throw new ConfigurationErrorsException(
+                    "Could not verify the PostgreSQL runtime connection security.");
+            if (reader.GetBoolean(0))
+                throw new ConfigurationErrorsException(
+                    "The PostgreSQL runtime connection must not use a superuser role.");
+            if (!reader.GetBoolean(1))
+                throw new ConfigurationErrorsException(
+                    "The PostgreSQL runtime connection must use TLS.");
         }
 
         public static void TestConnection()
