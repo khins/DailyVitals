@@ -28,7 +28,7 @@ public sealed class DatabaseMigrationRunner
     public async Task<IReadOnlyList<string>> GetPendingMigrationIdsAsync(
         CancellationToken cancellationToken = default)
     {
-        await using var connection = DbConnectionFactory.Create();
+        await using var connection = DbConnectionFactory.CreateMigration();
         await connection.OpenAsync(cancellationToken);
         await EnsureMigrationTableAsync(connection, cancellationToken);
 
@@ -43,7 +43,7 @@ public sealed class DatabaseMigrationRunner
 
     public async Task<IReadOnlyList<string>> RunAsync(CancellationToken cancellationToken = default)
     {
-        await using var connection = DbConnectionFactory.Create();
+        await using var connection = DbConnectionFactory.CreateMigration();
         await connection.OpenAsync(cancellationToken);
         await AcquireLockAsync(connection, cancellationToken);
 

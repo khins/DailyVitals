@@ -95,13 +95,27 @@
 
                         <div class="kidney-lab-number-grid">
                             <div class="field-group">
-                                <label for="albumin">Albumin</label>
+                                <div class="field-label-row">
+                                    <label for="albumin">Albumin</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show Albumin reference"
+                                            aria-label="Show Albumin reference"
+                                            @onclick="ShowAlbuminReference">?</button>
+                                </div>
                                 <InputNumber id="albumin" class="form-input" @bind-Value="_form.Albumin" />
                                 <ValidationMessage For="() => _form.Albumin" />
                             </div>
 
                             <div class="field-group">
-                                <label for="npcr">nPCR</label>
+                                <div class="field-label-row">
+                                    <label for="npcr">nPCR</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show nPCR reference"
+                                            aria-label="Show nPCR reference"
+                                            @onclick="ShowNpcrReference">?</button>
+                                </div>
                                 <InputNumber id="npcr" class="form-input" @bind-Value="_form.NPCR" />
                                 <ValidationMessage For="() => _form.NPCR" />
                             </div>
@@ -291,6 +305,45 @@
                 </article>
             </section>
 
+            @if (_activeLabReference is { } reference)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="HideLabReference">
+                    <section class="info-modal lab-reference-modal"
+                             role="dialog"
+                             aria-modal="true"
+                             aria-labelledby="lab-reference-title"
+                             aria-describedby="lab-reference-note"
+                             @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <div>
+                                <span>Lab Reference</span>
+                                <h2 id="lab-reference-title">@reference.Name</h2>
+                            </div>
+                            <button type="button"
+                                    class="modal-close-button"
+                                    aria-label="@($"Close {reference.Name} reference")"
+                                    @onclick="HideLabReference">×</button>
+                        </div>
+
+                        <div class="lab-reference-result @ReferenceStatusClass">
+                            <span class="lab-reference-icon" aria-hidden="true">@ReferenceStatusIcon</span>
+                            <strong>@ReferenceStatusText</strong>
+                            @if (reference.Value.HasValue)
+                            {
+                                <span>Your value: @reference.Value.Value.ToString("0.##") @reference.Unit</span>
+                            }
+                        </div>
+
+                        <p class="lab-reference-goal">Goal: @reference.GoalText</p>
+                        <p id="lab-reference-note" class="info-modal-note">
+                            This is a general dialysis nutrition reference. Your laboratory's
+                            range and your care team's individualized goal may differ.
+                        </p>
+                        <p class="lab-reference-source">Reference: National Kidney Foundation / KDOQI</p>
+                    </section>
+                </div>
+            }
+
             @if (_showDeleteConfirm)
             {
                 <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
@@ -328,6 +381,7 @@
     private string _messageClass = "page-message";
     private string? _formToast;
     private bool _showDeleteConfirm;
+    private LabReference? _activeLabReference;
 
     protected override void OnInitialized()
     {
@@ -365,6 +419,30 @@
     }
 
     private KidneyLabResult? LatestResult => _history.FirstOrDefault();
+
+    private bool ReferenceHasValue => _activeLabReference is { Value: not null };
+
+    private bool ReferenceIsInRange =>
+        _activeLabReference is { Value: { } value } reference &&
+        value >= reference.Goal;
+
+    private string ReferenceStatusText => !ReferenceHasValue
+        ? "No value entered"
+        : ReferenceIsInRange
+            ? "In range"
+            : "Below goal";
+
+    private string ReferenceStatusClass => !ReferenceHasValue
+        ? "lab-reference-result--neutral"
+        : ReferenceIsInRange
+            ? "lab-reference-result--success"
+            : "lab-reference-result--attention";
+
+    private string ReferenceStatusIcon => !ReferenceHasValue
+        ? "?"
+        : ReferenceIsInRange
+            ? "✓"
+            : "!";
 
     private string LabSummaryTitle => LatestResult is null
         ? "Ready for first panel"
@@ -606,6 +684,37 @@
         _showDeleteConfirm = true;
     }
 
+    private void ShowLabReference(LabReference reference)
+    {
+        _showDeleteConfirm = false;
+        _activeLabReference = reference;
+    }
+
+    private void ShowAlbuminReference()
+    {
+        ShowLabReference(new(
+            "Albumin",
+            _form.Albumin,
+            4.0m,
+            "g/dL",
+            "4.0 g/dL or higher"));
+    }
+
+    private void ShowNpcrReference()
+    {
+        ShowLabReference(new(
+            "nPCR",
+            _form.NPCR,
+            1.2m,
+            "g/kg/day",
+            "1.2 or higher"));
+    }
+
+    private void HideLabReference()
+    {
+        _activeLabReference = null;
+    }
+
     private void CancelDelete()
     {
         _showDeleteConfirm = false;
@@ -787,4 +896,11 @@
     }
 
     private sealed record LabTrendPoint(string Label, decimal Value);
+
+    private sealed record LabReference(
+        string Name,
+        decimal? Value,
+        decimal Goal,
+        string Unit,
+        string GoalText);
 }

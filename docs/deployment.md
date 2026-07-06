@@ -31,6 +31,16 @@ dotnet publish DailyVitals.Web\DailyVitals.Web.csproj `
 
 The deployment environment must provide the connection string, OpenAI configuration, ASP.NET Core environment, HTTPS termination, and persistent Data Protection keys.
 
+## Health Probes
+
+- GET /health/live confirms that the web process can serve requests.
+- GET /health/ready confirms that the restricted runtime database connection
+  is reachable, encrypted with TLS, and does not use a PostgreSQL superuser.
+
+Both endpoints are intentionally anonymous and return only status/check names;
+they never expose connection strings, exception details, or health data. Configure
+the hosting platform's liveness and readiness probes to use these paths.
+
 ## Configuration
 
 Use environment-specific secret management for:
@@ -44,6 +54,20 @@ Provide the PostgreSQL connection with the standard ASP.NET Core environment
 variable `ConnectionStrings__DailyVitals` or the deployment-specific alias
 `DAILYVITALS_CONNECTION_STRING`. The web project does not package or require an
 `App.config` file.
+
+Use a dedicated, least-privileged PostgreSQL login for that runtime connection.
+Grant only schema usage plus the table, sequence, and function permissions the
+application requires. Require TLS and certificate verification in production
+(`SSL Mode=VerifyFull` with the trusted PostgreSQL root certificate).
+Web startup verifies the live runtime session and refuses to start when that
+connection is unencrypted or its login is a PostgreSQL superuser.
+
+Migration execution may use a separate administrative connection supplied as
+`ConnectionStrings__DailyVitalsMigrations` or
+`DAILYVITALS_MIGRATION_CONNECTION_STRING`. Supply that credential only to the
+one-time migration job; do not expose it to the continuously running web process.
+When no separate migration connection is configured, migration commands fall back
+to the runtime connection for local-development compatibility.
 
 Provide the OpenAI key through the hosting platform's secret manager using
 `OpenAI__ApiKey` or `OPENAI_API_KEY`. `OpenAI__Model` or `OPENAI_MODEL` can override

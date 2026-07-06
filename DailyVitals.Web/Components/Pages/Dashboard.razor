@@ -299,6 +299,80 @@
                     }
                 </article>
 
+                <article class="dashboard-card weight-sparkline-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>History</span>
+                            <h2>Weight Trend</h2>
+                        </div>
+                        <strong>@_weightHistory.Count entries</strong>
+                    </div>
+
+                    @if (WeightSparklinePoints.Count < 2)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>More weight data needed</h2>
+                            <p>Add at least two weight readings to build the dashboard trend.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="weight-sparkline-heading">
+                            <div>
+                                <div class="weight-sparkline-latest">
+                                    @WeightSparklineLatestText
+                                    <span class="@WeightSevenDayChangeClass">@WeightSevenDayChangeText</span>
+                                </div>
+                                <p>Latest: @WeightSparklineLatestTimeText</p>
+                            </div>
+                            <a class="secondary-link" href="weight-trend">View Weight History</a>
+                        </div>
+
+                        <div class="weight-sparkline-chart" aria-label="Recent weight trend">
+                            <svg viewBox="0 0 100 42" preserveAspectRatio="none" role="img">
+                                <polygon class="weight-sparkline-area" points="@WeightSparklineAreaPoints" />
+                                <polyline class="weight-sparkline-line" points="@WeightSparklinePolyline" />
+                                @foreach (var point in WeightSparklinePoints)
+                                {
+                                    <circle cx="@point.X" cy="@point.Y" r="1.1" />
+                                }
+                            </svg>
+                            <div class="weight-sparkline-labels" style="grid-template-columns: repeat(@WeightSparklinePoints.Count, minmax(0, 1fr));">
+                                @foreach (var point in WeightSparklinePoints)
+                                {
+                                    <span>
+                                        <strong>@point.Value.ToString("0.#")</strong>
+                                        <small>@point.ReadingTime.ToString("M/d")</small>
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="weight-sparkline-stats">
+                            <div>
+                                <span>7-Day Change</span>
+                                <strong class="@WeightSevenDayChangeClass">@WeightSevenDayChangeText</strong>
+                            </div>
+                            <div>
+                                <span>30-Day Change</span>
+                                <strong class="@WeightThirtyDayChangeClass">@WeightThirtyDayChangeText</strong>
+                            </div>
+                            <div>
+                                <span>Lowest (30 Days)</span>
+                                <strong>@WeightThirtyDayLowText</strong>
+                            </div>
+                            <div>
+                                <span>Highest (30 Days)</span>
+                                <strong>@WeightThirtyDayHighText</strong>
+                            </div>
+                            <div>
+                                <span>Trend</span>
+                                <strong class="@WeightSevenDayChangeClass">@WeightTrendDirection</strong>
+                            </div>
+                        </div>
+                    }
+                </article>
+
                 <article class="dashboard-card exercise-trend-panel">
                     <div class="card-heading">
                         <div>
@@ -927,6 +1001,124 @@
             ? $"Targets for {DateTime.Today:M/d/yyyy}. {TodayPhosphorusMg:N0} mg phosphorus logged today after binder adjustment."
             : "No food entries logged today yet.";
 
+    private IReadOnlyList<WeightSparklinePoint> WeightSparklinePoints
+    {
+        get
+        {
+            var readings = _weightHistory
+                .OrderBy(x => x.ReadingTime)
+                .TakeLast(7)
+                .ToList();
+
+            if (readings.Count == 0)
+                return [];
+
+            var min = readings.Min(x => x.WeightValue);
+            var max = readings.Max(x => x.WeightValue);
+            var range = max - min;
+            if (range <= 0)
+                range = 1m;
+
+            return readings
+                .Select((reading, index) => new WeightSparklinePoint(
+                    reading.ReadingTime,
+                    reading.WeightValue,
+                    string.IsNullOrWhiteSpace(reading.WeightUnit) ? "lb" : reading.WeightUnit,
+                    readings.Count == 1 ? 50m : 4m + index * 92m / (readings.Count - 1),
+                    35m - ((reading.WeightValue - min) / range * 28m)))
+                .ToList();
+        }
+    }
+
+    private string WeightSparklinePolyline => string.Join(
+        " ",
+        WeightSparklinePoints.Select(point => $"{point.X:0.##},{point.Y:0.##}"));
+
+    private string WeightSparklineAreaPoints => WeightSparklinePoints.Count == 0
+        ? string.Empty
+        : $"4,39 {WeightSparklinePolyline} 96,39";
+
+    private WeightSparklinePoint? LatestWeightSparklinePoint => WeightSparklinePoints.LastOrDefault();
+
+    private string WeightSparklineLatestText => LatestWeightSparklinePoint is null
+        ? "--"
+        : $"{LatestWeightSparklinePoint.Value:0.#} {LatestWeightSparklinePoint.Unit}";
+
+    private string WeightSparklineLatestTimeText => LatestWeightSparklinePoint is null
+        ? "No reading"
+        : LatestWeightSparklinePoint.ReadingTime.ToString("M/d/yyyy h:mm tt");
+
+    private decimal? GetWeightWindowChange(int days)
+    {
+        var latest = _weightHistory.OrderByDescending(x => x.ReadingTime).FirstOrDefault();
+        if (latest is null)
+            return null;
+
+        var cutoff = latest.ReadingTime.AddDays(-days);
+        var baseline = _weightHistory
+            .Where(x => x.ReadingTime >= cutoff && x.ReadingTime <= latest.ReadingTime)
+            .OrderBy(x => x.ReadingTime)
+            .FirstOrDefault();
+
+        return baseline is null ? null : latest.WeightValue - baseline.WeightValue;
+    }
+
+    private decimal? WeightSevenDayChange => GetWeightWindowChange(7);
+
+    private decimal? WeightThirtyDayChange => GetWeightWindowChange(30);
+
+    private string WeightSevenDayChangeText => FormatWeightChange(WeightSevenDayChange);
+
+    private string WeightThirtyDayChangeText => FormatWeightChange(WeightThirtyDayChange);
+
+    private string WeightSevenDayChangeClass => WeightChangeClass(WeightSevenDayChange);
+
+    private string WeightThirtyDayChangeClass => WeightChangeClass(WeightThirtyDayChange);
+
+    private IReadOnlyList<WeightReading> WeightThirtyDayReadings
+    {
+        get
+        {
+            var latest = _weightHistory.OrderByDescending(x => x.ReadingTime).FirstOrDefault();
+            if (latest is null)
+                return [];
+
+            var cutoff = latest.ReadingTime.AddDays(-30);
+            return _weightHistory.Where(x => x.ReadingTime >= cutoff).ToList();
+        }
+    }
+
+    private string WeightThirtyDayLowText => WeightThirtyDayReadings.Count == 0
+        ? "--"
+        : $"{WeightThirtyDayReadings.Min(x => x.WeightValue):0.#} lb";
+
+    private string WeightThirtyDayHighText => WeightThirtyDayReadings.Count == 0
+        ? "--"
+        : $"{WeightThirtyDayReadings.Max(x => x.WeightValue):0.#} lb";
+
+    private string WeightTrendDirection => WeightSevenDayChange switch
+    {
+        < -0.1m => "Losing weight",
+        > 0.1m => "Gaining weight",
+        not null => "Stable",
+        _ => "No trend"
+    };
+
+    private static string FormatWeightChange(decimal? change) => change switch
+    {
+        < 0 => $"↓ {Math.Abs(change.Value):0.#} lb",
+        > 0 => $"↑ {change.Value:0.#} lb",
+        0 => "→ 0 lb",
+        _ => "--"
+    };
+
+    private static string WeightChangeClass(decimal? change) => change switch
+    {
+        < 0 => "weight-sparkline-change weight-sparkline-change--down",
+        > 0 => "weight-sparkline-change weight-sparkline-change--up",
+        _ => "weight-sparkline-change"
+    };
+
     private IReadOnlyList<ExerciseTrendPoint> ExerciseSessionTrendPoints =>
         _exerciseHistory
             .Where(x => x.CaloriesExpended.HasValue)
@@ -1139,6 +1331,8 @@
         string RemainingClass);
 
     private sealed record ExerciseTrendPoint(DateTime StartTime, decimal Calories, decimal DurationMinutes);
+
+    private sealed record WeightSparklinePoint(DateTime ReadingTime, decimal Value, string Unit, decimal X, decimal Y);
 
     private sealed record ExerciseMonthTotal(string Label, decimal TotalCalories, decimal TotalMinutes, int HeightPercent);
 }

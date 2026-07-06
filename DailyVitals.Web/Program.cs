@@ -1,5 +1,6 @@
 using DailyVitals.Web.Components;
 using DailyVitals.Web.Configuration;
+using DailyVitals.Web.Health;
 using DailyVitals.Web.Services;
 using DailyVitals.Data.Configuration;
 using DailyVitals.Data.Migrations;
@@ -7,11 +8,15 @@ using DailyVitals.Data.Services;
 using DailyVitals.Data.Services.DailyVitals.App.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-DbConnectionFactory.Configure(builder.Configuration.GetConnectionString("DailyVitals"));
+DbConnectionFactory.Configure(
+    builder.Configuration.GetConnectionString("DailyVitals"),
+    builder.Configuration.GetConnectionString("DailyVitalsMigrations"));
 OpenAiConfiguration.Configure(
     builder.Configuration["OpenAI:ApiKey"],
     builder.Configuration["OpenAI:Model"]);
@@ -36,6 +41,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseReadinessHealthCheck>(
+        "database",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["ready"],
+        timeout: TimeSpan.FromSeconds(5));
 builder.Services.AddScoped<LoginUserService>();
 builder.Services.AddScoped<BloodPressureService>();
 builder.Services.AddScoped<BloodGlucoseService>();
@@ -85,6 +96,8 @@ else
     }
 }
 
+await DbConnectionFactory.ValidateRuntimeSecurityAsync();
+
 if (builder.Configuration.GetValue("DemoMode:Enabled", false))
 {
     try
@@ -111,6 +124,24 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+app.MapHealthChecks(
+    "/health/live",
+    new HealthCheckOptions
+    {
+        Predicate = _ => false,
+        ResponseWriter = WriteHealthResponseAsync
+    })
+    .AllowAnonymous();
+
+app.MapHealthChecks(
+    "/health/ready",
+    new HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready"),
+        ResponseWriter = WriteHealthResponseAsync
+    })
+    .AllowAnonymous();
 
 app.MapPost("/auth/session", async (
     AuthSessionRequest request,
@@ -154,5 +185,21 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+static Task WriteHealthResponseAsync(HttpContext context, HealthReport report)
+{
+    context.Response.ContentType = "application/json";
+    return context.Response.WriteAsJsonAsync(
+        new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(entry => new
+            {
+                name = entry.Key,
+                status = entry.Value.Status.ToString()
+            })
+        },
+        context.RequestAborted);
+}
 
 internal sealed record AuthSessionRequest(string? Ticket);
