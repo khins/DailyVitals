@@ -1,0 +1,53 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DailyVitals.Data", "DailyVitals.Data\DailyVitals.Data.csproj", "{D580C3F8-F824-1799-4093-5E86562A643E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DailyVitals.Domain", "DailyVitals.Domain\DailyVitals.Domain.csproj", "{0CFA188B-D62E-F470-0789-E50504415147}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DailyVitals.Web", "DailyVitals.Web\DailyVitals.Web.csproj", "{150942FA-7B6A-7415-9998-69B3F0D34612}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DailyVitals.App", "DailyVitalsApp\DailyVitals.App.csproj", "{1B3B4247-0B70-6957-AEB4-25AD6C92D4CD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{07C2787E-EAC7-C090-1BA3-A61EC2A24D84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SodiumBackfill", "tools\SodiumBackfill\SodiumBackfill.csproj", "{F71EB255-F217-938A-6FD1-E118FB5A78EC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D580C3F8-F824-1799-4093-5E86562A643E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D580C3F8-F824-1799-4093-5E86562A643E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D580C3F8-F824-1799-4093-5E86562A643E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D580C3F8-F824-1799-4093-5E86562A643E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CFA188B-D62E-F470-0789-E50504415147}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CFA188B-D62E-F470-0789-E50504415147}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CFA188B-D62E-F470-0789-E50504415147}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CFA188B-D62E-F470-0789-E50504415147}.Release|Any CPU.Build.0 = Release|Any CPU
+		{150942FA-7B6A-7415-9998-69B3F0D34612}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{150942FA-7B6A-7415-9998-69B3F0D34612}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{150942FA-7B6A-7415-9998-69B3F0D34612}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{150942FA-7B6A-7415-9998-69B3F0D34612}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B3B4247-0B70-6957-AEB4-25AD6C92D4CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B3B4247-0B70-6957-AEB4-25AD6C92D4CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B3B4247-0B70-6957-AEB4-25AD6C92D4CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B3B4247-0B70-6957-AEB4-25AD6C92D4CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F71EB255-F217-938A-6FD1-E118FB5A78EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F71EB255-F217-938A-6FD1-E118FB5A78EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F71EB255-F217-938A-6FD1-E118FB5A78EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F71EB255-F217-938A-6FD1-E118FB5A78EC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F71EB255-F217-938A-6FD1-E118FB5A78EC} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9836962B-BB8E-43BC-976A-32C9E74B3125}
+	EndGlobalSection
+EndGlobal

@@ -53,7 +53,7 @@ namespace DailyVitals.Data.Services
                 w.weight_unit,
                 w.reading_time,
                 w.notes,
-                COALESCE(p.height_ft, w.height_ft, 6.08) AS height_ft,
+                COALESCE(p.height_ft, w.height_ft) AS height_ft,
                 w.created_at,
                 w.updated_at
             FROM weight w
@@ -187,7 +187,7 @@ namespace DailyVitals.Data.Services
                         w.weight_id,
                         w.weight_value,
                         w.weight_unit,
-                        COALESCE(p.height_ft, w.height_ft, 6.08) AS height_ft,
+                        COALESCE(p.height_ft, w.height_ft) AS height_ft,
                         w.reading_time,
                         w.notes,
                         w.created_at,

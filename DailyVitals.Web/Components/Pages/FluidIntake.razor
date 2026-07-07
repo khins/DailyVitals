@@ -100,7 +100,7 @@
                         </div>
                     </div>
 
-                    <EditForm Model="_form" class="bp-form">
+                    <EditForm Model="_form" FormName="fluid-intake-entry-form" OnValidSubmit="SaveEntry" class="bp-form">
                         <DataAnnotationsValidator />
 
                         <div class="form-row">
@@ -155,7 +155,7 @@
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewEntry" disabled="@LoginSession.IsDemo">New</button>
                             <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(LoginSession.IsDemo || !_editingId.HasValue)">Delete</button>
-                            <button type="button" class="primary-action" @onclick="SaveEntry">Save</button>
+                            <button type="submit" class="primary-action">Save</button>
                         </div>
 
                     </EditForm>

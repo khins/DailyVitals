@@ -6,7 +6,7 @@ namespace DailyVitals.Web.Services;
 
 public sealed class DemoAccountSeeder
 {
-    private const int SeedVersion = 2;
+    private const int SeedVersion = 3;
     private readonly IConfiguration _configuration;
     private readonly PersonService _personService;
     private readonly LoginUserService _loginUserService;
@@ -107,6 +107,8 @@ public sealed class DemoAccountSeeder
                 person_id int8 NOT NULL,
                 consumed_at timestamp NOT NULL,
                 fluid_ml int4 NOT NULL,
+                entered_amount numeric(10, 2) NOT NULL DEFAULT 0,
+                entered_unit varchar(10) NOT NULL DEFAULT 'mL',
                 beverage_name varchar(120) NOT NULL,
                 notes text NULL,
                 created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -349,12 +351,12 @@ public sealed class DemoAccountSeeder
     private static void SeedFluid(NpgsqlConnection conn, NpgsqlTransaction transaction, long personId)
     {
         const string sql = @"
-            INSERT INTO public.fluid_intake (person_id, consumed_at, fluid_ml, beverage_name, notes)
-            SELECT @person_id, CURRENT_DATE - day_number + TIME '08:15', 240, 'Coffee', 'Morning beverage'
+            INSERT INTO public.fluid_intake (person_id, consumed_at, fluid_ml, entered_amount, entered_unit, beverage_name, notes)
+            SELECT @person_id, CURRENT_DATE - day_number + TIME '08:15', 240, 240, 'mL', 'Coffee', 'Morning beverage'
             FROM generate_series(0, 29) AS day_number;
 
-            INSERT INTO public.fluid_intake (person_id, consumed_at, fluid_ml, beverage_name, notes)
-            SELECT @person_id, CURRENT_DATE - day_number + TIME '15:00', 355, 'Water', 'Afternoon water'
+            INSERT INTO public.fluid_intake (person_id, consumed_at, fluid_ml, entered_amount, entered_unit, beverage_name, notes)
+            SELECT @person_id, CURRENT_DATE - day_number + TIME '15:00', 355, 355, 'mL', 'Water', 'Afternoon water'
             FROM generate_series(0, 29) AS day_number;";
 
         using var cmd = new NpgsqlCommand(sql, conn, transaction);
