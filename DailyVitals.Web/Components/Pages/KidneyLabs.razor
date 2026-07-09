@@ -147,7 +147,14 @@
                             </div>
 
                             <div class="field-group">
-                                <label for="calcium">Calcium</label>
+                                <div class="field-label-row">
+                                    <label for="calcium">Calcium</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show Calcium reference"
+                                            aria-label="Show Calcium reference"
+                                            @onclick="ShowCalciumReference">?</button>
+                                </div>
                                 <InputNumber id="calcium" class="form-input" @bind-Value="_form.Calcium" />
                                 <ValidationMessage For="() => _form.Calcium" />
                             </div>
@@ -752,6 +759,17 @@
             null,
             string.Empty,
             "2.0 or higher"));
+    }
+
+    private void ShowCalciumReference()
+    {
+        ShowLabReference(new(
+            "Calcium (Total)",
+            _form.Calcium,
+            8.5m,
+            10.0m,
+            "mg/dL",
+            "8.5 - 10.0 mg/dL"));
     }
 
     private void HideLabReference()
