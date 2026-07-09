@@ -160,13 +160,27 @@
                             </div>
 
                             <div class="field-group">
-                                <label for="phosphorus">Phosphorus</label>
+                                <div class="field-label-row">
+                                    <label for="phosphorus">Phosphorus</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show Phosphorus reference"
+                                            aria-label="Show Phosphorus reference"
+                                            @onclick="ShowPhosphorusReference">?</button>
+                                </div>
                                 <InputNumber id="phosphorus" class="form-input" @bind-Value="_form.Phosphorus" />
                                 <ValidationMessage For="() => _form.Phosphorus" />
                             </div>
 
                             <div class="field-group">
-                                <label for="ipth">iPTH</label>
+                                <div class="field-label-row">
+                                    <label for="ipth">iPTH</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show iPTH reference"
+                                            aria-label="Show iPTH reference"
+                                            @onclick="ShowIpthReference">?</button>
+                                </div>
                                 <InputNumber id="ipth" class="form-input" @bind-Value="_form.IPTH" />
                                 <ValidationMessage For="() => _form.IPTH" />
                             </div>
@@ -770,6 +784,28 @@
             10.0m,
             "mg/dL",
             "8.5 - 10.0 mg/dL"));
+    }
+
+    private void ShowPhosphorusReference()
+    {
+        ShowLabReference(new(
+            "Phosphorus",
+            _form.Phosphorus,
+            3.0m,
+            5.5m,
+            "mg/dL",
+            "3.0 - 5.5 mg/dL"));
+    }
+
+    private void ShowIpthReference()
+    {
+        ShowLabReference(new(
+            "iPTH",
+            _form.IPTH,
+            160m,
+            720m,
+            "pg/mL",
+            "160 - 720 pg/mL"));
     }
 
     private void HideLabReference()
