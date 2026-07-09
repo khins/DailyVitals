@@ -199,7 +199,14 @@
                             </div>
 
                             <div class="field-group">
-                                <label for="glucose">Glucose</label>
+                                <div class="field-label-row">
+                                    <label for="glucose">Glucose</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show Glucose reference"
+                                            aria-label="Show Glucose reference"
+                                            @onclick="ShowGlucoseReference">?</button>
+                                </div>
                                 <InputNumber id="glucose" class="form-input" @bind-Value="_form.Glucose" />
                                 <ValidationMessage For="() => _form.Glucose" />
                             </div>
@@ -824,6 +831,17 @@
             11.0m,
             "g/dL",
             "10.0 - 11.0 g/dL"));
+    }
+
+    private void ShowGlucoseReference()
+    {
+        ShowLabReference(new(
+            "Glucose",
+            _form.Glucose,
+            70m,
+            160m,
+            "mg/dL",
+            "70 - 160 mg/dL"));
     }
 
     private void HideLabReference()
