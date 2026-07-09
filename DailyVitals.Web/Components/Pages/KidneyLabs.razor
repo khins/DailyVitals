@@ -121,7 +121,14 @@
                             </div>
 
                             <div class="field-group">
-                                <label for="potassium">Potassium</label>
+                                <div class="field-label-row">
+                                    <label for="potassium">Potassium</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show Potassium reference"
+                                            aria-label="Show Potassium reference"
+                                            @onclick="ShowPotassiumReference">?</button>
+                                </div>
                                 <InputNumber id="potassium" class="form-input" @bind-Value="_form.Potassium" />
                                 <ValidationMessage For="() => _form.Potassium" />
                             </div>
@@ -424,13 +431,20 @@
 
     private bool ReferenceIsInRange =>
         _activeLabReference is { Value: { } value } reference &&
-        value >= reference.Goal;
+        value >= reference.LowGoal &&
+        (!reference.HighGoal.HasValue || value <= reference.HighGoal.Value);
+
+    private bool ReferenceIsHigh =>
+        _activeLabReference is { Value: { } value, HighGoal: { } highGoal } &&
+        value > highGoal;
 
     private string ReferenceStatusText => !ReferenceHasValue
         ? "No value entered"
         : ReferenceIsInRange
             ? "In range"
-            : "Below goal";
+            : ReferenceIsHigh
+                ? "Above range"
+                : "Below goal";
 
     private string ReferenceStatusClass => !ReferenceHasValue
         ? "lab-reference-result--neutral"
@@ -696,6 +710,7 @@
             "Albumin",
             _form.Albumin,
             4.0m,
+            null,
             "g/dL",
             "4.0 g/dL or higher"));
     }
@@ -706,8 +721,20 @@
             "nPCR",
             _form.NPCR,
             1.2m,
+            null,
             "g/kg/day",
             "1.2 or higher"));
+    }
+
+    private void ShowPotassiumReference()
+    {
+        ShowLabReference(new(
+            "Potassium",
+            _form.Potassium,
+            3.5m,
+            5.5m,
+            "mEq/L",
+            "3.5 - 5.5 mEq/L"));
     }
 
     private void HideLabReference()
@@ -900,7 +927,8 @@
     private sealed record LabReference(
         string Name,
         decimal? Value,
-        decimal Goal,
+        decimal LowGoal,
+        decimal? HighGoal,
         string Unit,
         string GoalText);
 }
