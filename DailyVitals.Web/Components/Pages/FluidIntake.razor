@@ -10,6 +10,7 @@
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<FluidIntake> Logger
 
 <PageTitle>Fluid Intake | DailyVitals</PageTitle>
 
@@ -502,7 +503,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Fluid intake save failed.");
+            ShowError("Fluid intake entry could not be saved. Please try again.");
         }
     }
 
@@ -556,7 +558,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Fluid intake delete failed.");
+            ShowError("Fluid intake entry could not be deleted. Please try again.");
         }
     }
 

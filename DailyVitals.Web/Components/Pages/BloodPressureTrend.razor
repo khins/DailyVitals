@@ -8,6 +8,7 @@
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<BloodPressureTrend> Logger
 
 <PageTitle>Blood Pressure Trend | DailyVitals</PageTitle>
 
@@ -311,7 +312,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Blood pressure trend data load failed.");
+            ShowError("Blood pressure trend data could not be loaded. Please try again.");
         }
     }
 

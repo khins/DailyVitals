@@ -10,6 +10,7 @@
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<Nutrition> Logger
 
 <PageTitle>Nutrition | DailyVitals</PageTitle>
 
@@ -969,7 +970,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Nutrition estimate failed.");
+            ShowError("Nutrition estimate could not be completed. Please try again.");
         }
         finally
         {
@@ -1106,7 +1108,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Nutrition entry save failed.");
+            ShowError("Nutrition entry could not be saved. Please try again.");
         }
     }
 
@@ -1176,7 +1179,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Nutrition entry delete failed.");
+            ShowError("Nutrition entry could not be deleted. Please try again.");
         }
     }
 

@@ -11,6 +11,7 @@
 @inject VitalThresholdService VitalThresholdService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<Profile> Logger
 
 <PageTitle>Profile | DailyVitals</PageTitle>
 
@@ -390,7 +391,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Profile load failed.");
+            ShowError("Profile could not be loaded. Please try again.");
         }
     }
 
@@ -520,7 +522,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Profile save failed.");
+            ShowError("Profile could not be saved. Please try again.");
         }
     }
 

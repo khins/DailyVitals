@@ -6,6 +6,7 @@
 @inject LoginUserService LoginUserService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<AccountRecovery> Logger
 
 <PageTitle>Reset Password | DailyVitals</PageTitle>
 
@@ -157,7 +158,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Account recovery password reset failed.");
+            ShowError("Password reset could not be completed. Please try again.");
         }
     }
 

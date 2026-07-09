@@ -6,6 +6,7 @@
 @inject LoginUserService LoginUserService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<ForgotEmail> Logger
 
 <PageTitle>Forgot Email | DailyVitals</PageTitle>
 
@@ -138,7 +139,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Forgot email lookup failed.");
+            ShowError("Email lookup could not be completed. Please try again.");
         }
     }
 
