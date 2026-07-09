@@ -134,7 +134,14 @@
                             </div>
 
                             <div class="field-group">
-                                <label for="wktv">wKt/V</label>
+                                <div class="field-label-row">
+                                    <label for="wktv">wKt/V</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show wKt/V reference"
+                                            aria-label="Show wKt/V reference"
+                                            @onclick="ShowWktvReference">?</button>
+                                </div>
                                 <InputNumber id="wktv" class="form-input" @bind-Value="_form.WKtV" />
                                 <ValidationMessage For="() => _form.WKtV" />
                             </div>
@@ -339,6 +346,7 @@
                             {
                                 <span>Your value: @reference.Value.Value.ToString("0.##") @reference.Unit</span>
                             }
+                            <span>Collected: @ReferenceCollectedText</span>
                         </div>
 
                         <p class="lab-reference-goal">Goal: @reference.GoalText</p>
@@ -434,17 +442,11 @@
         value >= reference.LowGoal &&
         (!reference.HighGoal.HasValue || value <= reference.HighGoal.Value);
 
-    private bool ReferenceIsHigh =>
-        _activeLabReference is { Value: { } value, HighGoal: { } highGoal } &&
-        value > highGoal;
-
     private string ReferenceStatusText => !ReferenceHasValue
         ? "No value entered"
         : ReferenceIsInRange
             ? "In range"
-            : ReferenceIsHigh
-                ? "Above range"
-                : "Below goal";
+            : "Out-of-Range";
 
     private string ReferenceStatusClass => !ReferenceHasValue
         ? "lab-reference-result--neutral"
@@ -457,6 +459,10 @@
         : ReferenceIsInRange
             ? "✓"
             : "!";
+
+    private string ReferenceCollectedText => TryParseResultMonthText(out var resultMonth)
+        ? NormalizeMonth(resultMonth).ToString("MMM dd, yyyy")
+        : DisplayResultMonth;
 
     private string LabSummaryTitle => LatestResult is null
         ? "Ready for first panel"
@@ -735,6 +741,17 @@
             5.5m,
             "mEq/L",
             "3.5 - 5.5 mEq/L"));
+    }
+
+    private void ShowWktvReference()
+    {
+        ShowLabReference(new(
+            "wKt/V",
+            _form.WKtV,
+            2.0m,
+            null,
+            string.Empty,
+            "2.0 or higher"));
     }
 
     private void HideLabReference()
