@@ -186,7 +186,14 @@
                             </div>
 
                             <div class="field-group">
-                                <label for="hemoglobin">Hemoglobin</label>
+                                <div class="field-label-row">
+                                    <label for="hemoglobin">Hemoglobin</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show Hemoglobin reference"
+                                            aria-label="Show Hemoglobin reference"
+                                            @onclick="ShowHemoglobinReference">?</button>
+                                </div>
                                 <InputNumber id="hemoglobin" class="form-input" @bind-Value="_form.Hemoglobin" />
                                 <ValidationMessage For="() => _form.Hemoglobin" />
                             </div>
@@ -806,6 +813,17 @@
             720m,
             "pg/mL",
             "160 - 720 pg/mL"));
+    }
+
+    private void ShowHemoglobinReference()
+    {
+        ShowLabReference(new(
+            "Hemoglobin",
+            _form.Hemoglobin,
+            10.0m,
+            11.0m,
+            "g/dL",
+            "10.0 - 11.0 g/dL"));
     }
 
     private void HideLabReference()
