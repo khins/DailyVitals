@@ -225,7 +225,14 @@
                             </div>
 
                             <div class="field-group">
-                                <label for="triglycerides">Triglycerides</label>
+                                <div class="field-label-row">
+                                    <label for="triglycerides">Triglycerides</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show Triglycerides reference"
+                                            aria-label="Show Triglycerides reference"
+                                            @onclick="ShowTriglyceridesReference">?</button>
+                                </div>
                                 <InputNumber id="triglycerides" class="form-input" @bind-Value="_form.Triglycerides" />
                                 <ValidationMessage For="() => _form.Triglycerides" />
                             </div>
@@ -863,6 +870,18 @@
             200m,
             "mg/dL",
             "Less than 200 mg/dL",
+            IsHighGoalExclusive: true));
+    }
+
+    private void ShowTriglyceridesReference()
+    {
+        ShowLabReference(new(
+            "Triglycerides",
+            _form.Triglycerides,
+            0m,
+            150m,
+            "mg/dL",
+            "Less than 150 mg/dL",
             IsHighGoalExclusive: true));
     }
 
