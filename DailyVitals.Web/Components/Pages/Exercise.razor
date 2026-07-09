@@ -13,6 +13,7 @@
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<Exercise> Logger
 
 <PageTitle>Exercise | DailyVitals</PageTitle>
 
@@ -679,7 +680,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Exercise session save failed.");
+            ShowError("Exercise session could not be saved. Please try again.");
         }
     }
 
@@ -773,7 +775,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Exercise session delete failed.");
+            ShowError("Exercise session could not be deleted. Please try again.");
         }
     }
 

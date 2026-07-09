@@ -9,6 +9,7 @@
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<BloodGlucose> Logger
 
 <PageTitle>Blood Glucose | DailyVitals</PageTitle>
 
@@ -433,7 +434,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Blood glucose save failed.");
+            ShowError("Blood glucose entry could not be saved. Please try again.");
         }
     }
 
@@ -487,7 +489,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Blood glucose delete failed.");
+            ShowError("Blood glucose entry could not be deleted. Please try again.");
         }
     }
 

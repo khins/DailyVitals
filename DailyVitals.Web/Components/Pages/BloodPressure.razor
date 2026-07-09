@@ -11,6 +11,7 @@
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<BloodPressure> Logger
 
 <PageTitle>Blood Pressure | DailyVitals</PageTitle>
 
@@ -499,7 +500,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Blood pressure save failed.");
+            ShowError("Blood pressure entry could not be saved. Please try again.");
         }
     }
 
@@ -553,7 +555,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Blood pressure delete failed.");
+            ShowError("Blood pressure entry could not be deleted. Please try again.");
         }
     }
 

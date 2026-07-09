@@ -10,6 +10,7 @@
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<Weight> Logger
 
 <PageTitle>Weight | DailyVitals</PageTitle>
 
@@ -589,7 +590,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Weight entry save failed.");
+            ShowError("Weight entry could not be saved. Please try again.");
         }
     }
 
@@ -643,7 +645,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Weight entry delete failed.");
+            ShowError("Weight entry could not be deleted. Please try again.");
         }
     }
 

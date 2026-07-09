@@ -15,6 +15,7 @@
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<Reports> Logger
 
 <PageTitle>Reports | DailyVitals</PageTitle>
 
@@ -921,7 +922,8 @@
         }
         catch (Exception ex)
         {
-            ShowError($"Reports could not be loaded: {ex.Message}");
+            Logger.LogError(ex, "Reports data load failed.");
+            ShowError("Reports could not be loaded. Please try again.");
         }
     }
 
@@ -1194,7 +1196,8 @@
         }
         catch (Exception ex)
         {
-            _coachError = ex.Message;
+            Logger.LogError(ex, "Nutrition coach review failed.");
+            _coachError = "Nutrition coach review could not be completed. Please try again.";
         }
         finally
         {

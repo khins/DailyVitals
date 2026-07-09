@@ -18,6 +18,7 @@
 @inject VitalThresholdService VitalThresholdService
 @inject NavigationManager Navigation
 @inject LocalLoginSession LoginSession
+@inject ILogger<Dashboard> Logger
 
 <PageTitle>Dashboard | DailyVitals</PageTitle>
 
@@ -662,7 +663,8 @@
         }
         catch (Exception ex)
         {
-            ShowError($"Dashboard data could not be loaded: {ex.Message}");
+            Logger.LogError(ex, "Dashboard data load failed.");
+            ShowError("Dashboard data could not be loaded. Please try again.");
         }
     }
 

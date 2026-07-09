@@ -9,6 +9,7 @@
 @inject PersonService PersonService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject ILogger<KidneyLabs> Logger
 
 <PageTitle>Kidney Labs | DailyVitals</PageTitle>
 
@@ -742,7 +743,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Kidney lab result save failed.");
+            ShowError("Kidney lab result could not be saved. Please try again.");
         }
     }
 
@@ -930,7 +932,8 @@
         }
         catch (Exception ex)
         {
-            ShowError(ex.Message);
+            Logger.LogError(ex, "Kidney lab result delete failed.");
+            ShowError("Kidney lab result could not be deleted. Please try again.");
         }
     }
 
