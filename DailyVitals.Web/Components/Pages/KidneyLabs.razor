@@ -212,7 +212,14 @@
                             </div>
 
                             <div class="field-group">
-                                <label for="cholesterol">Cholesterol</label>
+                                <div class="field-label-row">
+                                    <label for="cholesterol">Cholesterol</label>
+                                    <button type="button"
+                                            class="help-icon-button kidney-lab-help-button"
+                                            title="Show Cholesterol reference"
+                                            aria-label="Show Cholesterol reference"
+                                            @onclick="ShowCholesterolReference">?</button>
+                                </div>
                                 <InputNumber id="cholesterol" class="form-input" @bind-Value="_form.Cholesterol" />
                                 <ValidationMessage For="() => _form.Cholesterol" />
                             </div>
@@ -475,7 +482,10 @@
     private bool ReferenceIsInRange =>
         _activeLabReference is { Value: { } value } reference &&
         value >= reference.LowGoal &&
-        (!reference.HighGoal.HasValue || value <= reference.HighGoal.Value);
+        (!reference.HighGoal.HasValue ||
+            (reference.IsHighGoalExclusive
+                ? value < reference.HighGoal.Value
+                : value <= reference.HighGoal.Value));
 
     private string ReferenceStatusText => !ReferenceHasValue
         ? "No value entered"
@@ -844,6 +854,18 @@
             "70 - 160 mg/dL"));
     }
 
+    private void ShowCholesterolReference()
+    {
+        ShowLabReference(new(
+            "Cholesterol",
+            _form.Cholesterol,
+            0m,
+            200m,
+            "mg/dL",
+            "Less than 200 mg/dL",
+            IsHighGoalExclusive: true));
+    }
+
     private void HideLabReference()
     {
         _activeLabReference = null;
@@ -1037,5 +1059,6 @@
         decimal LowGoal,
         decimal? HighGoal,
         string Unit,
-        string GoalText);
+        string GoalText,
+        bool IsHighGoalExclusive = false);
 }
