@@ -327,7 +327,7 @@
                 parts.Add(_form.Gender);
 
             if (SelectedHeightFt.HasValue)
-                parts.Add($"{_heightFeet} ft {_heightInches} in ({SelectedHeightFt.Value:0.00} ft)");
+                parts.Add($"{_heightFeet} ft {_heightInches} in ({SelectedHeightFt.Value:0.##} ft)");
 
             if (_form.IsDiabetic)
                 parts.Add("Diabetic");
@@ -545,7 +545,7 @@
         Navigation.NavigateTo("/");
     }
 
-    private decimal? SelectedHeightFt => _heightFeet <= 0 ? null : _heightFeet + (_heightInches / 100m);
+    private decimal? SelectedHeightFt => _heightFeet <= 0 ? null : _heightFeet + (_heightInches / 12m);
 
     private void SetHeightSelectors(decimal? heightFt)
     {
@@ -557,7 +557,7 @@
         }
 
         var feet = (int)Math.Truncate(heightFt.Value);
-        var inches = (int)Math.Round((heightFt.Value - feet) * 100m);
+        var inches = (int)Math.Round((heightFt.Value - feet) * 12m);
 
         if (inches >= 12)
         {

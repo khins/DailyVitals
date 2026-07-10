@@ -433,7 +433,7 @@
 
     private string HeightDisplay =>
         _heightFt.HasValue
-            ? $"Height: {FormatHeight(_heightFt.Value)} ({_heightFt.Value:0.00} ft)"
+            ? $"Height: {FormatHeight(_heightFt.Value)} ({_heightFt.Value:0.##} ft)"
             : "Set height on Profile before using BMI.";
 
     private string AuditText
@@ -739,7 +739,7 @@
     private static string FormatHeight(decimal heightFt)
     {
         var feet = (int)Math.Truncate(heightFt);
-        var inches = (int)Math.Round((heightFt - feet) * 100m);
+        var inches = (int)Math.Round((heightFt - feet) * 12m);
 
         if (inches >= 12)
         {
