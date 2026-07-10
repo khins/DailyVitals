@@ -4,11 +4,15 @@ param(
     [string]$HostName = "localhost",
     [int]$Port = 5433,
     [string]$Username = "postgres",
-    [string]$Password = "newpassword",
+    [string]$Password = $env:DAILYVITALS_BACKUP_PASSWORD,
     [string]$PgDumpPath = "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe"
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($Password)) {
+    throw "Database backup password was not provided. Set DAILYVITALS_BACKUP_PASSWORD or pass -Password."
+}
 
 if (-not (Test-Path -LiteralPath $PgDumpPath)) {
     throw "pg_dump not found at '$PgDumpPath'."
