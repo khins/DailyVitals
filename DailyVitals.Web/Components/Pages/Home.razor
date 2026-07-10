@@ -139,7 +139,16 @@
             return;
         }
 
-        var loginUser = LoginService.ValidateLogin(_model.UserName, _model.Password);
+        var loginResult = LoginService.Authenticate(_model.UserName, _model.Password);
+        if (loginResult.IsLocked)
+        {
+            _message = loginResult.LockedUntil.HasValue
+                ? $"Too many failed attempts. Try again after {loginResult.LockedUntil.Value:t}."
+                : "Too many failed attempts. Try again later.";
+            return;
+        }
+
+        var loginUser = loginResult.LoginUser;
         if (loginUser is null)
         {
             _message = "The email or password is incorrect.";

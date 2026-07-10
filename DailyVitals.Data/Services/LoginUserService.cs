@@ -13,11 +13,19 @@ namespace DailyVitals.Data.Services
         private const int HashSizeBytes = 32;
         private const int Iterations = 210_000;
         private const string Algorithm = "PBKDF2-SHA256";
+        private const int MaxFailedLoginAttempts = 5;
+        private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
 
         public LoginUser? ValidateCredentials(string? userName, string? password)
         {
+            var result = ValidateLogin(userName, password);
+            return result.LoginUser;
+        }
+
+        public LoginValidationResult ValidateLogin(string? userName, string? password)
+        {
             if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
-                return null;
+                return LoginValidationResult.Invalid();
 
             using var conn = DbConnectionFactory.Create();
             conn.Open();
@@ -35,7 +43,10 @@ namespace DailyVitals.Data.Services
                     is_demo,
                     created_at,
                     updated_at,
-                    last_login_at
+                    last_login_at,
+                    failed_login_count,
+                    last_failed_login_at,
+                    locked_until
                 FROM public.login_user
                 WHERE lower(user_name) = lower(@user_name)
                 LIMIT 1;";
@@ -45,39 +56,59 @@ namespace DailyVitals.Data.Services
 
             using var reader = cmd.ExecuteReader();
             if (!reader.Read())
-                return null;
+                return LoginValidationResult.Invalid();
 
             var algorithm = reader.GetString(6);
             var isActive = reader.GetBoolean(7);
             if (!isActive)
-                return null;
+                return LoginValidationResult.Invalid();
+
+            var loginUserId = reader.GetInt64(0);
+            DateTime? lockedUntil = reader.IsDBNull(14) ? null : reader.GetDateTime(14);
+            if (lockedUntil.HasValue && lockedUntil.Value > DateTime.Now)
+                return LoginValidationResult.Locked(lockedUntil.Value);
 
             var passwordHash = reader.GetString(3);
             var passwordSalt = reader.GetString(4);
             var iterations = reader.GetInt32(5);
 
             if (!string.Equals(algorithm, Algorithm, StringComparison.OrdinalIgnoreCase))
-                return null;
+            {
+                reader.Close();
+                var newLockedUntil = RecordFailedLogin(conn, loginUserId);
+                return newLockedUntil.HasValue
+                    ? LoginValidationResult.Locked(newLockedUntil.Value)
+                    : LoginValidationResult.Invalid();
+            }
 
             if (!VerifyPassword(password, passwordSalt, passwordHash, iterations))
-                return null;
+            {
+                reader.Close();
+                var newLockedUntil = RecordFailedLogin(conn, loginUserId);
+                return newLockedUntil.HasValue
+                    ? LoginValidationResult.Locked(newLockedUntil.Value)
+                    : LoginValidationResult.Invalid();
+            }
 
             var loginUser = new LoginUser
             {
-                LoginUserId = reader.GetInt64(0),
+                LoginUserId = loginUserId,
                 PersonId = reader.IsDBNull(1) ? null : reader.GetInt64(1),
                 UserName = reader.GetString(2),
                 IsActive = isActive,
                 IsDemo = reader.GetBoolean(8),
                 CreatedAt = reader.GetDateTime(9),
                 UpdatedAt = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                LastLoginAt = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
+                LastLoginAt = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                FailedLoginCount = reader.GetInt32(12),
+                LastFailedLoginAt = reader.IsDBNull(13) ? null : reader.GetDateTime(13),
+                LockedUntil = lockedUntil
             };
 
             reader.Close();
             RecordSuccessfulLogin(conn, loginUser.LoginUserId);
 
-            return loginUser;
+            return LoginValidationResult.Success(loginUser);
         }
 
         public void UpsertLoginUser(string userName, string password, bool isActive = true)
@@ -411,7 +442,18 @@ namespace DailyVitals.Data.Services
             conn.Open();
 
             const string sql = @"
-                SELECT login_user_id, person_id, user_name, is_active, is_demo, created_at, updated_at, last_login_at
+                SELECT
+                    login_user_id,
+                    person_id,
+                    user_name,
+                    is_active,
+                    is_demo,
+                    created_at,
+                    updated_at,
+                    last_login_at,
+                    failed_login_count,
+                    last_failed_login_at,
+                    locked_until
                 FROM public.login_user
                 ORDER BY user_name;";
 
@@ -429,7 +471,10 @@ namespace DailyVitals.Data.Services
                     IsDemo = reader.GetBoolean(4),
                     CreatedAt = reader.GetDateTime(5),
                     UpdatedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                    LastLoginAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
+                    LastLoginAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                    FailedLoginCount = reader.GetInt32(8),
+                    LastFailedLoginAt = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
+                    LockedUntil = reader.IsDBNull(10) ? null : reader.GetDateTime(10)
                 });
             }
 
@@ -614,12 +659,41 @@ namespace DailyVitals.Data.Services
         {
             const string sql = @"
                 UPDATE public.login_user
-                SET last_login_at = CURRENT_TIMESTAMP
+                SET last_login_at = CURRENT_TIMESTAMP,
+                    failed_login_count = 0,
+                    last_failed_login_at = NULL,
+                    locked_until = NULL
                 WHERE login_user_id = @login_user_id;";
 
             using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("login_user_id", loginUserId);
             cmd.ExecuteNonQuery();
+        }
+
+        private static DateTime? RecordFailedLogin(NpgsqlConnection conn, long loginUserId)
+        {
+            const string sql = @"
+                UPDATE public.login_user
+                SET failed_login_count = failed_login_count + 1,
+                    last_failed_login_at = CURRENT_TIMESTAMP,
+                    locked_until = CASE
+                        WHEN failed_login_count + 1 >= @max_failed_login_attempts
+                            THEN CURRENT_TIMESTAMP + (@lockout_minutes * INTERVAL '1 minute')
+                        ELSE locked_until
+                    END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE login_user_id = @login_user_id
+                RETURNING locked_until;";
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("login_user_id", loginUserId);
+            cmd.Parameters.AddWithValue("max_failed_login_attempts", MaxFailedLoginAttempts);
+            cmd.Parameters.AddWithValue("lockout_minutes", (int)LockoutDuration.TotalMinutes);
+
+            var result = cmd.ExecuteScalar();
+            return result is DateTime lockedUntil && lockedUntil > DateTime.Now
+                ? lockedUntil
+                : null;
         }
 
         private static bool IsDemoPerson(NpgsqlConnection conn, long personId)
@@ -665,5 +739,29 @@ namespace DailyVitals.Data.Services
             return computedBytes.Length == expectedBytes.Length &&
                 CryptographicOperations.FixedTimeEquals(computedBytes, expectedBytes);
         }
+    }
+
+    public sealed class LoginValidationResult
+    {
+        private LoginValidationResult(LoginUser? loginUser, bool isLocked, DateTime? lockedUntil)
+        {
+            LoginUser = loginUser;
+            IsLocked = isLocked;
+            LockedUntil = lockedUntil;
+        }
+
+        public LoginUser? LoginUser { get; }
+        public bool IsSuccess => LoginUser is not null;
+        public bool IsLocked { get; }
+        public DateTime? LockedUntil { get; }
+
+        public static LoginValidationResult Success(LoginUser loginUser) =>
+            new(loginUser, isLocked: false, lockedUntil: null);
+
+        public static LoginValidationResult Invalid() =>
+            new(null, isLocked: false, lockedUntil: null);
+
+        public static LoginValidationResult Locked(DateTime lockedUntil) =>
+            new(null, isLocked: true, lockedUntil);
     }
 }

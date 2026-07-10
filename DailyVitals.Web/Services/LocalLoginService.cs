@@ -1,6 +1,7 @@
 using DailyVitals.Data.Services;
 using DailyVitals.Domain.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace DailyVitals.Web.Services;
 
@@ -8,11 +9,16 @@ public sealed class LocalLoginService
 {
     private readonly IConfiguration _configuration;
     private readonly LoginUserService _loginUserService;
+    private readonly ILogger<LocalLoginService> _logger;
 
-    public LocalLoginService(IConfiguration configuration, LoginUserService loginUserService)
+    public LocalLoginService(
+        IConfiguration configuration,
+        LoginUserService loginUserService,
+        ILogger<LocalLoginService> logger)
     {
         _configuration = configuration;
         _loginUserService = loginUserService;
+        _logger = logger;
     }
 
     public bool ValidateCredentials(string? userName, string? password)
@@ -22,22 +28,48 @@ public sealed class LocalLoginService
 
     public LoginUser? ValidateLogin(string? userName, string? password)
     {
+        return Authenticate(userName, password).LoginUser;
+    }
+
+    public LocalLoginResult Authenticate(string? userName, string? password)
+    {
         TrySeedConfiguredLogin();
 
         try
         {
-            return _loginUserService.ValidateCredentials(userName, password);
+            var result = _loginUserService.ValidateLogin(userName, password);
+            if (result.IsSuccess)
+            {
+                _logger.LogInformation("Successful sign-in for {UserName}.", userName?.Trim());
+                return LocalLoginResult.Success(result.LoginUser!);
+            }
+
+            if (result.IsLocked)
+            {
+                _logger.LogWarning(
+                    "Locked account sign-in attempt for {UserName}. Locked until {LockedUntil}.",
+                    userName?.Trim(),
+                    result.LockedUntil);
+                return LocalLoginResult.Locked(result.LockedUntil);
+            }
+
+            _logger.LogWarning("Failed sign-in attempt for {UserName}.", userName?.Trim());
+            return LocalLoginResult.Invalid();
         }
-        catch
+        catch (Exception ex)
         {
             if (!ValidateConfiguredFallback(userName, password))
-                return null;
+            {
+                _logger.LogError(ex, "Login validation failed and configured fallback did not match.");
+                return LocalLoginResult.Invalid();
+            }
 
-            return new LoginUser
+            _logger.LogWarning(ex, "Using configured fallback login because database login validation failed.");
+            return LocalLoginResult.Success(new LoginUser
             {
                 UserName = userName?.Trim() ?? string.Empty,
                 IsActive = true
-            };
+            });
         }
     }
 
@@ -98,4 +130,28 @@ public sealed class LocalLoginService
     private bool HasConfiguredFallback() =>
         !string.IsNullOrWhiteSpace(_configuration["DailyVitalsLogin:UserName"]) &&
         !string.IsNullOrWhiteSpace(_configuration["DailyVitalsLogin:Password"]);
+}
+
+public sealed class LocalLoginResult
+{
+    private LocalLoginResult(LoginUser? loginUser, bool isLocked, DateTime? lockedUntil)
+    {
+        LoginUser = loginUser;
+        IsLocked = isLocked;
+        LockedUntil = lockedUntil;
+    }
+
+    public LoginUser? LoginUser { get; }
+    public bool IsSuccess => LoginUser is not null;
+    public bool IsLocked { get; }
+    public DateTime? LockedUntil { get; }
+
+    public static LocalLoginResult Success(LoginUser loginUser) =>
+        new(loginUser, isLocked: false, lockedUntil: null);
+
+    public static LocalLoginResult Invalid() =>
+        new(null, isLocked: false, lockedUntil: null);
+
+    public static LocalLoginResult Locked(DateTime? lockedUntil) =>
+        new(null, isLocked: true, lockedUntil);
 }
