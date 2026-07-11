@@ -1,9 +1,7 @@
 [build]
-builder = "RAILPACK"
-buildCommand = "dotnet restore DailyVitals.slnx && dotnet publish DailyVitals.Web/DailyVitals.Web.csproj --configuration Release --output publish"
+builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "dotnet publish/DailyVitals.Web.dll"
 healthcheckPath = "/health/ready"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
