@@ -25,9 +25,8 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT:-8080}
 ENV ASPNETCORE_ENVIRONMENT=Production
 
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "DailyVitals.Web.dll"]
+ENTRYPOINT ["sh", "-c", "dotnet DailyVitals.Web.dll --urls http://0.0.0.0:${PORT:-8080}"]

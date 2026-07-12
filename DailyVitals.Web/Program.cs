@@ -9,6 +9,7 @@ using DailyVitals.Data.Services.DailyVitals.App.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HostFiltering;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Security.Claims;
 
@@ -23,6 +24,23 @@ OpenAiConfiguration.Configure(
 
 // Add services to the container.
 builder.Services.AddDailyVitalsDataProtection(builder.Configuration, builder.Environment);
+builder.Services.Configure<HostFilteringOptions>(options =>
+{
+    var allowedHosts = GetConfiguredAllowedHosts(builder.Configuration);
+    var railwayPublicDomain = builder.Configuration["RAILWAY_PUBLIC_DOMAIN"];
+
+    if (!string.IsNullOrWhiteSpace(railwayPublicDomain))
+    {
+        allowedHosts.Add(railwayPublicDomain.Trim());
+    }
+
+    if (allowedHosts.Count > 0)
+    {
+        options.AllowedHosts = allowedHosts
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+});
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -200,6 +218,14 @@ static Task WriteHealthResponseAsync(HttpContext context, HealthReport report)
             })
         },
         context.RequestAborted);
+}
+
+static List<string> GetConfiguredAllowedHosts(IConfiguration configuration)
+{
+    return configuration["AllowedHosts"]?
+        .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .ToList()
+        ?? [];
 }
 
 internal sealed record AuthSessionRequest(string? Ticket);
