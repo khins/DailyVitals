@@ -24,12 +24,11 @@ internal static class DataProtectionConfiguration
         if (!environment.IsDevelopment())
         {
             RequireProductionSetting(configuredKeysPath, "DataProtection:KeysPath");
-            RequireProductionSetting(certificatePath, "DataProtection:CertificatePath");
 
             if (!Path.IsPathFullyQualified(configuredKeysPath!))
                 throw new InvalidOperationException("DataProtection:KeysPath must be an absolute path in production.");
 
-            if (!Path.IsPathFullyQualified(certificatePath!))
+            if (!string.IsNullOrWhiteSpace(certificatePath) && !Path.IsPathFullyQualified(certificatePath))
                 throw new InvalidOperationException("DataProtection:CertificatePath must be an absolute path in production.");
         }
 
