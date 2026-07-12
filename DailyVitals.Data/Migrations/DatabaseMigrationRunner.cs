@@ -87,7 +87,7 @@ public sealed class DatabaseMigrationRunner
         migrations.AddRange(Directory
             .EnumerateFiles(migrationsPath, "*.sql", SearchOption.TopDirectoryOnly)
             .Where(path => !string.Equals(Path.GetFileName(path), ".gitkeep", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .OrderBy(GetMigrationSortKey, StringComparer.Ordinal)
             .Select(path => CreateMigration(Path.GetFileNameWithoutExtension(path), path)));
 
         var duplicate = migrations.GroupBy(item => item.Id, StringComparer.Ordinal).FirstOrDefault(group => group.Count() > 1);
@@ -95,6 +95,16 @@ public sealed class DatabaseMigrationRunner
             throw new InvalidOperationException($"Duplicate database migration ID: {duplicate.Key}");
 
         return migrations;
+    }
+
+    private static string GetMigrationSortKey(string path)
+    {
+        return Path.GetFileName(path) switch
+        {
+            "2026-05-13-add-food-phosphorus-intake.sql" => "2026-05-13-00-add-food-phosphorus-intake.sql",
+            "2026-05-13-add-ai-food-phosphorus-estimate-fields.sql" => "2026-05-13-01-add-ai-food-phosphorus-estimate-fields.sql",
+            var fileName => fileName
+        };
     }
 
     private static Migration CreateBaselineMigration(string path)
