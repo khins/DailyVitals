@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HostFiltering;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Security.Claims;
 
@@ -24,6 +25,12 @@ OpenAiConfiguration.Configure(
 
 // Add services to the container.
 builder.Services.AddDailyVitalsDataProtection(builder.Configuration, builder.Environment);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 builder.Services.Configure<HostFilteringOptions>(options =>
 {
     var allowedHosts = GetConfiguredAllowedHosts(builder.Configuration);
@@ -136,8 +143,11 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+app.UseForwardedHeaders();
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/health"),
+    branch => branch.UseHttpsRedirection());
 
 app.UseAuthentication();
 app.UseAuthorization();
