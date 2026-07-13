@@ -274,8 +274,18 @@
         if (ModelIsEmpty)
             ResetForm();
 
-        LoadPersonPreferences();
-        LoadHistory();
+        try
+        {
+            LoadPersonPreferences();
+            LoadHistory();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Blood pressure page load failed.");
+            _messageClass = "page-message page-message--error";
+            _message = "Blood pressure data could not be loaded. Please try again.";
+        }
+
         StateHasChanged();
     }
 
