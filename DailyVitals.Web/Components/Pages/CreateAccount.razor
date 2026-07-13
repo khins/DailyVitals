@@ -55,33 +55,33 @@
             <div class="account-form-grid">
                 <div class="field-group">
                     <label for="first-name">First Name</label>
-                    <InputText id="first-name" class="form-input" autocomplete="given-name" @bind-Value="_model.FirstName" />
+                    <InputText id="first-name" name="FirstName" class="form-input" autocomplete="given-name" @bind-Value="_model.FirstName" />
                     <ValidationMessage For="() => _model.FirstName" />
                 </div>
 
                 <div class="field-group">
                     <label for="last-name">Last Name</label>
-                    <InputText id="last-name" class="form-input" autocomplete="family-name" @bind-Value="_model.LastName" />
+                    <InputText id="last-name" name="LastName" class="form-input" autocomplete="family-name" @bind-Value="_model.LastName" />
                     <ValidationMessage For="() => _model.LastName" />
                 </div>
             </div>
 
             <div class="field-group">
                 <label for="account-user-name">Email</label>
-                <InputText id="account-user-name" name="username" type="email" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
+                <InputText id="account-user-name" name="UserName" type="email" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
                 <ValidationMessage For="() => _model.UserName" />
             </div>
 
             <div class="account-form-grid">
                 <div class="field-group">
                     <label for="account-password">Password</label>
-                    <InputText id="account-password" name="new-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.Password" />
+                    <InputText id="account-password" name="Password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.Password" />
                     <ValidationMessage For="() => _model.Password" />
                 </div>
 
                 <div class="field-group">
                     <label for="confirm-password">Confirm Password</label>
-                    <InputText id="confirm-password" name="confirm-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
+                    <InputText id="confirm-password" name="ConfirmPassword" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
                     <ValidationMessage For="() => _model.ConfirmPassword" />
                 </div>
             </div>
@@ -117,13 +117,22 @@
 </section>
 
 @code {
-    private readonly CreateAccountModel _model = new();
+    private CreateAccountModel _model = new();
+
+    [SupplyParameterFromForm(FormName = "create-account-form")]
+    private CreateAccountModel? _submittedModel { get; set; }
     private string? _message;
     private string _messageClass = "login-message";
     private bool _showPassword;
     private bool _accountCreated;
 
     private string PasswordInputType => _showPassword ? "text" : "password";
+
+    protected override void OnParametersSet()
+    {
+        if (_submittedModel is not null)
+            _model = _submittedModel;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
