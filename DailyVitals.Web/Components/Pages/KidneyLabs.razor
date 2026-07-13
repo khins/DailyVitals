@@ -453,11 +453,8 @@
         ResetForm();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-            return;
-
         await LoginSession.RestoreAsync();
 
         if (!LoginSession.IsSignedIn)
@@ -1084,3 +1081,4 @@
         string GoalText,
         bool IsHighGoalExclusive = false);
 }
+

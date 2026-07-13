@@ -325,11 +325,8 @@
         ResetForm();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-            return;
-
         await LoginSession.RestoreAsync();
 
         if (!LoginSession.IsSignedIn)
@@ -775,3 +772,4 @@
 
     private sealed record BmiReferenceRow(string Category, string Range);
 }
+

@@ -192,11 +192,8 @@
     private string? _message;
     private string _messageClass = "page-message";
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-            return;
-
         await LoginSession.RestoreAsync();
 
         if (!LoginSession.IsSignedIn)
@@ -376,3 +373,4 @@
 
     private sealed record WeightTrendPoint(string Label, decimal Value, string Unit);
 }
+
