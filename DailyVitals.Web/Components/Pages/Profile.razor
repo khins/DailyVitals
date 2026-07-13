@@ -12,6 +12,7 @@
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 @inject ILogger<Profile> Logger
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Profile | DailyVitals</PageTitle>
 
@@ -94,37 +95,37 @@
                         <div class="account-form-grid">
                             <div class="field-group">
                                 <label for="profile-first-name">First Name</label>
-                                <InputText id="profile-first-name" class="form-input" @bind-Value="_form.FirstName" />
+                                <InputText id="profile-first-name" name="FirstName" class="form-input" @bind-Value="_form.FirstName" />
                                 <ValidationMessage For="() => _form.FirstName" />
                             </div>
 
                             <div class="field-group">
                                 <label for="profile-last-name">Last Name</label>
-                                <InputText id="profile-last-name" class="form-input" @bind-Value="_form.LastName" />
+                                <InputText id="profile-last-name" name="LastName" class="form-input" @bind-Value="_form.LastName" />
                                 <ValidationMessage For="() => _form.LastName" />
                             </div>
 
                             <div class="field-group form-grid-span-all">
                                 <label for="profile-user-name">Email</label>
-                                <InputText id="profile-user-name" type="email" class="form-input" autocomplete="email" @bind-Value="_form.UserName" />
+                                <InputText id="profile-user-name" name="UserName" type="email" class="form-input" autocomplete="email" @bind-Value="_form.UserName" />
                                 <ValidationMessage For="() => _form.UserName" />
                             </div>
 
                             <div class="field-group">
                                 <label for="profile-birth-date">Birth Date</label>
-                                <input id="profile-birth-date" class="form-input" type="date" value="@_birthDateText" @onchange="SetBirthDate" />
+                                <input id="profile-birth-date" name="BirthDateText" class="form-input" type="date" value="@_form.BirthDateText" @onchange="SetBirthDate" />
                             </div>
 
                             <div class="field-group">
                                 <label>Height</label>
                                 <div class="height-picker">
-                                    <select class="form-input" @bind="_heightFeet">
+                                    <select class="form-input" name="HeightFeet" @bind="_form.HeightFeet">
                                         @for (var feet = 3; feet <= 8; feet++)
                                         {
                                             <option value="@feet">@feet ft</option>
                                         }
                                     </select>
-                                    <select class="form-input" @bind="_heightInches">
+                                    <select class="form-input" name="HeightInches" @bind="_form.HeightInches">
                                         @for (var inches = 0; inches <= 11; inches++)
                                         {
                                             <option value="@inches">@inches in</option>
@@ -136,7 +137,7 @@
 
                         <fieldset class="gender-options profile-gender-options">
                             <legend>Gender</legend>
-                            <InputRadioGroup @bind-Value="_form.Gender">
+                            <InputRadioGroup Name="Gender" @bind-Value="_form.Gender">
                                 <div class="profile-radio-options">
                                     <label>
                                         <InputRadio Value="@("Male")" />
@@ -160,7 +161,7 @@
 
                             <div class="profile-toggle-grid">
                                 <label class="toggle-card">
-                                    <InputCheckbox @bind-Value="_form.IsDiabetic" />
+                                    <InputCheckbox name="IsDiabetic" @bind-Value="_form.IsDiabetic" />
                                     <span>
                                         <strong>Diabetic</strong>
                                         <small>Enable glucose-focused dashboard alerts.</small>
@@ -168,7 +169,7 @@
                                 </label>
 
                                 <label class="toggle-card">
-                                    <InputCheckbox @bind-Value="_form.TrackKidneyLabs" />
+                                    <InputCheckbox name="TrackKidneyLabs" @bind-Value="_form.TrackKidneyLabs" />
                                     <span>
                                         <strong>Kidney program</strong>
                                         <small>Show kidney lab tracking and monthly lab alerts.</small>
@@ -176,7 +177,7 @@
                                 </label>
 
                                 <label class="toggle-card">
-                                    <InputCheckbox @bind-Value="_form.TrackWeightLoss" />
+                                    <InputCheckbox name="TrackWeightLoss" @bind-Value="_form.TrackWeightLoss" />
                                     <span>
                                         <strong>Weight-loss focus</strong>
                                         <small>Keep weight trend tracking prominent for this person.</small>
@@ -187,55 +188,55 @@
                             <div class="nutrition-goal-fields">
                                 <div class="field-group">
                                     <label for="goal-effective-date">Goal Effective Date</label>
-                                    <input id="goal-effective-date" class="form-input" type="date" value="@_goalEffectiveDateText" @onchange="SetGoalEffectiveDate" />
+                                    <input id="goal-effective-date" name="GoalEffectiveDateText" class="form-input" type="date" value="@_form.GoalEffectiveDateText" @onchange="SetGoalEffectiveDate" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="phosphorus-limit">Phosphorus Limit (mg)</label>
-                                    <InputNumber id="phosphorus-limit" class="form-input" @bind-Value="_form.PhosphorusLimitMg" />
+                                    <InputNumber id="phosphorus-limit" name="PhosphorusLimitMg" class="form-input" @bind-Value="_form.PhosphorusLimitMg" />
                                     <ValidationMessage For="() => _form.PhosphorusLimitMg" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="sodium-limit">Sodium Limit (mg)</label>
-                                    <InputNumber id="sodium-limit" class="form-input" @bind-Value="_form.SodiumLimitMg" />
+                                    <InputNumber id="sodium-limit" name="SodiumLimitMg" class="form-input" @bind-Value="_form.SodiumLimitMg" />
                                     <ValidationMessage For="() => _form.SodiumLimitMg" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="calorie-limit">Calorie Limit</label>
-                                    <InputNumber id="calorie-limit" class="form-input" @bind-Value="_form.CalorieLimit" />
+                                    <InputNumber id="calorie-limit" name="CalorieLimit" class="form-input" @bind-Value="_form.CalorieLimit" />
                                     <ValidationMessage For="() => _form.CalorieLimit" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="protein-target">Protein Target (g)</label>
-                                    <InputNumber id="protein-target" class="form-input" @bind-Value="_form.ProteinTargetG" />
+                                    <InputNumber id="protein-target" name="ProteinTargetG" class="form-input" @bind-Value="_form.ProteinTargetG" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="potassium-limit">Potassium Limit (mg)</label>
-                                    <InputNumber id="potassium-limit" class="form-input" @bind-Value="_form.PotassiumLimitMg" />
+                                    <InputNumber id="potassium-limit" name="PotassiumLimitMg" class="form-input" @bind-Value="_form.PotassiumLimitMg" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="fluid-limit">Fluid Limit (ml)</label>
-                                    <InputNumber id="fluid-limit" class="form-input" @bind-Value="_form.FluidLimitMl" />
+                                    <InputNumber id="fluid-limit" name="FluidLimitMl" class="form-input" @bind-Value="_form.FluidLimitMl" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="glucose-target">Glucose Target (mg/dL)</label>
-                                    <InputNumber id="glucose-target" class="form-input" @bind-Value="_form.GlucoseTargetMgDl" />
+                                    <InputNumber id="glucose-target" name="GlucoseTargetMgDl" class="form-input" @bind-Value="_form.GlucoseTargetMgDl" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="systolic-threshold">Systolic Alert Max</label>
-                                    <InputNumber id="systolic-threshold" class="form-input" @bind-Value="_form.SystolicThresholdMax" />
+                                    <InputNumber id="systolic-threshold" name="SystolicThresholdMax" class="form-input" @bind-Value="_form.SystolicThresholdMax" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="diastolic-threshold">Diastolic Alert Max</label>
-                                    <InputNumber id="diastolic-threshold" class="form-input" @bind-Value="_form.DiastolicThresholdMax" />
+                                    <InputNumber id="diastolic-threshold" name="DiastolicThresholdMax" class="form-input" @bind-Value="_form.DiastolicThresholdMax" />
                                 </div>
                             </div>
 
@@ -263,17 +264,23 @@
 }
 
 @code {
-    private readonly ProfileForm _form = new();
-    private string _birthDateText = string.Empty;
-    private string _goalEffectiveDateText = DateTime.Today.ToString("yyyy-MM-dd");
+    private ProfileForm _form = new();
+
+    [SupplyParameterFromForm(FormName = "profile-form")]
+    private ProfileForm? _submittedForm { get; set; }
+
     private long? _nutritionGoalId;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
-    private int _heightFeet = 5;
-    private int _heightInches = 0;
     private string? _message;
     private string _messageClass = "page-message";
     private string? _profileToast;
+
+    protected override void OnParametersSet()
+    {
+        if (_submittedForm is not null)
+            _form = _submittedForm;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -291,8 +298,12 @@
             return;
         }
 
-        LoadProfile();
+        if (!IsFormPost)
+            LoadProfile();
     }
+
+    private bool IsFormPost =>
+        string.Equals(HttpContextAccessor.HttpContext?.Request.Method, "POST", StringComparison.OrdinalIgnoreCase);
 
     private string DisplayName =>
         string.IsNullOrWhiteSpace(_form.FirstName) && string.IsNullOrWhiteSpace(_form.LastName)
@@ -322,7 +333,7 @@
                 parts.Add(_form.Gender);
 
             if (SelectedHeightFt.HasValue)
-                parts.Add($"{_heightFeet} ft {_heightInches} in ({SelectedHeightFt.Value:0.##} ft)");
+                parts.Add($"{_form.HeightFeet} ft {_form.HeightInches} in ({SelectedHeightFt.Value:0.##} ft)");
 
             if (_form.IsDiabetic)
                 parts.Add("Diabetic");
@@ -377,7 +388,7 @@
             _form.GlucoseTargetMgDl = person.GlucoseTargetMgDl ?? 100;
             _form.TrackKidneyLabs = person.TrackKidneyLabs;
             _form.TrackWeightLoss = person.TrackWeightLoss;
-            _birthDateText = person.BirthDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+            _form.BirthDateText = person.BirthDate?.ToString("yyyy-MM-dd") ?? string.Empty;
             _createdAt = person.CreatedAt;
             _updatedAt = person.UpdatedAt;
             SetHeightSelectors(person.HeightFt);
@@ -395,7 +406,7 @@
     {
         var goal = NutritionGoalService.GetActiveGoal(personId, DateTime.Today);
         _nutritionGoalId = goal?.NutritionGoalId;
-        _goalEffectiveDateText = (goal?.EffectiveDate ?? DateTime.Today).ToString("yyyy-MM-dd");
+        _form.GoalEffectiveDateText = (goal?.EffectiveDate ?? DateTime.Today).ToString("yyyy-MM-dd");
         _form.PhosphorusLimitMg = goal?.PhosphorusLimitMg ?? 1000;
         _form.SodiumLimitMg = goal?.SodiumLimitMg ?? 2000;
         _form.CalorieLimit = goal?.CalorieLimit ?? 2200;
@@ -420,12 +431,12 @@
 
     private void SetBirthDate(ChangeEventArgs args)
     {
-        _birthDateText = args.Value?.ToString() ?? string.Empty;
+        _form.BirthDateText = args.Value?.ToString() ?? string.Empty;
     }
 
     private void SetGoalEffectiveDate(ChangeEventArgs args)
     {
-        _goalEffectiveDateText = args.Value?.ToString() ?? string.Empty;
+        _form.GoalEffectiveDateText = args.Value?.ToString() ?? string.Empty;
     }
 
     private async Task SaveProfile()
@@ -442,13 +453,13 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_birthDateText))
+        if (string.IsNullOrWhiteSpace(_form.BirthDateText))
         {
             ShowError("Birth date is required for account recovery.");
             return;
         }
 
-        if (!DateTime.TryParse(_birthDateText, out var parsedBirthDate))
+        if (!DateTime.TryParse(_form.BirthDateText, out var parsedBirthDate))
         {
             ShowError("Enter a valid birth date.");
             return;
@@ -458,7 +469,7 @@
 
         try
         {
-            if (!DateTime.TryParse(_goalEffectiveDateText, out var goalEffectiveDate))
+            if (!DateTime.TryParse(_form.GoalEffectiveDateText, out var goalEffectiveDate))
             {
                 ShowError("Enter a valid nutrition goal effective date.");
                 return;
@@ -540,14 +551,14 @@
         Navigation.NavigateTo("/");
     }
 
-    private decimal? SelectedHeightFt => _heightFeet <= 0 ? null : _heightFeet + (_heightInches / 12m);
+    private decimal? SelectedHeightFt => _form.HeightFeet <= 0 ? null : _form.HeightFeet + (_form.HeightInches / 12m);
 
     private void SetHeightSelectors(decimal? heightFt)
     {
         if (!heightFt.HasValue || heightFt.Value <= 0)
         {
-            _heightFeet = 5;
-            _heightInches = 0;
+            _form.HeightFeet = 5;
+            _form.HeightInches = 0;
             return;
         }
 
@@ -560,8 +571,8 @@
             inches %= 12;
         }
 
-        _heightFeet = Math.Clamp(feet, 3, 8);
-        _heightInches = Math.Clamp(inches, 0, 11);
+        _form.HeightFeet = Math.Clamp(feet, 3, 8);
+        _form.HeightInches = Math.Clamp(inches, 0, 11);
     }
 
     private sealed class ProfileForm
@@ -578,7 +589,13 @@
 
         public DateTime? BirthDate { get; set; }
 
+        public string BirthDateText { get; set; } = string.Empty;
+
         public string? Gender { get; set; }
+
+        public int HeightFeet { get; set; } = 5;
+
+        public int HeightInches { get; set; }
 
         public bool IsDiabetic { get; set; }
 
@@ -591,6 +608,8 @@
         [Required(ErrorMessage = "Enter a phosphorus limit.")]
         [Range(1, int.MaxValue, ErrorMessage = "Phosphorus limit must be greater than zero.")]
         public int? PhosphorusLimitMg { get; set; } = 1000;
+
+        public string GoalEffectiveDateText { get; set; } = DateTime.Today.ToString("yyyy-MM-dd");
 
         [Required(ErrorMessage = "Enter a sodium limit.")]
         [Range(1, int.MaxValue, ErrorMessage = "Sodium limit must be greater than zero.")]
