@@ -101,37 +101,37 @@
                         </div>
                     </div>
 
-                    <EditForm Model="_form" FormName="blood-pressure-entry-form" OnValidSubmit="SaveReading" class="bp-form">
+                    <EditForm Model="Model" FormName="blood-pressure-entry-form" OnValidSubmit="SaveReading" class="bp-form">
                         <DataAnnotationsValidator />
 
                         <div class="form-row">
                             <label for="reading-time">Reading Time</label>
-                            <input id="reading-time" class="form-input" type="datetime-local" value="@_readingTimeText" @onchange="SetReadingTime" />
+                            <InputText id="reading-time" type="datetime-local" class="form-input" @bind-Value="Model.ReadingTimeText" />
                         </div>
 
                         <div class="bp-number-grid">
                             <div class="field-group">
                                 <label for="systolic">Systolic</label>
-                                <InputNumber id="systolic" class="form-input" @bind-Value="_form.Systolic" />
-                                <ValidationMessage For="() => _form.Systolic" />
+                                <InputNumber id="systolic" class="form-input" @bind-Value="Model.Systolic" />
+                                <ValidationMessage For="() => Model.Systolic" />
                             </div>
 
                             <div class="field-group">
                                 <label for="diastolic">Diastolic</label>
-                                <InputNumber id="diastolic" class="form-input" @bind-Value="_form.Diastolic" />
-                                <ValidationMessage For="() => _form.Diastolic" />
+                                <InputNumber id="diastolic" class="form-input" @bind-Value="Model.Diastolic" />
+                                <ValidationMessage For="() => Model.Diastolic" />
                             </div>
 
                             <div class="field-group">
                                 <label for="pulse">Pulse</label>
-                                <InputNumber id="pulse" class="form-input" @bind-Value="_form.Pulse" />
-                                <ValidationMessage For="() => _form.Pulse" />
+                                <InputNumber id="pulse" class="form-input" @bind-Value="Model.Pulse" />
+                                <ValidationMessage For="() => Model.Pulse" />
                             </div>
                         </div>
 
                         <div class="field-group">
                             <label for="notes">Notes</label>
-                            <InputTextArea id="notes" class="form-input notes-input" @bind-Value="_form.Notes" />
+                            <InputTextArea id="notes" class="form-input notes-input" @bind-Value="Model.Notes" />
                         </div>
 
                         @if (!string.IsNullOrWhiteSpace(AuditText))
@@ -231,7 +231,8 @@
 }
 
 @code {
-    private readonly BloodPressureForm _form = new();
+    [SupplyParameterFromForm(FormName = "blood-pressure-entry-form")]
+    private BloodPressureForm Model { get; set; } = default!;
     private readonly List<BloodPressureReading> _history = [];
     private const int HistoryPageSize = 20;
     private long? _editingId;
@@ -242,15 +243,14 @@
     private int _diastolicAlertMax = 80;
     private bool _showKidneyLabs = true;
     private bool _isBloodPressureMenuOpen = true;
-    private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
     private string? _message;
     private string _messageClass = "page-message";
     private string? _formToast;
     private bool _showDeleteConfirm;
 
-    protected override void OnInitialized()
+    protected override void OnParametersSet()
     {
-        ResetForm();
+        Model ??= new BloodPressureForm();
     }
 
     protected override async Task OnInitializedAsync()
@@ -271,10 +271,20 @@
             return;
         }
 
+        if (ModelIsEmpty)
+            ResetForm();
+
         LoadPersonPreferences();
         LoadHistory();
         StateHasChanged();
     }
+
+    private bool ModelIsEmpty =>
+        !Model.Systolic.HasValue &&
+        !Model.Diastolic.HasValue &&
+        !Model.Pulse.HasValue &&
+        string.IsNullOrWhiteSpace(Model.Notes) &&
+        string.IsNullOrWhiteSpace(Model.ReadingTimeText);
 
     private void LoadPersonPreferences()
     {
@@ -288,10 +298,10 @@
     {
         get
         {
-            if (!_form.Systolic.HasValue || !_form.Diastolic.HasValue)
+            if (!Model.Systolic.HasValue || !Model.Diastolic.HasValue)
                 return "Ready";
 
-            if (_form.Systolic > _systolicAlertMax || _form.Diastolic > _diastolicAlertMax)
+            if (Model.Systolic > _systolicAlertMax || Model.Diastolic > _diastolicAlertMax)
                 return "High";
 
             return "In range";
@@ -321,7 +331,7 @@
 
     private string DeleteReadingSummary =>
         _editingId.HasValue
-            ? $"{_form.Systolic}/{_form.Diastolic}, pulse {_form.Pulse}, {_readingTimeText}"
+            ? $"{Model.Systolic}/{Model.Diastolic}, pulse {Model.Pulse}, {Model.ReadingTimeText}"
             : "No reading selected.";
 
     private List<BloodPressureReading> PagedHistory =>
@@ -376,11 +386,11 @@
     private void SelectReading(BloodPressureReading reading, bool clearToast = true)
     {
         _editingId = reading.BloodPressureId;
-        _form.Systolic = reading.Systolic;
-        _form.Diastolic = reading.Diastolic;
-        _form.Pulse = reading.Pulse;
-        _form.Notes = reading.Notes ?? string.Empty;
-        _readingTimeText = ToDateTimeLocal(reading.ReadingTime);
+        Model.Systolic = reading.Systolic;
+        Model.Diastolic = reading.Diastolic;
+        Model.Pulse = reading.Pulse;
+        Model.Notes = reading.Notes ?? string.Empty;
+        Model.ReadingTimeText = ToDateTimeLocal(reading.ReadingTime);
         _createdAt = reading.CreatedAt;
         _updatedAt = reading.UpdatedAt;
         _message = null;
@@ -397,22 +407,15 @@
         _showDeleteConfirm = false;
     }
 
-    private void SetReadingTime(ChangeEventArgs args)
-    {
-        _readingTimeText = args.Value?.ToString() ?? string.Empty;
-        if (DateTime.TryParse(_readingTimeText, out var readingTime))
-            SyncSeatedAtNote(readingTime);
-    }
-
     private void ResetForm()
     {
         var now = DateTime.Now;
         _editingId = null;
-        _form.Systolic = null;
-        _form.Diastolic = null;
-        _form.Pulse = null;
-        _form.Notes = $"Morning reading, seated at {now:h:mm tt}";
-        _readingTimeText = ToDateTimeLocal(now);
+        Model.Systolic = null;
+        Model.Diastolic = null;
+        Model.Pulse = null;
+        Model.Notes = $"Morning reading, seated at {now:h:mm tt}";
+        Model.ReadingTimeText = ToDateTimeLocal(now);
         _createdAt = null;
         _updatedAt = null;
     }
@@ -436,20 +439,20 @@
         if (!TryGetReadingTime(out var readingTime))
             return;
 
-        if (!_form.Systolic.HasValue || !_form.Diastolic.HasValue || !_form.Pulse.HasValue)
+        if (!Model.Systolic.HasValue || !Model.Diastolic.HasValue || !Model.Pulse.HasValue)
         {
             ShowError("Enter systolic, diastolic, and pulse values.");
             return;
         }
 
-        if (_form.Systolic.Value <= _form.Diastolic.Value)
+        if (Model.Systolic.Value <= Model.Diastolic.Value)
         {
             ShowError("Systolic must be greater than diastolic.");
             return;
         }
 
         var personId = LoginSession.PersonId.Value;
-        var notes = _form.Notes ?? string.Empty;
+        var notes = Model.Notes ?? string.Empty;
 
         try
         {
@@ -458,9 +461,9 @@
                 var updated = BloodPressureService.UpdateBloodPressureForPerson(
                     personId,
                     _editingId.Value,
-                    _form.Systolic.Value,
-                    _form.Diastolic.Value,
-                    _form.Pulse.Value,
+                    Model.Systolic.Value,
+                    Model.Diastolic.Value,
+                    Model.Pulse.Value,
                     readingTime,
                     notes,
                     LoginSession.UserName ?? string.Empty);
@@ -477,9 +480,9 @@
             {
                 var insertedId = BloodPressureService.InsertBloodPressure(
                     personId,
-                    _form.Systolic.Value,
-                    _form.Diastolic.Value,
-                    _form.Pulse.Value,
+                    Model.Systolic.Value,
+                    Model.Diastolic.Value,
+                    Model.Pulse.Value,
                     readingTime,
                     notes,
                     LoginSession.UserName ?? string.Empty);
@@ -559,7 +562,7 @@
 
     private bool TryGetReadingTime(out DateTime readingTime)
     {
-        if (DateTime.TryParse(_readingTimeText, out readingTime))
+        if (DateTime.TryParse(Model.ReadingTimeText, out readingTime))
             return true;
 
         ShowError("Enter a valid reading time.");
@@ -628,17 +631,17 @@
     private void SyncSeatedAtNote(DateTime readingTime)
     {
         var seatedText = $"seated at {readingTime:h:mm tt}";
-        var currentNotes = _form.Notes ?? string.Empty;
+        var currentNotes = Model.Notes ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(currentNotes))
         {
-            _form.Notes = $"Morning reading, {seatedText}";
+            Model.Notes = $"Morning reading, {seatedText}";
             return;
         }
 
         if (currentNotes.Contains("seated at", StringComparison.OrdinalIgnoreCase))
         {
-            _form.Notes = Regex.Replace(
+            Model.Notes = Regex.Replace(
                 currentNotes,
                 @"seated at\s+\d{1,2}:\d{2}\s*(AM|PM)",
                 seatedText,
@@ -648,6 +651,8 @@
 
     private sealed class BloodPressureForm
     {
+        public string? ReadingTimeText { get; set; }
+
         [Required]
         [Range(1, 300)]
         public int? Systolic { get; set; }
