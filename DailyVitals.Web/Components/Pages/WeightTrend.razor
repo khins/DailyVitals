@@ -51,7 +51,7 @@
                 <span>Profile</span>
             </a>
 
-            <button type="button" class="rail-signout" @onclick="SignOut">Sign out</button>
+            <a class="rail-signout" href="signout">Sign out</a>
         </aside>
 
         <main class="dashboard-main">
@@ -373,4 +373,5 @@
 
     private sealed record WeightTrendPoint(string Label, decimal Value, string Unit);
 }
+
 
