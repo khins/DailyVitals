@@ -203,6 +203,50 @@ app.MapPost("/auth/session", async (
     return Results.NoContent();
 }).DisableAntiforgery();
 
+app.MapPost("/auth/login", async (
+    HttpContext httpContext,
+    LocalLoginService loginService) =>
+{
+    var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+    var userName = form["UserName"].ToString().Trim();
+    var password = form["Password"].ToString();
+    var rememberDevice = IsChecked(form["RememberMe"].ToString());
+
+    if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+        return Results.Redirect("/?signin=missing");
+
+    var loginResult = loginService.Authenticate(userName, password);
+    if (loginResult.IsLocked)
+        return Results.Redirect("/?signin=locked");
+
+    var loginUser = loginResult.LoginUser;
+    if (loginUser?.PersonId is not > 0)
+        return Results.Redirect("/?signin=invalid");
+
+    var claims = new[]
+    {
+        new Claim(ClaimTypes.Name, loginUser.UserName),
+        new Claim(LocalLoginSession.AuthClaimTypes.PersonId, loginUser.PersonId.Value.ToString()),
+        new Claim(LocalLoginSession.AuthClaimTypes.IsDemo, loginUser.IsDemo.ToString()),
+        new Claim(LocalLoginSession.AuthClaimTypes.RememberDevice, rememberDevice.ToString())
+    };
+    var principal = new ClaimsPrincipal(
+        new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
+    var properties = new AuthenticationProperties
+    {
+        IsPersistent = rememberDevice,
+        AllowRefresh = true,
+        ExpiresUtc = rememberDevice ? DateTimeOffset.UtcNow.AddDays(30) : null
+    };
+
+    await httpContext.SignInAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme,
+        principal,
+        properties);
+
+    return Results.Redirect("/dashboard");
+}).DisableAntiforgery();
+
 app.MapPost("/auth/signout", async (HttpContext httpContext) =>
 {
     await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -270,6 +314,12 @@ static string? NormalizeHost(string? configuredHost)
         trimmed = trimmed[..colonIndex];
 
     return trimmed;
+}
+
+static bool IsChecked(string? value)
+{
+    return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(value, "on", StringComparison.OrdinalIgnoreCase);
 }
 
 internal sealed record AuthSessionRequest(string? Ticket);
