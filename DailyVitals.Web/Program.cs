@@ -209,6 +209,12 @@ app.MapPost("/auth/signout", async (HttpContext httpContext) =>
     return Results.NoContent();
 }).DisableAntiforgery();
 
+app.MapGet("/signout", async (HttpContext httpContext) =>
+{
+    await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    return Results.Redirect("/");
+}).AllowAnonymous();
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

@@ -541,15 +541,19 @@ h1 {
 }
 
 .rail-signout {
+    display: block;
     margin-top: 10px;
     border: 1px solid #d7e1df;
     background: #ffffff;
     cursor: pointer;
     text-align: left;
+    text-decoration: none;
 }
 
 .rail-signout:hover {
     background: #f6f9f8;
+    color: #173f4a;
+    text-decoration: none;
 }
 
 .dashboard-main {
