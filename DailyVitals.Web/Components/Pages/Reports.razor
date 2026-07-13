@@ -585,11 +585,8 @@
     private decimal _exerciseAverageMinutes;
     private int _exerciseActiveDays;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-            return;
-
         await LoginSession.RestoreAsync();
 
         if (!LoginSession.IsSignedIn)
@@ -1264,3 +1261,4 @@
         IReadOnlyList<NutrientSource> Sources,
         string Unit);
 }
+
