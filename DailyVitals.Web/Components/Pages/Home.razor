@@ -1,15 +1,10 @@
 @page "/"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
-@using System.Security.Claims
 @using DailyVitals.Web.Services
-@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Authentication.Cookies
 @inject NavigationManager Navigation
-@inject LocalLoginService LoginService
 @inject LocalLoginSession LoginSession
 @inject IConfiguration Configuration
-@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Sign in | DailyVitals</PageTitle>
 
@@ -51,19 +46,15 @@
             </div>
         </div>
 
-        <EditForm Model="Model" FormName="sign-in-form" OnValidSubmit="SignIn" class="login-form">
-            <DataAnnotationsValidator />
-
+        <form method="post" action="/auth/login" class="login-form">
             <div class="field-group">
                 <label for="user-name">Email</label>
-                <InputText id="user-name" type="email" class="form-input" autocomplete="username" @bind-Value="Model!.UserName" />
-                <ValidationMessage For="() => Model!.UserName" />
+                <input id="user-name" name="UserName" type="email" class="form-input" autocomplete="username" value="@Model!.UserName" required />
             </div>
 
             <div class="field-group">
                 <label for="password">Password</label>
-                <InputText id="password" type="@PasswordInputType" class="form-input" autocomplete="current-password" @bind-Value="Model!.Password" />
-                <ValidationMessage For="() => Model!.Password" />
+                <input id="password" name="Password" type="@PasswordInputType" class="form-input" autocomplete="current-password" value="@Model!.Password" required />
             </div>
 
             <div class="password-action-row">
@@ -80,7 +71,7 @@
 
             <div class="form-options remember-device-row">
                 <label class="checkbox-row">
-                    <InputCheckbox @bind-Value="Model!.RememberMe" />
+                    <input type="checkbox" name="RememberMe" value="true" checked="@Model!.RememberMe" />
                     <span>Remember this device</span>
                 </label>
                 @if (Model!.RememberMe)
@@ -89,9 +80,9 @@
                 }
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(_message))
+            @if (!string.IsNullOrWhiteSpace(SignInMessage))
             {
-                <div class="login-message" role="status">@_message</div>
+                <div class="login-message" role="status">@SignInMessage</div>
             }
 
             <button type="submit" class="primary-button">Sign in</button>
@@ -107,20 +98,27 @@
                     <button type="button" class="secondary-link" @onclick="UseDemoCredentials">Use demo account</button>
                 </div>
             }
-        </EditForm>
+        </form>
     </div>
 </section>
 
 @code {
-    [SupplyParameterFromForm(FormName = "sign-in-form")]
-    private LoginModel? Model { get; set; }
+    [SupplyParameterFromQuery(Name = "signin")]
+    private string? SignInResult { get; set; }
 
-    private string? _message;
+    private LoginModel? Model { get; set; }
     private bool _showPassword;
 
     private string PasswordInputType => _showPassword ? "text" : "password";
     private bool DemoModeEnabled => Configuration.GetValue("DemoMode:Enabled", false);
     private string DemoUserName => Configuration["DemoMode:UserName"] ?? "demo@activevitals.app";
+    private string? SignInMessage => SignInResult switch
+    {
+        "missing" => "Enter your email and password.",
+        "locked" => "Too many failed attempts. Try again later.",
+        "invalid" => "The email or password is incorrect.",
+        _ => null
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -132,87 +130,13 @@
             Navigation.NavigateTo("/dashboard", replace: true);
     }
 
-    private async Task SignIn()
-    {
-        if (!LoginService.IsConfigured)
-        {
-            _message = "Local sign-in is not configured yet. Add DailyVitalsLogin email and password settings.";
-            return;
-        }
-
-        var loginResult = LoginService.Authenticate(Model!.UserName, Model.Password);
-        if (loginResult.IsLocked)
-        {
-            _message = loginResult.LockedUntil.HasValue
-                ? $"Too many failed attempts. Try again after {loginResult.LockedUntil.Value:t}."
-                : "Too many failed attempts. Try again later.";
-            return;
-        }
-
-        var loginUser = loginResult.LoginUser;
-        if (loginUser is null)
-        {
-            _message = "The email or password is incorrect.";
-            return;
-        }
-
-        if (!loginUser.PersonId.HasValue)
-        {
-            _message = "This login is not linked to a person record yet.";
-            return;
-        }
-
-        _message = null;
-        await SignInAfterAuthentication(
-            loginUser.UserName,
-            loginUser.PersonId,
-            Model.RememberMe,
-            loginUser.IsDemo);
-        Navigation.NavigateTo("/dashboard", forceLoad: true, replace: true);
-    }
-
-    private async Task SignInAfterAuthentication(string userName, long? personId, bool rememberDevice, bool isDemo)
-    {
-        if (!personId.HasValue)
-            throw new InvalidOperationException("A person record is required to create an authenticated session.");
-
-        var httpContext = HttpContextAccessor.HttpContext;
-        if (httpContext is not null)
-        {
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.Name, userName),
-                new Claim(LocalLoginSession.AuthClaimTypes.PersonId, personId.Value.ToString()),
-                new Claim(LocalLoginSession.AuthClaimTypes.IsDemo, isDemo.ToString()),
-                new Claim(LocalLoginSession.AuthClaimTypes.RememberDevice, rememberDevice.ToString())
-            };
-            var principal = new ClaimsPrincipal(
-                new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
-            var properties = new AuthenticationProperties
-            {
-                IsPersistent = rememberDevice,
-                AllowRefresh = true,
-                ExpiresUtc = rememberDevice ? DateTimeOffset.UtcNow.AddDays(30) : null
-            };
-
-            await httpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                principal,
-                properties);
-            LoginSession.SignIn(userName, personId, isDemo, rememberDevice);
-            return;
-        }
-
-        await LoginSession.SignInAsync(userName, personId, rememberDevice, isDemo);
-    }
-
     private void UseDemoCredentials()
     {
         Model ??= new LoginModel();
         Model.UserName = DemoUserName;
         Model.Password = Configuration["DemoMode:Password"] ?? "Demo123!";
         Model.RememberMe = false;
-        _message = null;
+        SignInResult = null;
     }
 
     private sealed class LoginModel
