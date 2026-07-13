@@ -34,12 +34,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.Configure<HostFilteringOptions>(options =>
 {
     var allowedHosts = GetConfiguredAllowedHosts(builder.Configuration);
-    var railwayPublicDomain = builder.Configuration["RAILWAY_PUBLIC_DOMAIN"];
 
-    if (!string.IsNullOrWhiteSpace(railwayPublicDomain))
-    {
-        allowedHosts.Add(railwayPublicDomain.Trim());
-    }
+    AddAllowedHost(allowedHosts, builder.Configuration["RAILWAY_PUBLIC_DOMAIN"]);
+    AddAllowedHost(allowedHosts, builder.Configuration["RAILWAY_STATIC_URL"]);
+    AddAllowedHost(allowedHosts, "myactivevitals-production.up.railway.app");
+    AddAllowedHost(allowedHosts, "myactivevitals.com");
+    AddAllowedHost(allowedHosts, "www.myactivevitals.com");
 
     if (allowedHosts.Count > 0)
     {
@@ -243,6 +243,33 @@ static List<string> GetConfiguredAllowedHosts(IConfiguration configuration)
         .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         .ToList()
         ?? [];
+}
+
+static void AddAllowedHost(List<string> allowedHosts, string? configuredHost)
+{
+    var host = NormalizeHost(configuredHost);
+    if (!string.IsNullOrWhiteSpace(host))
+        allowedHosts.Add(host);
+}
+
+static string? NormalizeHost(string? configuredHost)
+{
+    if (string.IsNullOrWhiteSpace(configuredHost))
+        return null;
+
+    var trimmed = configuredHost.Trim();
+    if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+        return uri.Host;
+
+    var slashIndex = trimmed.IndexOf('/');
+    if (slashIndex >= 0)
+        trimmed = trimmed[..slashIndex];
+
+    var colonIndex = trimmed.IndexOf(':');
+    if (colonIndex > 0)
+        trimmed = trimmed[..colonIndex];
+
+    return trimmed;
 }
 
 internal sealed record AuthSessionRequest(string? Ticket);
