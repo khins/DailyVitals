@@ -68,7 +68,7 @@ namespace DailyVitals.Data.Services
                 Pulse = reader.GetInt32(3),
                 ReadingTime = reader.GetDateTime(4),
                 Notes = reader.IsDBNull(5) ? null : reader.GetString(5),
-                CreatedAt = reader.GetDateTime(6),
+                CreatedAt = reader.IsDBNull(6) ? reader.GetDateTime(4) : reader.GetDateTime(6),
                 UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
             };
         }
@@ -172,7 +172,7 @@ namespace DailyVitals.Data.Services
                     Pulse = reader.GetInt32(3),
                     ReadingTime = reader.GetDateTime(4),
                     Notes = reader.IsDBNull(5) ? null : reader.GetString(5),
-                    CreatedAt = reader.GetDateTime(6),
+                    CreatedAt = reader.IsDBNull(6) ? reader.GetDateTime(4) : reader.GetDateTime(6),
                     UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
                 });
             }
