@@ -275,11 +275,8 @@
     private string _messageClass = "page-message";
     private string? _profileToast;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-            return;
-
         await LoginSession.RestoreAsync();
 
         if (!LoginSession.IsSignedIn)
@@ -291,12 +288,10 @@
         if (!LoginSession.PersonId.HasValue)
         {
             ShowError("This login is not linked to a person record yet.");
-            StateHasChanged();
             return;
         }
 
         LoadProfile();
-        StateHasChanged();
     }
 
     private string DisplayName =>
