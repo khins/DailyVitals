@@ -1,7 +1,6 @@
 @page "/blood-pressure"
 @attribute [Authorize]
 @rendermode InteractiveServer
-@using System.ComponentModel.DataAnnotations
 @using System.Text.RegularExpressions
 @using DailyVitals.Data.Services
 @using DailyVitals.Domain.Models
@@ -101,37 +100,34 @@
                         </div>
                     </div>
 
-                    <EditForm Model="Model" FormName="blood-pressure-entry-form" OnValidSubmit="SaveReading" class="bp-form">
-                        <DataAnnotationsValidator />
+                    <form method="post" action="/blood-pressure/save" class="bp-form">
+                        <input type="hidden" name="EditingId" value="@_editingId" />
 
                         <div class="form-row">
                             <label for="reading-time">Reading Time</label>
-                            <InputText id="reading-time" type="datetime-local" class="form-input" @bind-Value="Model.ReadingTimeText" />
+                            <input id="reading-time" name="ReadingTimeText" type="datetime-local" class="form-input" value="@Model.ReadingTimeText" required />
                         </div>
 
                         <div class="bp-number-grid">
                             <div class="field-group">
                                 <label for="systolic">Systolic</label>
-                                <InputNumber id="systolic" class="form-input" @bind-Value="Model.Systolic" />
-                                <ValidationMessage For="() => Model.Systolic" />
+                                <input id="systolic" name="Systolic" type="number" min="1" max="300" class="form-input" value="@Model.Systolic" required />
                             </div>
 
                             <div class="field-group">
                                 <label for="diastolic">Diastolic</label>
-                                <InputNumber id="diastolic" class="form-input" @bind-Value="Model.Diastolic" />
-                                <ValidationMessage For="() => Model.Diastolic" />
+                                <input id="diastolic" name="Diastolic" type="number" min="1" max="200" class="form-input" value="@Model.Diastolic" required />
                             </div>
 
                             <div class="field-group">
                                 <label for="pulse">Pulse</label>
-                                <InputNumber id="pulse" class="form-input" @bind-Value="Model.Pulse" />
-                                <ValidationMessage For="() => Model.Pulse" />
+                                <input id="pulse" name="Pulse" type="number" min="1" max="250" class="form-input" value="@Model.Pulse" required />
                             </div>
                         </div>
 
                         <div class="field-group">
                             <label for="notes">Notes</label>
-                            <InputTextArea id="notes" class="form-input notes-input" @bind-Value="Model.Notes" />
+                            <textarea id="notes" name="Notes" class="form-input notes-input">@Model.Notes</textarea>
                         </div>
 
                         @if (!string.IsNullOrWhiteSpace(AuditText))
@@ -153,7 +149,7 @@
                                 <button type="button" aria-label="Dismiss blood pressure update message" @onclick="DismissFormToast">×</button>
                             </div>
                         }
-                    </EditForm>
+                    </form>
                 </article>
 
                 <article class="dashboard-card history-panel">
@@ -231,8 +227,10 @@
 }
 
 @code {
-    [SupplyParameterFromForm(FormName = "blood-pressure-entry-form")]
-    private BloodPressureForm Model { get; set; } = default!;
+    [SupplyParameterFromQuery(Name = "status")]
+    private string? Status { get; set; }
+
+    private BloodPressureForm Model { get; set; } = new();
     private readonly List<BloodPressureReading> _history = [];
     private const int HistoryPageSize = 20;
     private long? _editingId;
@@ -278,6 +276,7 @@
         {
             LoadPersonPreferences();
             LoadHistory();
+            ApplyStatusMessage();
         }
         catch (Exception ex)
         {
@@ -287,6 +286,31 @@
         }
 
         StateHasChanged();
+    }
+
+    private void ApplyStatusMessage()
+    {
+        switch (Status)
+        {
+            case "saved":
+                ShowSuccess("Blood pressure reading saved.");
+                break;
+            case "updated":
+                ShowSuccess("Blood pressure reading updated.");
+                break;
+            case "invalid":
+                ShowError("Enter valid systolic, diastolic, pulse, and reading time values.");
+                break;
+            case "demo":
+                ShowError(DemoModeGuard.ReadOnlyMessage);
+                break;
+            case "not-found":
+                ShowError("The selected blood pressure record could not be updated.");
+                break;
+            case "save-error":
+                ShowError("Blood pressure entry could not be saved. Please try again.");
+                break;
+        }
     }
 
     private bool ModelIsEmpty =>
@@ -430,91 +454,6 @@
         _updatedAt = null;
     }
 
-    private void SaveReading()
-    {
-        if (LoginSession.IsDemo)
-        {
-            ShowError(DemoModeGuard.ReadOnlyMessage);
-            return;
-        }
-
-        _showDeleteConfirm = false;
-
-        if (!LoginSession.PersonId.HasValue)
-        {
-            ShowError("This login is not linked to a person record yet.");
-            return;
-        }
-
-        if (!TryGetReadingTime(out var readingTime))
-            return;
-
-        if (!Model.Systolic.HasValue || !Model.Diastolic.HasValue || !Model.Pulse.HasValue)
-        {
-            ShowError("Enter systolic, diastolic, and pulse values.");
-            return;
-        }
-
-        if (Model.Systolic.Value <= Model.Diastolic.Value)
-        {
-            ShowError("Systolic must be greater than diastolic.");
-            return;
-        }
-
-        var personId = LoginSession.PersonId.Value;
-        var notes = Model.Notes ?? string.Empty;
-
-        try
-        {
-            if (_editingId.HasValue)
-            {
-                var updated = BloodPressureService.UpdateBloodPressureForPerson(
-                    personId,
-                    _editingId.Value,
-                    Model.Systolic.Value,
-                    Model.Diastolic.Value,
-                    Model.Pulse.Value,
-                    readingTime,
-                    notes,
-                    LoginSession.UserName ?? string.Empty);
-
-                if (!updated)
-                {
-                    ShowError("The selected blood pressure record could not be updated.");
-                    return;
-                }
-
-                ShowSuccess("Blood pressure reading updated.");
-            }
-            else
-            {
-                var insertedId = BloodPressureService.InsertBloodPressure(
-                    personId,
-                    Model.Systolic.Value,
-                    Model.Diastolic.Value,
-                    Model.Pulse.Value,
-                    readingTime,
-                    notes,
-                    LoginSession.UserName ?? string.Empty);
-
-                _editingId = insertedId;
-                _historyPage = 1;
-                ShowSuccess("Blood pressure reading saved.");
-            }
-
-            LoadHistory();
-
-            var selected = _history.FirstOrDefault(x => x.BloodPressureId == _editingId);
-            if (selected is not null)
-                SelectReading(selected, clearToast: false);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Blood pressure save failed.");
-            ShowError("Blood pressure entry could not be saved. Please try again.");
-        }
-    }
-
     private void RequestDeleteSelected()
     {
         if (!_editingId.HasValue)
@@ -568,15 +507,6 @@
             Logger.LogError(ex, "Blood pressure delete failed.");
             ShowError("Blood pressure entry could not be deleted. Please try again.");
         }
-    }
-
-    private bool TryGetReadingTime(out DateTime readingTime)
-    {
-        if (DateTime.TryParse(Model.ReadingTimeText, out readingTime))
-            return true;
-
-        ShowError("Enter a valid reading time.");
-        return false;
     }
 
     private void ShowSuccess(string message)
@@ -663,16 +593,10 @@
     {
         public string? ReadingTimeText { get; set; }
 
-        [Required]
-        [Range(1, 300)]
         public int? Systolic { get; set; }
 
-        [Required]
-        [Range(1, 200)]
         public int? Diastolic { get; set; }
 
-        [Required]
-        [Range(1, 250)]
         public int? Pulse { get; set; }
 
         public string? Notes { get; set; }
