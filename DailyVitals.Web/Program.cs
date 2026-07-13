@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HostFiltering;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Globalization;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -245,6 +246,86 @@ app.MapPost("/auth/login", async (
         properties);
 
     return Results.Redirect("/dashboard");
+}).DisableAntiforgery();
+
+app.MapPost("/blood-pressure/save", async (
+    HttpContext httpContext,
+    BloodPressureService bloodPressureService,
+    ILoggerFactory loggerFactory) =>
+{
+    var logger = loggerFactory.CreateLogger("BloodPressureSaveEndpoint");
+    var principal = httpContext.User;
+    var personIdValue = principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.PersonId);
+    if (principal.Identity?.IsAuthenticated != true ||
+        !long.TryParse(personIdValue, out var personId) ||
+        personId <= 0)
+    {
+        return Results.Redirect("/?signin=invalid");
+    }
+
+    var isDemo = string.Equals(
+        principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.IsDemo),
+        bool.TrueString,
+        StringComparison.OrdinalIgnoreCase);
+    if (isDemo)
+        return Results.Redirect("/blood-pressure?status=demo");
+
+    var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+    var systolicText = form["Systolic"].ToString();
+    var diastolicText = form["Diastolic"].ToString();
+    var pulseText = form["Pulse"].ToString();
+    var readingTimeText = form["ReadingTimeText"].ToString();
+    var notes = form["Notes"].ToString();
+    var editingIdText = form["EditingId"].ToString();
+    var userName = principal.Identity.Name ?? string.Empty;
+
+    if (!int.TryParse(systolicText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var systolic) ||
+        !int.TryParse(diastolicText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var diastolic) ||
+        !int.TryParse(pulseText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var pulse) ||
+        !DateTime.TryParse(readingTimeText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var readingTime))
+    {
+        return Results.Redirect("/blood-pressure?status=invalid");
+    }
+
+    if (systolic <= diastolic)
+        return Results.Redirect("/blood-pressure?status=invalid");
+
+    try
+    {
+        if (long.TryParse(editingIdText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var editingId) &&
+            editingId > 0)
+        {
+            var updated = bloodPressureService.UpdateBloodPressureForPerson(
+                personId,
+                editingId,
+                systolic,
+                diastolic,
+                pulse,
+                readingTime,
+                notes,
+                userName);
+
+            return Results.Redirect(updated
+                ? "/blood-pressure?status=updated"
+                : "/blood-pressure?status=not-found");
+        }
+
+        bloodPressureService.InsertBloodPressure(
+            personId,
+            systolic,
+            diastolic,
+            pulse,
+            readingTime,
+            notes,
+            userName);
+
+        return Results.Redirect("/blood-pressure?status=saved");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Blood pressure server save failed.");
+        return Results.Redirect("/blood-pressure?status=save-error");
+    }
 }).DisableAntiforgery();
 
 app.MapPost("/auth/signout", async (HttpContext httpContext) =>
