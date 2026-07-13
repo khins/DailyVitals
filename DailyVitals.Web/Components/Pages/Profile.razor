@@ -264,10 +264,8 @@
 }
 
 @code {
-    private ProfileForm _form = new();
-
     [SupplyParameterFromForm(FormName = "profile-form")]
-    private ProfileForm? _submittedForm { get; set; }
+    private ProfileForm _form { get; set; } = default!;
 
     private long? _nutritionGoalId;
     private DateTime? _createdAt;
@@ -278,8 +276,7 @@
 
     protected override void OnParametersSet()
     {
-        if (_submittedForm is not null)
-            _form = _submittedForm;
+        _form ??= new ProfileForm();
     }
 
     protected override async Task OnInitializedAsync()
