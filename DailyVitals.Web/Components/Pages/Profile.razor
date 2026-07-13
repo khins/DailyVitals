@@ -12,7 +12,6 @@
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
 @inject ILogger<Profile> Logger
-@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Profile | DailyVitals</PageTitle>
 
@@ -34,7 +33,7 @@
                 <a href="reports">Reports</a>
                 <a href="nutrition">Nutrition</a>
                 <a href="fluid-intake">Fluid Intake</a>
-                @if (_form.TrackKidneyLabs)
+                @if (Model.TrackKidneyLabs)
                 {
                     <a href="renal-foods">Renal Friendly Foods</a>
                     <a href="labs">Kidney Labs</a>
@@ -89,55 +88,55 @@
                         </div>
                     </div>
 
-                    <EditForm Model="_form" FormName="profile-form" OnValidSubmit="SaveProfile" class="bp-form">
+                    <EditForm Model="Model" FormName="profile-form" OnValidSubmit="SaveProfile" class="bp-form">
                         <DataAnnotationsValidator />
 
                         <div class="account-form-grid">
                             <div class="field-group">
                                 <label for="profile-first-name">First Name</label>
-                                <InputText id="profile-first-name" name="FirstName" class="form-input" @bind-Value="_form.FirstName" />
-                                <ValidationMessage For="() => _form.FirstName" />
+                                <InputText id="profile-first-name" class="form-input" @bind-Value="Model.FirstName" />
+                                <ValidationMessage For="() => Model.FirstName" />
                             </div>
 
                             <div class="field-group">
                                 <label for="profile-last-name">Last Name</label>
-                                <InputText id="profile-last-name" name="LastName" class="form-input" @bind-Value="_form.LastName" />
-                                <ValidationMessage For="() => _form.LastName" />
+                                <InputText id="profile-last-name" class="form-input" @bind-Value="Model.LastName" />
+                                <ValidationMessage For="() => Model.LastName" />
                             </div>
 
                             <div class="field-group form-grid-span-all">
                                 <label for="profile-user-name">Email</label>
-                                <InputText id="profile-user-name" name="UserName" type="email" class="form-input" autocomplete="email" @bind-Value="_form.UserName" />
-                                <ValidationMessage For="() => _form.UserName" />
+                                <InputText id="profile-user-name" type="email" class="form-input" autocomplete="email" @bind-Value="Model.UserName" />
+                                <ValidationMessage For="() => Model.UserName" />
                             </div>
 
                             <div class="field-group">
                                 <label for="profile-birth-date">Birth Date</label>
-                                <input id="profile-birth-date" name="BirthDateText" class="form-input" type="date" value="@_form.BirthDateText" @onchange="SetBirthDate" />
+                                <InputText id="profile-birth-date" type="date" class="form-input" @bind-Value="Model.BirthDateText" />
                             </div>
 
                             <div class="field-group">
                                 <label>Height</label>
                                 <div class="height-picker">
-                                    <select class="form-input" name="HeightFeet" @bind="_form.HeightFeet">
+                                    <InputSelect class="form-input" @bind-Value="Model.HeightFeet">
                                         @for (var feet = 3; feet <= 8; feet++)
                                         {
                                             <option value="@feet">@feet ft</option>
                                         }
-                                    </select>
-                                    <select class="form-input" name="HeightInches" @bind="_form.HeightInches">
+                                    </InputSelect>
+                                    <InputSelect class="form-input" @bind-Value="Model.HeightInches">
                                         @for (var inches = 0; inches <= 11; inches++)
                                         {
                                             <option value="@inches">@inches in</option>
                                         }
-                                    </select>
+                                    </InputSelect>
                                 </div>
                             </div>
                         </div>
 
                         <fieldset class="gender-options profile-gender-options">
                             <legend>Gender</legend>
-                            <InputRadioGroup Name="Gender" @bind-Value="_form.Gender">
+                            <InputRadioGroup @bind-Value="Model.Gender">
                                 <div class="profile-radio-options">
                                     <label>
                                         <InputRadio Value="@("Male")" />
@@ -161,7 +160,7 @@
 
                             <div class="profile-toggle-grid">
                                 <label class="toggle-card">
-                                    <InputCheckbox name="IsDiabetic" @bind-Value="_form.IsDiabetic" />
+                                    <InputCheckbox @bind-Value="Model.IsDiabetic" />
                                     <span>
                                         <strong>Diabetic</strong>
                                         <small>Enable glucose-focused dashboard alerts.</small>
@@ -169,7 +168,7 @@
                                 </label>
 
                                 <label class="toggle-card">
-                                    <InputCheckbox name="TrackKidneyLabs" @bind-Value="_form.TrackKidneyLabs" />
+                                    <InputCheckbox @bind-Value="Model.TrackKidneyLabs" />
                                     <span>
                                         <strong>Kidney program</strong>
                                         <small>Show kidney lab tracking and monthly lab alerts.</small>
@@ -177,7 +176,7 @@
                                 </label>
 
                                 <label class="toggle-card">
-                                    <InputCheckbox name="TrackWeightLoss" @bind-Value="_form.TrackWeightLoss" />
+                                    <InputCheckbox @bind-Value="Model.TrackWeightLoss" />
                                     <span>
                                         <strong>Weight-loss focus</strong>
                                         <small>Keep weight trend tracking prominent for this person.</small>
@@ -188,55 +187,55 @@
                             <div class="nutrition-goal-fields">
                                 <div class="field-group">
                                     <label for="goal-effective-date">Goal Effective Date</label>
-                                    <input id="goal-effective-date" name="GoalEffectiveDateText" class="form-input" type="date" value="@_form.GoalEffectiveDateText" @onchange="SetGoalEffectiveDate" />
+                                    <InputText id="goal-effective-date" type="date" class="form-input" @bind-Value="Model.GoalEffectiveDateText" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="phosphorus-limit">Phosphorus Limit (mg)</label>
-                                    <InputNumber id="phosphorus-limit" name="PhosphorusLimitMg" class="form-input" @bind-Value="_form.PhosphorusLimitMg" />
-                                    <ValidationMessage For="() => _form.PhosphorusLimitMg" />
+                                    <InputNumber id="phosphorus-limit" class="form-input" @bind-Value="Model.PhosphorusLimitMg" />
+                                    <ValidationMessage For="() => Model.PhosphorusLimitMg" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="sodium-limit">Sodium Limit (mg)</label>
-                                    <InputNumber id="sodium-limit" name="SodiumLimitMg" class="form-input" @bind-Value="_form.SodiumLimitMg" />
-                                    <ValidationMessage For="() => _form.SodiumLimitMg" />
+                                    <InputNumber id="sodium-limit" class="form-input" @bind-Value="Model.SodiumLimitMg" />
+                                    <ValidationMessage For="() => Model.SodiumLimitMg" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="calorie-limit">Calorie Limit</label>
-                                    <InputNumber id="calorie-limit" name="CalorieLimit" class="form-input" @bind-Value="_form.CalorieLimit" />
-                                    <ValidationMessage For="() => _form.CalorieLimit" />
+                                    <InputNumber id="calorie-limit" class="form-input" @bind-Value="Model.CalorieLimit" />
+                                    <ValidationMessage For="() => Model.CalorieLimit" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="protein-target">Protein Target (g)</label>
-                                    <InputNumber id="protein-target" name="ProteinTargetG" class="form-input" @bind-Value="_form.ProteinTargetG" />
+                                    <InputNumber id="protein-target" class="form-input" @bind-Value="Model.ProteinTargetG" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="potassium-limit">Potassium Limit (mg)</label>
-                                    <InputNumber id="potassium-limit" name="PotassiumLimitMg" class="form-input" @bind-Value="_form.PotassiumLimitMg" />
+                                    <InputNumber id="potassium-limit" class="form-input" @bind-Value="Model.PotassiumLimitMg" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="fluid-limit">Fluid Limit (ml)</label>
-                                    <InputNumber id="fluid-limit" name="FluidLimitMl" class="form-input" @bind-Value="_form.FluidLimitMl" />
+                                    <InputNumber id="fluid-limit" class="form-input" @bind-Value="Model.FluidLimitMl" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="glucose-target">Glucose Target (mg/dL)</label>
-                                    <InputNumber id="glucose-target" name="GlucoseTargetMgDl" class="form-input" @bind-Value="_form.GlucoseTargetMgDl" />
+                                    <InputNumber id="glucose-target" class="form-input" @bind-Value="Model.GlucoseTargetMgDl" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="systolic-threshold">Systolic Alert Max</label>
-                                    <InputNumber id="systolic-threshold" name="SystolicThresholdMax" class="form-input" @bind-Value="_form.SystolicThresholdMax" />
+                                    <InputNumber id="systolic-threshold" class="form-input" @bind-Value="Model.SystolicThresholdMax" />
                                 </div>
 
                                 <div class="field-group">
                                     <label for="diastolic-threshold">Diastolic Alert Max</label>
-                                    <InputNumber id="diastolic-threshold" name="DiastolicThresholdMax" class="form-input" @bind-Value="_form.DiastolicThresholdMax" />
+                                    <InputNumber id="diastolic-threshold" class="form-input" @bind-Value="Model.DiastolicThresholdMax" />
                                 </div>
                             </div>
 
@@ -265,7 +264,7 @@
 
 @code {
     [SupplyParameterFromForm(FormName = "profile-form")]
-    private ProfileForm _form { get; set; } = default!;
+    private ProfileForm Model { get; set; } = default!;
 
     private long? _nutritionGoalId;
     private DateTime? _createdAt;
@@ -274,13 +273,10 @@
     private string _messageClass = "page-message";
     private string? _profileToast;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        _form ??= new ProfileForm();
-    }
+        Model ??= new ProfileForm();
 
-    protected override async Task OnInitializedAsync()
-    {
         await LoginSession.RestoreAsync();
 
         if (!LoginSession.IsSignedIn)
@@ -295,24 +291,26 @@
             return;
         }
 
-        if (!IsFormPost)
+        if (ModelIsEmpty)
             LoadProfile();
     }
 
-    private bool IsFormPost =>
-        string.Equals(HttpContextAccessor.HttpContext?.Request.Method, "POST", StringComparison.OrdinalIgnoreCase);
+    private bool ModelIsEmpty =>
+        string.IsNullOrWhiteSpace(Model.FirstName) &&
+        string.IsNullOrWhiteSpace(Model.LastName) &&
+        string.IsNullOrWhiteSpace(Model.UserName);
 
     private string DisplayName =>
-        string.IsNullOrWhiteSpace(_form.FirstName) && string.IsNullOrWhiteSpace(_form.LastName)
+        string.IsNullOrWhiteSpace(Model.FirstName) && string.IsNullOrWhiteSpace(Model.LastName)
             ? "Profile"
-            : $"{_form.FirstName} {_form.LastName}".Trim();
+            : $"{Model.FirstName} {Model.LastName}".Trim();
 
     private string Initials
     {
         get
         {
-            var first = string.IsNullOrWhiteSpace(_form.FirstName) ? string.Empty : _form.FirstName.Trim()[0].ToString();
-            var last = string.IsNullOrWhiteSpace(_form.LastName) ? string.Empty : _form.LastName.Trim()[0].ToString();
+            var first = string.IsNullOrWhiteSpace(Model.FirstName) ? string.Empty : Model.FirstName.Trim()[0].ToString();
+            var last = string.IsNullOrWhiteSpace(Model.LastName) ? string.Empty : Model.LastName.Trim()[0].ToString();
             return string.IsNullOrWhiteSpace(first + last) ? "DV" : (first + last).ToUpperInvariant();
         }
     }
@@ -323,22 +321,22 @@
         {
             var parts = new List<string>();
 
-            if (_form.BirthDate.HasValue)
-                parts.Add(_form.BirthDate.Value.ToString("M/d/yyyy"));
+            if (Model.BirthDate.HasValue)
+                parts.Add(Model.BirthDate.Value.ToString("M/d/yyyy"));
 
-            if (!string.IsNullOrWhiteSpace(_form.Gender))
-                parts.Add(_form.Gender);
+            if (!string.IsNullOrWhiteSpace(Model.Gender))
+                parts.Add(Model.Gender);
 
             if (SelectedHeightFt.HasValue)
-                parts.Add($"{_form.HeightFeet} ft {_form.HeightInches} in ({SelectedHeightFt.Value:0.##} ft)");
+                parts.Add($"{Model.HeightFeet} ft {Model.HeightInches} in ({SelectedHeightFt.Value:0.##} ft)");
 
-            if (_form.IsDiabetic)
+            if (Model.IsDiabetic)
                 parts.Add("Diabetic");
 
-            if (_form.TrackKidneyLabs)
+            if (Model.TrackKidneyLabs)
                 parts.Add("Kidney labs on");
 
-            if (_form.TrackWeightLoss)
+            if (Model.TrackWeightLoss)
                 parts.Add("Weight focus");
 
             return parts.Count == 0 ? "No profile details entered yet." : string.Join(" | ", parts);
@@ -376,16 +374,16 @@
                 return;
             }
 
-            _form.FirstName = person.FirstName;
-            _form.LastName = person.LastName;
-            _form.UserName = LoginSession.UserName;
-            _form.BirthDate = person.BirthDate;
-            _form.Gender = person.Gender;
-            _form.IsDiabetic = person.IsDiabetic;
-            _form.GlucoseTargetMgDl = person.GlucoseTargetMgDl ?? 100;
-            _form.TrackKidneyLabs = person.TrackKidneyLabs;
-            _form.TrackWeightLoss = person.TrackWeightLoss;
-            _form.BirthDateText = person.BirthDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+            Model.FirstName = person.FirstName;
+            Model.LastName = person.LastName;
+            Model.UserName = LoginSession.UserName;
+            Model.BirthDate = person.BirthDate;
+            Model.Gender = person.Gender;
+            Model.IsDiabetic = person.IsDiabetic;
+            Model.GlucoseTargetMgDl = person.GlucoseTargetMgDl ?? 100;
+            Model.TrackKidneyLabs = person.TrackKidneyLabs;
+            Model.TrackWeightLoss = person.TrackWeightLoss;
+            Model.BirthDateText = person.BirthDate?.ToString("yyyy-MM-dd") ?? string.Empty;
             _createdAt = person.CreatedAt;
             _updatedAt = person.UpdatedAt;
             SetHeightSelectors(person.HeightFt);
@@ -403,13 +401,13 @@
     {
         var goal = NutritionGoalService.GetActiveGoal(personId, DateTime.Today);
         _nutritionGoalId = goal?.NutritionGoalId;
-        _form.GoalEffectiveDateText = (goal?.EffectiveDate ?? DateTime.Today).ToString("yyyy-MM-dd");
-        _form.PhosphorusLimitMg = goal?.PhosphorusLimitMg ?? 1000;
-        _form.SodiumLimitMg = goal?.SodiumLimitMg ?? 2000;
-        _form.CalorieLimit = goal?.CalorieLimit ?? 2200;
-        _form.ProteinTargetG = goal?.ProteinTargetG ?? 100;
-        _form.PotassiumLimitMg = goal?.PotassiumLimitMg ?? 2500;
-        _form.FluidLimitMl = goal?.FluidLimitMl ?? 2500;
+        Model.GoalEffectiveDateText = (goal?.EffectiveDate ?? DateTime.Today).ToString("yyyy-MM-dd");
+        Model.PhosphorusLimitMg = goal?.PhosphorusLimitMg ?? 1000;
+        Model.SodiumLimitMg = goal?.SodiumLimitMg ?? 2000;
+        Model.CalorieLimit = goal?.CalorieLimit ?? 2200;
+        Model.ProteinTargetG = goal?.ProteinTargetG ?? 100;
+        Model.PotassiumLimitMg = goal?.PotassiumLimitMg ?? 2500;
+        Model.FluidLimitMl = goal?.FluidLimitMl ?? 2500;
     }
 
     private void LoadBloodPressureThresholds(long personId)
@@ -417,23 +415,13 @@
         var systolic = VitalThresholdService.GetActiveThreshold(personId, VitalThresholdService.BloodPressureSystolic);
         var diastolic = VitalThresholdService.GetActiveThreshold(personId, VitalThresholdService.BloodPressureDiastolic);
 
-        _form.SystolicThresholdMax = systolic?.MaxValue.HasValue == true
+        Model.SystolicThresholdMax = systolic?.MaxValue.HasValue == true
             ? Convert.ToInt32(systolic.MaxValue.Value)
             : 130;
 
-        _form.DiastolicThresholdMax = diastolic?.MaxValue.HasValue == true
+        Model.DiastolicThresholdMax = diastolic?.MaxValue.HasValue == true
             ? Convert.ToInt32(diastolic.MaxValue.Value)
             : 80;
-    }
-
-    private void SetBirthDate(ChangeEventArgs args)
-    {
-        _form.BirthDateText = args.Value?.ToString() ?? string.Empty;
-    }
-
-    private void SetGoalEffectiveDate(ChangeEventArgs args)
-    {
-        _form.GoalEffectiveDateText = args.Value?.ToString() ?? string.Empty;
     }
 
     private async Task SaveProfile()
@@ -450,13 +438,13 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_form.BirthDateText))
+        if (string.IsNullOrWhiteSpace(Model.BirthDateText))
         {
             ShowError("Birth date is required for account recovery.");
             return;
         }
 
-        if (!DateTime.TryParse(_form.BirthDateText, out var parsedBirthDate))
+        if (!DateTime.TryParse(Model.BirthDateText, out var parsedBirthDate))
         {
             ShowError("Enter a valid birth date.");
             return;
@@ -466,7 +454,7 @@
 
         try
         {
-            if (!DateTime.TryParse(_form.GoalEffectiveDateText, out var goalEffectiveDate))
+            if (!DateTime.TryParse(Model.GoalEffectiveDateText, out var goalEffectiveDate))
             {
                 ShowError("Enter a valid nutrition goal effective date.");
                 return;
@@ -474,50 +462,50 @@
 
             PersonService.UpdatePerson(
                 LoginSession.PersonId.Value,
-                _form.FirstName!.Trim(),
-                _form.LastName!.Trim(),
+                Model.FirstName!.Trim(),
+                Model.LastName!.Trim(),
                 SelectedHeightFt,
                 birthDate,
-                _form.Gender,
-                _form.IsDiabetic,
-                _form.GlucoseTargetMgDl,
-                _form.TrackKidneyLabs,
-                _form.TrackWeightLoss);
+                Model.Gender,
+                Model.IsDiabetic,
+                Model.GlucoseTargetMgDl,
+                Model.TrackKidneyLabs,
+                Model.TrackWeightLoss);
 
-            var trimmedUserName = _form.UserName!.Trim();
+            var trimmedUserName = Model.UserName!.Trim();
             if (!string.Equals(trimmedUserName, LoginSession.UserName, StringComparison.OrdinalIgnoreCase))
             {
                 LoginUserService.UpdateUserNameForPerson(LoginSession.PersonId.Value, trimmedUserName);
                 await LoginSession.UpdateUserNameAsync(trimmedUserName);
-                _form.UserName = trimmedUserName;
+                Model.UserName = trimmedUserName;
             }
 
             _nutritionGoalId = NutritionGoalService.SaveGoal(new NutritionGoal
             {
                 NutritionGoalId = _nutritionGoalId ?? 0,
                 PersonId = LoginSession.PersonId.Value,
-                SodiumLimitMg = _form.SodiumLimitMg!.Value,
-                PhosphorusLimitMg = _form.PhosphorusLimitMg!.Value,
-                CalorieLimit = _form.CalorieLimit!.Value,
+                SodiumLimitMg = Model.SodiumLimitMg!.Value,
+                PhosphorusLimitMg = Model.PhosphorusLimitMg!.Value,
+                CalorieLimit = Model.CalorieLimit!.Value,
                 EffectiveDate = goalEffectiveDate.Date,
-                ProteinTargetG = _form.ProteinTargetG,
-                PotassiumLimitMg = _form.PotassiumLimitMg,
-                FluidLimitMl = _form.FluidLimitMl
+                ProteinTargetG = Model.ProteinTargetG,
+                PotassiumLimitMg = Model.PotassiumLimitMg,
+                FluidLimitMl = Model.FluidLimitMl
             });
 
             VitalThresholdService.SavePersonThreshold(
                 LoginSession.PersonId.Value,
                 VitalThresholdService.BloodPressureSystolic,
                 minValue: null,
-                maxValue: _form.SystolicThresholdMax);
+                maxValue: Model.SystolicThresholdMax);
 
             VitalThresholdService.SavePersonThreshold(
                 LoginSession.PersonId.Value,
                 VitalThresholdService.BloodPressureDiastolic,
                 minValue: null,
-                maxValue: _form.DiastolicThresholdMax);
+                maxValue: Model.DiastolicThresholdMax);
 
-            _form.BirthDate = birthDate;
+            Model.BirthDate = birthDate;
             _updatedAt = DateTime.Now;
             _messageClass = "page-message";
             _message = null;
@@ -548,14 +536,14 @@
         Navigation.NavigateTo("/");
     }
 
-    private decimal? SelectedHeightFt => _form.HeightFeet <= 0 ? null : _form.HeightFeet + (_form.HeightInches / 12m);
+    private decimal? SelectedHeightFt => Model.HeightFeet <= 0 ? null : Model.HeightFeet + (Model.HeightInches / 12m);
 
     private void SetHeightSelectors(decimal? heightFt)
     {
         if (!heightFt.HasValue || heightFt.Value <= 0)
         {
-            _form.HeightFeet = 5;
-            _form.HeightInches = 0;
+            Model.HeightFeet = 5;
+            Model.HeightInches = 0;
             return;
         }
 
@@ -568,8 +556,8 @@
             inches %= 12;
         }
 
-        _form.HeightFeet = Math.Clamp(feet, 3, 8);
-        _form.HeightInches = Math.Clamp(inches, 0, 11);
+        Model.HeightFeet = Math.Clamp(feet, 3, 8);
+        Model.HeightInches = Math.Clamp(inches, 0, 11);
     }
 
     private sealed class ProfileForm
@@ -627,3 +615,5 @@
         public int? DiastolicThresholdMax { get; set; } = 80;
     }
 }
+
+
