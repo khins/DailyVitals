@@ -49,40 +49,40 @@
             </div>
         </div>
 
-        <EditForm Model="_model" FormName="create-account-form" OnValidSubmit="SubmitAccount" class="login-form account-form">
+        <EditForm Model="Model" FormName="create-account-form" OnValidSubmit="SubmitAccount" class="login-form account-form">
             <DataAnnotationsValidator />
 
             <div class="account-form-grid">
                 <div class="field-group">
                     <label for="first-name">First Name</label>
-                    <InputText id="first-name" name="FirstName" class="form-input" autocomplete="given-name" @bind-Value="_model.FirstName" />
-                    <ValidationMessage For="() => _model.FirstName" />
+                    <InputText id="first-name" class="form-input" autocomplete="given-name" @bind-Value="Model!.FirstName" />
+                    <ValidationMessage For="() => Model!.FirstName" />
                 </div>
 
                 <div class="field-group">
                     <label for="last-name">Last Name</label>
-                    <InputText id="last-name" name="LastName" class="form-input" autocomplete="family-name" @bind-Value="_model.LastName" />
-                    <ValidationMessage For="() => _model.LastName" />
+                    <InputText id="last-name" class="form-input" autocomplete="family-name" @bind-Value="Model!.LastName" />
+                    <ValidationMessage For="() => Model!.LastName" />
                 </div>
             </div>
 
             <div class="field-group">
                 <label for="account-user-name">Email</label>
-                <InputText id="account-user-name" name="UserName" type="email" class="form-input" autocomplete="username" @bind-Value="_model.UserName" />
-                <ValidationMessage For="() => _model.UserName" />
+                <InputText id="account-user-name" type="email" class="form-input" autocomplete="username" @bind-Value="Model!.UserName" />
+                <ValidationMessage For="() => Model!.UserName" />
             </div>
 
             <div class="account-form-grid">
                 <div class="field-group">
                     <label for="account-password">Password</label>
-                    <InputText id="account-password" name="Password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.Password" />
-                    <ValidationMessage For="() => _model.Password" />
+                    <InputText id="account-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="Model!.Password" />
+                    <ValidationMessage For="() => Model!.Password" />
                 </div>
 
                 <div class="field-group">
                     <label for="confirm-password">Confirm Password</label>
-                    <InputText id="confirm-password" name="ConfirmPassword" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="_model.ConfirmPassword" />
-                    <ValidationMessage For="() => _model.ConfirmPassword" />
+                    <InputText id="confirm-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="Model!.ConfirmPassword" />
+                    <ValidationMessage For="() => Model!.ConfirmPassword" />
                 </div>
             </div>
 
@@ -117,10 +117,9 @@
 </section>
 
 @code {
-    private CreateAccountModel _model = new();
-
     [SupplyParameterFromForm(FormName = "create-account-form")]
-    private CreateAccountModel? _submittedModel { get; set; }
+    private CreateAccountModel? Model { get; set; }
+
     private string? _message;
     private string _messageClass = "login-message";
     private bool _showPassword;
@@ -128,10 +127,9 @@
 
     private string PasswordInputType => _showPassword ? "text" : "password";
 
-    protected override void OnParametersSet()
+    protected override void OnInitialized()
     {
-        if (_submittedModel is not null)
-            _model = _submittedModel;
+        Model ??= new CreateAccountModel();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -147,13 +145,13 @@
 
     private async Task SubmitAccount()
     {
-        if (!string.Equals(_model.Password, _model.ConfirmPassword, StringComparison.Ordinal))
+        if (!string.Equals(Model!.Password, Model.ConfirmPassword, StringComparison.Ordinal))
         {
             ShowError("Passwords must match.");
             return;
         }
 
-        if (LoginUserService.UserNameExists(_model.UserName ?? string.Empty))
+        if (LoginUserService.UserNameExists(Model.UserName ?? string.Empty))
         {
             ShowError("That email is already in use.");
             return;
@@ -162,16 +160,16 @@
         try
         {
             var personId = PersonService.InsertPerson(
-                _model.FirstName!.Trim(),
-                _model.LastName!.Trim(),
+                Model.FirstName!.Trim(),
+                Model.LastName!.Trim(),
                 null,
                 null,
                 null);
 
             var loginUser = LoginUserService.CreateLoginUser(
                 personId,
-                _model.UserName!.Trim(),
-                _model.Password!);
+                Model.UserName!.Trim(),
+                Model.Password!);
 
             await LoginSession.SignInAsync(loginUser.UserName, loginUser.PersonId, rememberDevice: true);
             Navigation.NavigateTo("/profile", forceLoad: true, replace: true);
