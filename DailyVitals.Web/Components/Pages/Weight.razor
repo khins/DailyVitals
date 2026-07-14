@@ -113,21 +113,21 @@
                         <div class="weight-number-grid">
                             <div class="field-group">
                                 <label for="weight-value">Weight</label>
-                                <input id="weight-value" name="WeightValue" type="number" step="0.1" min="3.0" max="1102.3" class="form-input" value="@_form.WeightValue" required />
+                                <input id="weight-value" name="WeightValue" type="number" step="0.1" min="3.0" max="1102.3" class="form-input" value="@_form.WeightValue" data-bmi-weight-input required />
                             </div>
 
                             <div class="field-group">
                                 <label for="weight-unit">Unit</label>
-                                <select id="weight-unit" name="WeightUnit" class="form-input">
+                                <select id="weight-unit" name="WeightUnit" class="form-input" data-bmi-unit-input>
                                     <option value="lb" selected="@IsWeightUnitSelected("lb")">lb</option>
                                     <option value="kg" selected="@IsWeightUnitSelected("kg")">kg</option>
                                 </select>
                             </div>
                         </div>
 
-                        <div class="bmi-panel @BmiPanelClass">
-                            <strong>BMI: @BmiText</strong>
-                            <span>@BmiCategory</span>
+                        <div class="bmi-panel @BmiPanelClass" data-bmi-panel data-height-ft="@(_heightFt?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)">
+                            <strong>BMI: <span data-bmi-value>@BmiText</span></strong>
+                            <span data-bmi-category>@BmiCategory</span>
                         </div>
 
                         <div class="field-group">
