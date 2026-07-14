@@ -103,7 +103,7 @@
 
                         <div class="field-group">
                             <label for="exercise-type">Exercise</label>
-                            <InputSelect id="exercise-type" class="form-input" @bind-Value="_form.ExerciseTypeId">
+                            <InputSelect id="exercise-type" class="form-input" @bind-Value="_form.ExerciseTypeId" data-other-exercise-select data-other-exercise-value="@OtherExerciseTypeId">
                                 <option value="">Select exercise</option>
                                 @foreach (var exerciseType in _exerciseTypes)
                                 {
@@ -114,14 +114,11 @@
                             <ValidationMessage For="() => _form.ExerciseTypeId" />
                         </div>
 
-                        @if (IsOtherExerciseSelected)
-                        {
-                            <div class="field-group">
-                                <label for="other-exercise">Other Exercise</label>
-                                <InputText id="other-exercise" class="form-input" @bind-Value="_form.OtherExerciseName" />
-                                <p class="field-hint">Existing exercise names are checked before a new option is added.</p>
-                            </div>
-                        }
+                        <div class="field-group @(IsOtherExerciseSelected ? null : "is-hidden")" data-other-exercise-field>
+                            <label for="other-exercise">Other Exercise</label>
+                            <InputText id="other-exercise" class="form-input" @bind-Value="_form.OtherExerciseName" disabled="@(!IsOtherExerciseSelected)" data-other-exercise-input />
+                            <p class="field-hint">Existing exercise names are checked before a new option is added.</p>
+                        </div>
 
                         <div class="exercise-number-grid">
                             <div class="field-group">
