@@ -396,6 +396,88 @@ app.MapPost("/blood-glucose/save", async (
     }
 }).DisableAntiforgery();
 
+app.MapPost("/weight/save", async (
+    HttpContext httpContext,
+    WeightService weightService,
+    PersonService personService,
+    ILoggerFactory loggerFactory) =>
+{
+    var logger = loggerFactory.CreateLogger("WeightSaveEndpoint");
+    var principal = httpContext.User;
+    var personIdValue = principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.PersonId);
+    if (principal.Identity?.IsAuthenticated != true ||
+        !long.TryParse(personIdValue, out var personId) ||
+        personId <= 0)
+    {
+        return Results.Redirect("/?signin=invalid");
+    }
+
+    var isDemo = string.Equals(
+        principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.IsDemo),
+        bool.TrueString,
+        StringComparison.OrdinalIgnoreCase);
+    if (isDemo)
+        return Results.Redirect("/weight?status=demo");
+
+    var heightFt = personService.GetPersonById(personId)?.HeightFt;
+    if (!heightFt.HasValue)
+        return Results.Redirect("/weight?status=height-required");
+
+    var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+    var weightText = form["WeightValue"].ToString();
+    var weightUnit = form["WeightUnit"].ToString();
+    var readingTimeText = form["ReadingTimeText"].ToString();
+    var notes = form["Notes"].ToString();
+    var editingIdText = form["EditingId"].ToString();
+    var userName = principal.Identity.Name ?? string.Empty;
+
+    if (string.IsNullOrWhiteSpace(weightUnit))
+        weightUnit = "lb";
+
+    if (!decimal.TryParse(weightText, NumberStyles.Number, CultureInfo.InvariantCulture, out var weightValue) ||
+        !IsWeightInValidRange(weightValue, weightUnit) ||
+        !DateTime.TryParse(readingTimeText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var readingTime))
+    {
+        return Results.Redirect("/weight?status=invalid");
+    }
+
+    try
+    {
+        if (long.TryParse(editingIdText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var editingId) &&
+            editingId > 0)
+        {
+            var updated = weightService.UpdateWeightForPerson(
+                personId,
+                editingId,
+                weightValue,
+                weightUnit,
+                readingTime,
+                notes,
+                userName);
+
+            return Results.Redirect(updated
+                ? "/weight?status=updated"
+                : "/weight?status=not-found");
+        }
+
+        weightService.InsertWeight(
+            personId,
+            weightValue,
+            weightUnit,
+            heightFt.Value,
+            readingTime,
+            notes,
+            userName);
+
+        return Results.Redirect("/weight?status=saved");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Weight server save failed.");
+        return Results.Redirect("/weight?status=save-error");
+    }
+}).DisableAntiforgery();
+
 app.MapPost("/auth/signout", async (HttpContext httpContext) =>
 {
     await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -469,6 +551,13 @@ static bool IsChecked(string? value)
 {
     return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(value, "on", StringComparison.OrdinalIgnoreCase);
+}
+
+static bool IsWeightInValidRange(decimal weightValue, string weightUnit)
+{
+    return string.Equals(weightUnit, "kg", StringComparison.OrdinalIgnoreCase)
+        ? weightValue is >= 3.0m and <= 500.0m
+        : weightValue is >= 6.6m and <= 1102.3m;
 }
 
 internal sealed record AuthSessionRequest(string? Ticket);
