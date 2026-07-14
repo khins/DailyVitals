@@ -131,7 +131,7 @@ namespace DailyVitals.Data.Services
                     Notes = reader.IsDBNull(3)
                         ? null
                         : reader.GetString(3),
-                    CreatedAt = reader.GetDateTime(4),
+                    CreatedAt = reader.IsDBNull(4) ? reader.GetDateTime(2) : reader.GetDateTime(4),
                     UpdatedAt = reader.IsDBNull(5) ? null : reader.GetDateTime(5)
                 });
             }
@@ -204,7 +204,7 @@ namespace DailyVitals.Data.Services
                 GlucoseValue = reader.GetInt32(1),
                 ReadingTime = reader.GetDateTime(2),
                 Notes = reader.IsDBNull(3) ? null : reader.GetString(3),
-                CreatedAt = reader.GetDateTime(4),
+                CreatedAt = reader.IsDBNull(4) ? reader.GetDateTime(2) : reader.GetDateTime(4),
                 UpdatedAt = reader.IsDBNull(5) ? null : reader.GetDateTime(5)
             };
         }

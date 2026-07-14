@@ -328,6 +328,74 @@ app.MapPost("/blood-pressure/save", async (
     }
 }).DisableAntiforgery();
 
+app.MapPost("/blood-glucose/save", async (
+    HttpContext httpContext,
+    BloodGlucoseService bloodGlucoseService,
+    ILoggerFactory loggerFactory) =>
+{
+    var logger = loggerFactory.CreateLogger("BloodGlucoseSaveEndpoint");
+    var principal = httpContext.User;
+    var personIdValue = principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.PersonId);
+    if (principal.Identity?.IsAuthenticated != true ||
+        !long.TryParse(personIdValue, out var personId) ||
+        personId <= 0)
+    {
+        return Results.Redirect("/?signin=invalid");
+    }
+
+    var isDemo = string.Equals(
+        principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.IsDemo),
+        bool.TrueString,
+        StringComparison.OrdinalIgnoreCase);
+    if (isDemo)
+        return Results.Redirect("/blood-glucose?status=demo");
+
+    var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+    var glucoseText = form["GlucoseValue"].ToString();
+    var readingTimeText = form["ReadingTimeText"].ToString();
+    var notes = form["Notes"].ToString();
+    var editingIdText = form["EditingId"].ToString();
+    var userName = principal.Identity.Name ?? string.Empty;
+
+    if (!int.TryParse(glucoseText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var glucoseValue) ||
+        glucoseValue <= 0 ||
+        !DateTime.TryParse(readingTimeText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var readingTime))
+    {
+        return Results.Redirect("/blood-glucose?status=invalid");
+    }
+
+    try
+    {
+        if (long.TryParse(editingIdText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var editingId) &&
+            editingId > 0)
+        {
+            bloodGlucoseService.Update(
+                editingId,
+                personId,
+                glucoseValue,
+                readingTime,
+                notes,
+                userName);
+
+            return Results.Redirect("/blood-glucose?status=updated");
+        }
+
+        bloodGlucoseService.Insert(
+            personId,
+            glucoseValue,
+            readingTime,
+            notes,
+            userName);
+
+        return Results.Redirect("/blood-glucose?status=saved");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Blood glucose server save failed.");
+        return Results.Redirect("/blood-glucose?status=save-error");
+    }
+}).DisableAntiforgery();
+
 app.MapPost("/auth/signout", async (HttpContext httpContext) =>
 {
     await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
