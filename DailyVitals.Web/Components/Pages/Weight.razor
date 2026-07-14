@@ -1,7 +1,6 @@
 @page "/weight"
 @attribute [Authorize]
 @rendermode InteractiveServer
-@using System.ComponentModel.DataAnnotations
 @using DailyVitals.Data.Services
 @using DailyVitals.Domain.Models
 @using DailyVitals.Domain.Models.Calculations
@@ -103,27 +102,26 @@
                         </div>
                     </div>
 
-                    <EditForm Model="_form" FormName="weight-entry-form" OnValidSubmit="SaveReading" class="bp-form">
-                        <DataAnnotationsValidator />
+                    <form method="post" action="/weight/save" class="bp-form">
+                        <input type="hidden" name="EditingId" value="@_editingId" />
 
                         <div class="form-row">
                             <label for="reading-time">Reading Time</label>
-                            <input id="reading-time" class="form-input" type="datetime-local" value="@_readingTimeText" @onchange="SetReadingTime" />
+                            <input id="reading-time" name="ReadingTimeText" class="form-input" type="datetime-local" value="@_readingTimeText" required />
                         </div>
 
                         <div class="weight-number-grid">
                             <div class="field-group">
                                 <label for="weight-value">Weight</label>
-                                <InputNumber id="weight-value" class="form-input" @bind-Value="_form.WeightValue" />
-                                <ValidationMessage For="() => _form.WeightValue" />
+                                <input id="weight-value" name="WeightValue" type="number" step="0.1" min="3.0" max="1102.3" class="form-input" value="@_form.WeightValue" required />
                             </div>
 
                             <div class="field-group">
                                 <label for="weight-unit">Unit</label>
-                                <InputSelect id="weight-unit" class="form-input" @bind-Value="_form.WeightUnit">
-                                    <option value="lb">lb</option>
-                                    <option value="kg">kg</option>
-                                </InputSelect>
+                                <select id="weight-unit" name="WeightUnit" class="form-input">
+                                    <option value="lb" selected="@IsWeightUnitSelected("lb")">lb</option>
+                                    <option value="kg" selected="@IsWeightUnitSelected("kg")">kg</option>
+                                </select>
                             </div>
                         </div>
 
@@ -134,7 +132,7 @@
 
                         <div class="field-group">
                             <label for="notes">Notes</label>
-                            <InputTextArea id="notes" class="form-input notes-input" @bind-Value="_form.Notes" />
+                            <textarea id="notes" name="Notes" class="form-input notes-input">@_form.Notes</textarea>
                         </div>
 
                         @if (!string.IsNullOrWhiteSpace(AuditText))
@@ -156,7 +154,7 @@
                                 <button type="button" aria-label="Dismiss weight update message" @onclick="DismissFormToast">×</button>
                             </div>
                         }
-                    </EditForm>
+                    </form>
                 </article>
 
                 <article class="dashboard-card history-panel">
@@ -295,6 +293,9 @@
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "status")]
+    private string? Status { get; set; }
+
     private static readonly BmiReferenceRow[] BmiReferenceRows =
     [
         new("Underweight", "Below 18.5"),
@@ -342,10 +343,48 @@
             return;
         }
 
-        LoadPersonPreferences();
-        LoadPersonHeight();
-        LoadHistory();
+        try
+        {
+            LoadPersonPreferences();
+            LoadPersonHeight();
+            LoadHistory();
+            ApplyStatusMessage();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Weight page load failed.");
+            ShowError("Weight data could not be loaded. Please try again.");
+        }
+
         StateHasChanged();
+    }
+
+    private void ApplyStatusMessage()
+    {
+        switch (Status)
+        {
+            case "saved":
+                ShowSuccess("Weight reading saved.");
+                break;
+            case "updated":
+                ShowSuccess("Weight reading updated.");
+                break;
+            case "invalid":
+                ShowError(WeightRangeMessage);
+                break;
+            case "height-required":
+                ShowError("Set height on Profile before saving weight.");
+                break;
+            case "demo":
+                ShowError(DemoModeGuard.ReadOnlyMessage);
+                break;
+            case "not-found":
+                ShowError("The selected weight record could not be updated.");
+                break;
+            case "save-error":
+                ShowError("Weight entry could not be saved. Please try again.");
+                break;
+        }
     }
 
     private void LoadPersonPreferences()
@@ -490,11 +529,6 @@
         _showDeleteConfirm = false;
     }
 
-    private void SetReadingTime(ChangeEventArgs args)
-    {
-        _readingTimeText = args.Value?.ToString() ?? string.Empty;
-    }
-
     private void ResetForm()
     {
         var now = DateTime.Now;
@@ -505,91 +539,6 @@
         _readingTimeText = ToDateTimeLocal(now);
         _createdAt = null;
         _updatedAt = null;
-    }
-
-    private void SaveReading()
-    {
-        if (LoginSession.IsDemo)
-        {
-            ShowError(DemoModeGuard.ReadOnlyMessage);
-            return;
-        }
-
-        _showDeleteConfirm = false;
-
-        if (!LoginSession.PersonId.HasValue)
-        {
-            ShowError("This login is not linked to a person record yet.");
-            return;
-        }
-
-        if (!_heightFt.HasValue)
-        {
-            ShowError("Set height on Profile before saving weight.");
-            return;
-        }
-
-        if (!TryGetReadingTime(out var readingTime))
-            return;
-
-        if (!IsWeightInValidRange())
-        {
-            ShowError(WeightRangeMessage);
-            return;
-        }
-
-        var personId = LoginSession.PersonId.Value;
-        var weightValue = _form.WeightValue.GetValueOrDefault();
-        var notes = _form.Notes ?? string.Empty;
-
-        try
-        {
-            if (_editingId.HasValue)
-            {
-                var updated = WeightService.UpdateWeightForPerson(
-                    personId,
-                    _editingId.Value,
-                    weightValue,
-                    _form.WeightUnit,
-                    readingTime,
-                    notes,
-                    LoginSession.UserName ?? string.Empty);
-
-                if (!updated)
-                {
-                    ShowError("The selected weight record could not be updated.");
-                    return;
-                }
-
-                ShowSuccess("Weight reading updated.");
-            }
-            else
-            {
-                var insertedId = WeightService.InsertWeight(
-                    personId,
-                    weightValue,
-                    _form.WeightUnit,
-                    _heightFt.Value,
-                    readingTime,
-                    notes,
-                    LoginSession.UserName ?? string.Empty);
-
-                _editingId = insertedId;
-                _historyPage = 1;
-                ShowSuccess("Weight reading saved.");
-            }
-
-            LoadHistory();
-
-            var selected = _history.FirstOrDefault(x => x.WeightId == _editingId);
-            if (selected is not null)
-                SelectReading(selected, clearToast: false);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Weight entry save failed.");
-            ShowError("Weight entry could not be saved. Please try again.");
-        }
     }
 
     private void RequestDeleteSelected()
@@ -645,15 +594,6 @@
             Logger.LogError(ex, "Weight entry delete failed.");
             ShowError("Weight entry could not be deleted. Please try again.");
         }
-    }
-
-    private bool TryGetReadingTime(out DateTime readingTime)
-    {
-        if (DateTime.TryParse(_readingTimeText, out readingTime))
-            return true;
-
-        ShowError("Enter a valid reading time.");
-        return false;
     }
 
     private void ShowSuccess(string message)
@@ -757,12 +697,13 @@
             : _form.WeightValue.Value is >= 6.6m and <= 1102.3m;
     }
 
+    private bool IsWeightUnitSelected(string unit) =>
+        string.Equals(_form.WeightUnit, unit, StringComparison.OrdinalIgnoreCase);
+
     private const string WeightRangeMessage = "Range: 6.6 to 1102.3 lbs. Or 3.0 to 500.0 kg.";
 
     private sealed class WeightForm
     {
-        [Required]
-        [Range(typeof(decimal), "3.0", "1102.3", ErrorMessage = WeightRangeMessage)]
         public decimal? WeightValue { get; set; }
 
         public string WeightUnit { get; set; } = "lb";

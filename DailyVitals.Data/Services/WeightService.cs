@@ -77,7 +77,7 @@ namespace DailyVitals.Data.Services
                     ReadingTime = reader.GetDateTime(3),
                     Notes = reader.IsDBNull(4) ? null : reader.GetString(4),
                     HeightFt = reader.IsDBNull(5) ? null : reader.GetDecimal(5),
-                    CreatedAt = reader.GetDateTime(6),
+                    CreatedAt = reader.IsDBNull(6) ? reader.GetDateTime(3) : reader.GetDateTime(6),
                     UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
                 });
             }
@@ -216,7 +216,7 @@ namespace DailyVitals.Data.Services
                 HeightFt = reader.IsDBNull(3) ? null : reader.GetDecimal(3),
                 ReadingTime = reader.GetDateTime(4),
                 Notes = reader.IsDBNull(5) ? null : reader.GetString(5),
-                CreatedAt = reader.GetDateTime(6),
+                CreatedAt = reader.IsDBNull(6) ? reader.GetDateTime(4) : reader.GetDateTime(6),
                 UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
             };
         }
