@@ -172,13 +172,24 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewSession" disabled="@LoginSession.IsDemo">New</button>
-                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(LoginSession.IsDemo || !_editingId.HasValue)">Delete</button>
+                            <button
+                                type="submit"
+                                form="exercise-delete-form"
+                                class="secondary-link"
+                                disabled="@(LoginSession.IsDemo || !_editingId.HasValue)"
+                                onclick="return confirm('Delete this exercise session?');">
+                                Delete
+                            </button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
                         @if (ShowInlineFormMessage)
                         {
                             <div class="@($"{_messageClass} exercise-inline-message")" role="status">@_message</div>
                         }
+                    </form>
+
+                    <form id="exercise-delete-form" method="post" action="/exercise/delete" class="is-hidden">
+                        <input type="hidden" name="EditingId" value="@_editingId" />
                     </form>
                 </article>
 
@@ -215,8 +226,15 @@
                                 <tbody>
                                     @foreach (var session in PagedHistory)
                                     {
-                                        <tr class="@(session.ExerciseSessionId == _editingId ? "is-selected" : null)" @onclick="() => SelectSession(session)">
-                                            <td>@session.StartTime.ToString("M/d/yyyy h:mm tt")</td>
+                                        <tr
+                                            class="@(session.ExerciseSessionId == _editingId ? "is-selected" : null)"
+                                            title="Select this exercise session"
+                                            onclick="@($"window.location.href='{GetSessionLink(session.ExerciseSessionId)}'")">
+                                            <td>
+                                                <a class="table-action-link" href="@GetSessionLink(session.ExerciseSessionId)">
+                                                    @session.StartTime.ToString("M/d/yyyy h:mm tt")
+                                                </a>
+                                            </td>
                                             <td>@session.ExerciseName</td>
                                             <td>@session.DurationMinutes.ToString("0.##")</td>
                                             <td>@(session.CaloriesExpended?.ToString("0.##") ?? "")</td>
@@ -301,6 +319,9 @@
     [SupplyParameterFromQuery(Name = "status")]
     private string? Status { get; set; }
 
+    [SupplyParameterFromQuery(Name = "sessionId")]
+    private long? SessionId { get; set; }
+
     private const long OtherExerciseTypeId = -1;
     private readonly ExerciseForm _form = new();
     private readonly List<ExerciseSession> _history = [];
@@ -349,6 +370,7 @@
             LoadPersonPreferences();
             LoadExerciseTypes();
             LoadHistory();
+            SelectRequestedSession();
             ApplyStatusMessage();
         }
         catch (Exception ex)
@@ -370,6 +392,9 @@
             case "updated":
                 ShowSuccess("Exercise session updated.");
                 break;
+            case "deleted":
+                ShowSuccess("Exercise session deleted.");
+                break;
             case "missing-exercise":
                 ShowError("Select an exercise.");
                 break;
@@ -387,6 +412,9 @@
                 break;
             case "not-found":
                 ShowError("The selected exercise session could not be updated.");
+                break;
+            case "delete-error":
+                ShowError("Exercise session could not be deleted. Please try again.");
                 break;
             case "save-error":
                 ShowError("Exercise session could not be saved. Please try again.");
@@ -461,6 +489,8 @@
 
     private bool IsOtherExerciseSelected => _form.ExerciseTypeId == OtherExerciseTypeId;
 
+    private static string GetSessionLink(long exerciseSessionId) => $"/exercise?sessionId={exerciseSessionId}";
+
     private string CaloriesHelpText =>
         _showAdvancedCalories
             ? "Leave calories blank to estimate from duration, intensity, and latest weight."
@@ -495,6 +525,16 @@
 
         _history.AddRange(ExerciseService.GetHistory(LoginSession.PersonId.Value));
         EnsureHistoryPageInRange();
+    }
+
+    private void SelectRequestedSession()
+    {
+        if (!SessionId.HasValue)
+            return;
+
+        var selected = _history.FirstOrDefault(x => x.ExerciseSessionId == SessionId.Value);
+        if (selected is not null)
+            SelectSession(selected);
     }
 
     private void SelectSession(ExerciseSession session)
