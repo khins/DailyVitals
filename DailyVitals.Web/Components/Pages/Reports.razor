@@ -235,7 +235,7 @@
                             <dd>@SodiumAverageExcessText</dd>
                         </div>
                     </dl>
-                    <button type="button" class="secondary-link report-card-action" @onclick="ShowSodiumReport">Details</button>
+                    <a class="secondary-link report-card-action" href="@GetReportDetailHref("sodium")">Details</a>
                 </article>
 
                 <article class="dashboard-card report-card">
@@ -290,7 +290,7 @@
                             <dd>@PhosphorusAverageExcessText</dd>
                         </div>
                     </dl>
-                    <button type="button" class="secondary-link report-card-action" @onclick="ShowPhosphorusReport">Details</button>
+                    <a class="secondary-link report-card-action" href="@GetReportDetailHref("phosphorus")">Details</a>
                 </article>
 
                 <article class="dashboard-card report-card">
@@ -315,7 +315,7 @@
                             <dd>@ProteinAverageGapText</dd>
                         </div>
                     </dl>
-                    <button type="button" class="secondary-link report-card-action" @onclick="ShowProteinReport">Details</button>
+                    <a class="secondary-link report-card-action" href="@GetReportDetailHref("protein")">Details</a>
                 </article>
 
                 <article class="dashboard-card report-card">
@@ -340,7 +340,7 @@
                             <dd>@PotassiumAverageExcessText</dd>
                         </div>
                     </dl>
-                    <button type="button" class="secondary-link report-card-action" @onclick="ShowPotassiumReport">Details</button>
+                    <a class="secondary-link report-card-action" href="@GetReportDetailHref("potassium")">Details</a>
                 </article>
 
                 <article class="dashboard-card report-card">
@@ -474,7 +474,7 @@
                                 <span>Actionable Nutrition</span>
                                 <h2 id="nutrient-report-title">@report.Title</h2>
                             </div>
-                            <button type="button" class="modal-close-button" aria-label="Close nutrient report" @onclick="DismissNutrientReport">×</button>
+                            <a class="modal-close-button" aria-label="Close nutrient report" href="/reports">×</a>
                         </div>
 
                         <dl class="action-report-list">
@@ -533,6 +533,10 @@
     private DateTime? _coachReviewCreatedAt;
     private bool _isGeneratingCoachReview;
     private string? _coachError;
+
+    [SupplyParameterFromQuery(Name = "detail")]
+    public string? Detail { get; set; }
+
     private NutritionGoal? _nutritionGoal;
     private int _nutritionActiveDays;
     private int _nutritionPhosphorusDaysInTarget;
@@ -585,6 +589,11 @@
     private decimal _exerciseAverageMinutes;
     private int _exerciseActiveDays;
 
+    protected override void OnParametersSet()
+    {
+        ApplyDetailFromQuery();
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await LoginSession.RestoreAsync();
@@ -597,6 +606,13 @@
 
         LoadReports();
         StateHasChanged();
+    }
+
+    private void ApplyDetailFromQuery()
+    {
+        _activeNutrientReportKey = TryNormalizeReportDetail(Detail, out var reportKey)
+            ? reportKey
+            : null;
     }
 
     private string ReportSummaryTitle =>
@@ -1154,6 +1170,28 @@
     private void ShowNutrientReport(string reportKey)
     {
         _activeNutrientReportKey = reportKey;
+    }
+
+    private static string GetReportDetailHref(string reportKey) => $"/reports?detail={reportKey}";
+
+    private static bool TryNormalizeReportDetail(string? value, out string reportKey)
+    {
+        reportKey = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        switch (value.Trim().ToLowerInvariant())
+        {
+            case "sodium":
+            case "phosphorus":
+            case "protein":
+            case "potassium":
+                reportKey = value.Trim().ToLowerInvariant();
+                return true;
+            default:
+                return false;
+        }
     }
 
     private void ShowSodiumReport() => ShowNutrientReport("sodium");
