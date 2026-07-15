@@ -230,7 +230,7 @@ namespace DailyVitals.Data.Services
                         Notes = reader.IsDBNull(7)
                             ? null
                             : reader.GetString(7),
-                        CreatedAt = reader.GetDateTime(8),
+                        CreatedAt = reader.IsDBNull(8) ? reader.GetDateTime(3) : reader.GetDateTime(8),
                         UpdatedAt = reader.IsDBNull(9) ? null : reader.GetDateTime(9)
                     });
                 }

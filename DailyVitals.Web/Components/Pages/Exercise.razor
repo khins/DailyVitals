@@ -1,8 +1,6 @@
 @page "/exercise"
 @attribute [Authorize]
 @rendermode InteractiveServer
-@using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Components.Forms
 @using DailyVitals.Data.Services
 @using DailyVitals.Data.Services.DailyVitals.App.Services
 @using DailyVitals.Domain.Models
@@ -93,47 +91,45 @@
                         </div>
                     </div>
 
-                    <EditForm EditContext="_editContext" FormName="exercise-entry-form" OnValidSubmit="SaveSession" class="bp-form">
-                        <DataAnnotationsValidator />
+                    <form method="post" action="/exercise/save" class="bp-form">
+                        <input type="hidden" name="EditingId" value="@_editingId" />
 
                         <div class="form-row">
                             <label for="start-time">Date</label>
-                            <input id="start-time" class="form-input" type="datetime-local" value="@_startTimeText" @onchange="SetStartTime" />
+                            <input id="start-time" name="StartTimeText" class="form-input" type="datetime-local" value="@_startTimeText" required />
                         </div>
 
                         <div class="field-group">
                             <label for="exercise-type">Exercise</label>
-                            <InputSelect id="exercise-type" class="form-input" @bind-Value="_form.ExerciseTypeId" data-other-exercise-select data-other-exercise-value="@OtherExerciseTypeId">
+                            <select id="exercise-type" name="ExerciseTypeId" class="form-input" data-other-exercise-select data-other-exercise-value="@OtherExerciseTypeId" required>
                                 <option value="">Select exercise</option>
                                 @foreach (var exerciseType in _exerciseTypes)
                                 {
-                                    <option value="@exerciseType.ExerciseTypeId">@exerciseType.ExerciseName</option>
+                                    <option value="@exerciseType.ExerciseTypeId" selected="@IsExerciseTypeSelected(exerciseType.ExerciseTypeId)">@exerciseType.ExerciseName</option>
                                 }
-                                <option value="@OtherExerciseTypeId">Other</option>
-                            </InputSelect>
-                            <ValidationMessage For="() => _form.ExerciseTypeId" />
+                                <option value="@OtherExerciseTypeId" selected="@IsExerciseTypeSelected(OtherExerciseTypeId)">Other</option>
+                            </select>
                         </div>
 
                         <div class="field-group @(IsOtherExerciseSelected ? null : "is-hidden")" data-other-exercise-field>
                             <label for="other-exercise">Other Exercise</label>
-                            <InputText id="other-exercise" class="form-input" @bind-Value="_form.OtherExerciseName" disabled="@(!IsOtherExerciseSelected)" data-other-exercise-input />
+                            <input id="other-exercise" name="OtherExerciseName" class="form-input" value="@_form.OtherExerciseName" disabled="@(!IsOtherExerciseSelected)" data-other-exercise-input />
                             <p class="field-hint">Existing exercise names are checked before a new option is added.</p>
                         </div>
 
                         <div class="exercise-number-grid">
                             <div class="field-group">
                                 <label for="duration">Duration (min)</label>
-                                <InputNumber id="duration" class="form-input" @bind-Value="_form.DurationMinutes" @bind-Value:after="RefreshEstimatedCaloriesIfAuto" />
-                                <ValidationMessage For="() => _form.DurationMinutes" />
+                                <input id="duration" name="DurationMinutes" type="number" step="0.01" min="0.01" max="10000" class="form-input" value="@_form.DurationMinutes" required />
                             </div>
 
                             <div class="field-group">
                                 <label for="intensity">Intensity</label>
-                                <InputSelect id="intensity" class="form-input" @bind-Value="_form.Intensity" @bind-Value:after="RefreshEstimatedCaloriesIfAuto">
-                                    <option value="Low">Low</option>
-                                    <option value="Moderate">Moderate</option>
-                                    <option value="High">High</option>
-                                </InputSelect>
+                                <select id="intensity" name="Intensity" class="form-input">
+                                    <option value="Low" selected="@IsIntensitySelected("Low")">Low</option>
+                                    <option value="Moderate" selected="@IsIntensitySelected("Moderate")">Moderate</option>
+                                    <option value="High" selected="@IsIntensitySelected("High")">High</option>
+                                </select>
                             </div>
                         </div>
 
@@ -160,13 +156,13 @@
                                     <label for="calories">Calories expended</label>
                                     <button type="button" class="help-icon-button" aria-label="Calories calculation details" @onclick="ShowCaloriesFormulaModal">?</button>
                                 </div>
-                                <InputNumber id="calories" class="form-input" @bind-Value="_form.CaloriesExpended" @bind-Value:after="MarkCaloriesManualOverride" />
+                                <input id="calories" name="CaloriesExpended" type="number" step="0.01" min="0" class="form-input" value="@_form.CaloriesExpended" />
                             </div>
                         }
 
                         <div class="field-group">
                             <label for="notes">Notes</label>
-                            <InputTextArea id="notes" class="form-input notes-input" @bind-Value="_form.Notes" />
+                            <textarea id="notes" name="Notes" class="form-input notes-input">@_form.Notes</textarea>
                         </div>
 
                         @if (!string.IsNullOrWhiteSpace(AuditText))
@@ -183,7 +179,7 @@
                         {
                             <div class="@($"{_messageClass} exercise-inline-message")" role="status">@_message</div>
                         }
-                    </EditForm>
+                    </form>
                 </article>
 
                 <article class="dashboard-card history-panel">
@@ -302,12 +298,14 @@
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "status")]
+    private string? Status { get; set; }
+
     private const long OtherExerciseTypeId = -1;
     private readonly ExerciseForm _form = new();
     private readonly List<ExerciseSession> _history = [];
     private readonly List<ExerciseType> _exerciseTypes = [];
     private const int HistoryPageSize = 20;
-    private EditContext? _editContext;
     private long? _editingId;
     private int _historyPage = 1;
     private DateTime? _editingStartDate;
@@ -346,10 +344,54 @@
             return;
         }
 
-        LoadPersonPreferences();
-        LoadExerciseTypes();
-        LoadHistory();
+        try
+        {
+            LoadPersonPreferences();
+            LoadExerciseTypes();
+            LoadHistory();
+            ApplyStatusMessage();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Exercise page load failed.");
+            ShowError("Exercise data could not be loaded. Please try again.");
+        }
+
         StateHasChanged();
+    }
+
+    private void ApplyStatusMessage()
+    {
+        switch (Status)
+        {
+            case "saved":
+                ShowSuccess("Exercise session saved.");
+                break;
+            case "updated":
+                ShowSuccess("Exercise session updated.");
+                break;
+            case "missing-exercise":
+                ShowError("Select an exercise.");
+                break;
+            case "missing-other":
+                ShowError("Enter the other exercise name.");
+                break;
+            case "invalid":
+                ShowError("Enter a valid date and duration.");
+                break;
+            case "invalid-calories":
+                ShowError("Calories expended cannot be negative.");
+                break;
+            case "demo":
+                ShowError(DemoModeGuard.ReadOnlyMessage);
+                break;
+            case "not-found":
+                ShowError("The selected exercise session could not be updated.");
+                break;
+            case "save-error":
+                ShowError("Exercise session could not be saved. Please try again.");
+                break;
+        }
     }
 
     private void LoadPersonPreferences()
@@ -411,6 +453,11 @@
             return _exerciseTypes.FirstOrDefault(x => x.ExerciseTypeId == _form.ExerciseTypeId)?.ExerciseName ?? "Exercise";
         }
     }
+
+    private bool IsExerciseTypeSelected(long exerciseTypeId) => _form.ExerciseTypeId == exerciseTypeId;
+
+    private bool IsIntensitySelected(string intensity) =>
+        string.Equals(_form.Intensity, intensity, StringComparison.OrdinalIgnoreCase);
 
     private bool IsOtherExerciseSelected => _form.ExerciseTypeId == OtherExerciseTypeId;
 
@@ -478,11 +525,6 @@
         _showCaloriesFormulaModal = false;
     }
 
-    private void SetStartTime(ChangeEventArgs args)
-    {
-        _startTimeText = args.Value?.ToString() ?? string.Empty;
-    }
-
     private void ResetForm()
     {
         _editingId = null;
@@ -500,7 +542,6 @@
         _showDeleteConfirm = false;
         _showCaloriesFormulaModal = false;
         _isCaloriesManualOverride = false;
-        _editContext = new EditContext(_form);
     }
 
     private void ToggleAdvancedCalories()
@@ -515,6 +556,33 @@
         else
         {
             RefreshEstimatedCaloriesIfAuto();
+        }
+    }
+
+    private void RefreshEstimatedCaloriesIfAuto()
+    {
+        if (_isCaloriesManualOverride ||
+            !_form.DurationMinutes.HasValue ||
+            !LoginSession.PersonId.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            var latestWeight = WeightService.GetLatestForPerson(LoginSession.PersonId.Value);
+            if (latestWeight is null)
+                return;
+
+            _form.CaloriesExpended = ExerciseMetrics.EstimateCaloriesBurned(
+                _form.DurationMinutes.Value,
+                _form.Intensity,
+                latestWeight.WeightValue,
+                latestWeight.WeightUnit);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Exercise calories estimate could not be refreshed.");
         }
     }
 
@@ -538,19 +606,6 @@
         _showCaloriesFormulaModal = false;
     }
 
-    private void MarkCaloriesManualOverride()
-    {
-        _isCaloriesManualOverride = _form.CaloriesExpended.HasValue;
-    }
-
-    private void RefreshEstimatedCaloriesIfAuto()
-    {
-        if (_isCaloriesManualOverride)
-            return;
-
-        _form.CaloriesExpended = EstimateCalories();
-    }
-
     private void PreviousHistoryPage()
     {
         if (_historyPage > 1)
@@ -570,154 +625,6 @@
 
         if (_historyPage < 1)
             _historyPage = 1;
-    }
-
-    private void SaveSession()
-    {
-        if (LoginSession.IsDemo)
-        {
-            ShowError(DemoModeGuard.ReadOnlyMessage);
-            return;
-        }
-
-        _showDeleteConfirm = false;
-        _showCaloriesFormulaModal = false;
-
-        if (!LoginSession.PersonId.HasValue)
-        {
-            ShowError("This login is not linked to a person record yet.");
-            return;
-        }
-
-        if (!TryGetStartTime(out var startTime))
-            return;
-
-        var exerciseTypeId = ResolveExerciseTypeId();
-        if (!exerciseTypeId.HasValue)
-            return;
-
-        if (!_form.DurationMinutes.HasValue || _form.DurationMinutes.Value <= 0)
-        {
-            ShowError("Duration must be greater than zero.");
-            return;
-        }
-
-        if (_form.CaloriesExpended.HasValue && _form.CaloriesExpended.Value < 0)
-        {
-            ShowError("Calories expended cannot be negative.");
-            return;
-        }
-
-        var calories = _form.CaloriesExpended ?? EstimateCalories();
-        var personId = LoginSession.PersonId.Value;
-        var notes = _form.Notes ?? string.Empty;
-
-        try
-        {
-            var shouldUpdateSelectedSession = _editingId.HasValue
-                && _editingStartDate.HasValue
-                && _editingStartDate.Value == startTime.Date;
-
-            if (shouldUpdateSelectedSession)
-            {
-                var updated = ExerciseService.UpdateExerciseSessionForPerson(
-                    _editingId.GetValueOrDefault(),
-                    personId,
-                    exerciseTypeId.Value,
-                    startTime,
-                    _form.DurationMinutes.Value,
-                    calories,
-                    _form.Intensity,
-                    notes,
-                    LoginSession.UserName ?? string.Empty);
-
-                if (!updated)
-                {
-                    ShowError("The selected exercise session could not be updated.");
-                    return;
-                }
-
-                ShowSuccess("Exercise session updated.");
-            }
-            else
-            {
-                ExerciseService.InsertExerciseSession(
-                    personId,
-                    exerciseTypeId.Value,
-                    startTime,
-                    _form.DurationMinutes.Value,
-                    calories,
-                    _form.Intensity,
-                    notes,
-                    LoginSession.UserName ?? string.Empty);
-
-                ShowSuccess(_editingId.HasValue
-                    ? "Exercise session saved as a new date."
-                    : "Exercise session saved.");
-                _historyPage = 1;
-                _editingId = null;
-                _editingStartDate = null;
-            }
-
-            LoadHistory();
-
-            if (_editingId.HasValue)
-            {
-                var selected = _history.FirstOrDefault(x => x.ExerciseSessionId == _editingId);
-                if (selected is not null)
-                    SelectSession(selected);
-            }
-            else
-            {
-                ResetForm();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Exercise session save failed.");
-            ShowError("Exercise session could not be saved. Please try again.");
-        }
-    }
-
-    private long? ResolveExerciseTypeId()
-    {
-        if (!_form.ExerciseTypeId.HasValue)
-        {
-            ShowError("Select an exercise.");
-            return null;
-        }
-
-        if (!IsOtherExerciseSelected)
-            return _form.ExerciseTypeId.Value;
-
-        if (string.IsNullOrWhiteSpace(_form.OtherExerciseName))
-        {
-            ShowError("Enter the other exercise name.");
-            return null;
-        }
-
-        var exerciseTypeId = ExerciseService.GetOrCreateExerciseType(_form.OtherExerciseName);
-        LoadExerciseTypes();
-        _form.ExerciseTypeId = exerciseTypeId;
-        _form.OtherExerciseName = string.Empty;
-
-        return exerciseTypeId;
-    }
-
-    private decimal? EstimateCalories()
-    {
-        if (!LoginSession.PersonId.HasValue || !_form.DurationMinutes.HasValue)
-            return null;
-
-        var latestWeight = WeightService.GetLatestForPerson(LoginSession.PersonId.Value);
-        if (latestWeight is null)
-            return null;
-
-        return ExerciseMetrics.EstimateCaloriesBurned(
-            _form.DurationMinutes.Value,
-            _form.Intensity,
-            latestWeight.WeightValue,
-            latestWeight.WeightUnit);
     }
 
     private void RequestDeleteSelected()
@@ -774,15 +681,6 @@
         }
     }
 
-    private bool TryGetStartTime(out DateTime startTime)
-    {
-        if (DateTime.TryParse(_startTimeText, out startTime))
-            return true;
-
-        ShowError("Enter a valid date.");
-        return false;
-    }
-
     private void ShowSuccess(string message)
     {
         _messageClass = "page-message";
@@ -811,13 +709,10 @@
 
     private sealed class ExerciseForm
     {
-        [Required(ErrorMessage = "Select an exercise.")]
         public long? ExerciseTypeId { get; set; }
 
         public string OtherExerciseName { get; set; } = string.Empty;
 
-        [Required]
-        [Range(typeof(decimal), "0.01", "10000")]
         public decimal? DurationMinutes { get; set; }
 
         public decimal? CaloriesExpended { get; set; }
