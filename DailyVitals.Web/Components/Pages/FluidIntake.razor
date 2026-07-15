@@ -1,7 +1,6 @@
 @page "/fluid-intake"
 @attribute [Authorize]
 @rendermode InteractiveServer
-@using System.ComponentModel.DataAnnotations
 @using DailyVitals.Data.Services
 @using DailyVitals.Domain.Models
 @using FluidIntakeEntry = DailyVitals.Domain.Models.FluidIntake
@@ -101,12 +100,12 @@
                         </div>
                     </div>
 
-                    <EditForm Model="_form" FormName="fluid-intake-entry-form" OnValidSubmit="SaveEntry" class="bp-form">
-                        <DataAnnotationsValidator />
+                    <form method="post" action="/fluid-intake/save" class="bp-form">
+                        <input type="hidden" name="EditingId" value="@_editingId" />
 
                         <div class="form-row">
                             <label for="consumed-at">Time</label>
-                            <input id="consumed-at" class="form-input" type="datetime-local" value="@_consumedAtText" @onchange="SetConsumedAt" />
+                            <input id="consumed-at" name="ConsumedAtText" class="form-input" type="datetime-local" value="@_consumedAtText" required />
                         </div>
                         @if (_editingId.HasValue)
                         {
@@ -116,24 +115,22 @@
                         <div class="glucose-number-grid">
                             <div class="field-group">
                                 <label for="beverage">Beverage</label>
-                                <InputText id="beverage" class="form-input" @bind-Value="_form.BeverageName" />
-                                <ValidationMessage For="() => _form.BeverageName" />
+                                <input id="beverage" name="BeverageName" class="form-input" value="@_form.BeverageName" maxlength="120" required />
                             </div>
                         </div>
 
                         <div class="fluid-amount-grid">
                             <div class="field-group">
                                 <label for="fluid-amount">Amount</label>
-                                <InputNumber id="fluid-amount" class="form-input" step="0.1" @bind-Value="_form.Amount" />
-                                <ValidationMessage For="() => _form.Amount" />
+                                <input id="fluid-amount" name="Amount" type="number" class="form-input" step="0.1" min="0.1" max="10000" value="@_form.Amount" required />
                             </div>
 
                             <div class="field-group">
                                 <label for="fluid-unit">Unit</label>
-                                <InputSelect id="fluid-unit" class="form-input" @bind-Value="_form.Unit">
-                                    <option value="fl oz">fl oz</option>
-                                    <option value="mL">mL</option>
-                                </InputSelect>
+                                <select id="fluid-unit" name="Unit" class="form-input">
+                                    <option value="fl oz" selected="@IsUnitSelected(FluidOuncesUnit)">fl oz</option>
+                                    <option value="mL" selected="@IsUnitSelected(MillilitersUnit)">mL</option>
+                                </select>
                             </div>
                         </div>
 
@@ -145,7 +142,7 @@
 
                         <div class="field-group">
                             <label for="notes">Notes</label>
-                            <InputTextArea id="notes" class="form-input notes-input" @bind-Value="_form.Notes" />
+                            <textarea id="notes" name="Notes" class="form-input notes-input">@_form.Notes</textarea>
                         </div>
 
                         @if (!string.IsNullOrWhiteSpace(AuditText))
@@ -159,7 +156,7 @@
                             <button type="submit" class="primary-action">Save</button>
                         </div>
 
-                    </EditForm>
+                    </form>
                 </article>
 
                 <article class="dashboard-card history-panel">
@@ -255,6 +252,9 @@
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "status")]
+    private string? Status { get; set; }
+
     private readonly FluidForm _form = new();
     private readonly List<FluidIntakeEntry> _history = [];
     private long? _editingId;
@@ -293,9 +293,50 @@
             return;
         }
 
-        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
-        LoadHistory();
+        try
+        {
+            _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
+            LoadHistory();
+            ApplyStatusMessage();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Fluid intake page load failed.");
+            ShowError("Fluid intake data could not be loaded. Please try again.");
+        }
+
         StateHasChanged();
+    }
+
+    private void ApplyStatusMessage()
+    {
+        switch (Status)
+        {
+            case "saved":
+                ShowSuccess("Fluid intake saved.", DateTime.Now);
+                break;
+            case "updated":
+                ShowSuccess("Fluid intake updated.", DateTime.Now, "Updated at");
+                break;
+            case "demo":
+                ShowError(DemoModeGuard.ReadOnlyMessage);
+                break;
+            case "missing-beverage":
+                ShowError("Enter a beverage before saving.");
+                break;
+            case "invalid-time":
+                ShowError("Enter a valid intake time.");
+                break;
+            case "invalid-amount":
+                ShowError("Fluid amount must convert to between 1 and 10,000 mL.");
+                break;
+            case "not-found":
+                ShowError("The selected fluid intake could not be updated.");
+                break;
+            case "save-error":
+                ShowError("Fluid intake entry could not be saved. Please try again.");
+                break;
+        }
     }
 
     private IReadOnlyList<FluidIntakeEntry> TodayEntries =>
@@ -332,6 +373,9 @@
     private string FormToastTimestampText => _formToastTimestamp.HasValue
         ? $"{_formToastTimestampLabel}: {_formToastTimestamp.Value:g}"
         : string.Empty;
+
+    private bool IsUnitSelected(string unit) =>
+        string.Equals(_form.Unit, unit, StringComparison.Ordinal);
 
     private string AuditText
     {
@@ -382,11 +426,6 @@
         _showDeleteConfirm = false;
     }
 
-    private void SetConsumedAt(ChangeEventArgs args)
-    {
-        _consumedAtText = args.Value?.ToString() ?? string.Empty;
-    }
-
     private void ResetForm()
     {
         _editingId = null;
@@ -398,111 +437,6 @@
         _form.Notes = string.Empty;
         _createdAt = null;
         _updatedAt = null;
-    }
-
-    private void SaveEntry()
-    {
-        if (LoginSession.IsDemo)
-        {
-            ShowError(DemoModeGuard.ReadOnlyMessage);
-            return;
-        }
-
-        _showDeleteConfirm = false;
-
-        if (!LoginSession.PersonId.HasValue)
-        {
-            ShowError("This login is not linked to a person record yet.");
-            return;
-        }
-
-        var beverageName = _form.BeverageName?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(beverageName))
-        {
-            ShowError("Enter a beverage before saving.");
-            return;
-        }
-
-        if (beverageName.Length > 120)
-        {
-            ShowError("Beverage must be 120 characters or less.");
-            return;
-        }
-
-        if (!TryGetConsumedAt(out var consumedAt))
-            return;
-
-        if (!TryGetFluidMl(out var fluidMl))
-            return;
-
-        var notes = _form.Notes?.Trim();
-        var shouldInsert = !_editingId.HasValue ||
-            !_editingConsumedAt.HasValue ||
-            _editingConsumedAt.Value != TruncateToMinute(consumedAt);
-        var wasEditing = _editingId.HasValue;
-        long? savedId = shouldInsert ? null : _editingId;
-        var successMessage = string.Empty;
-
-        try
-        {
-            if (!shouldInsert)
-            {
-                var updated = FluidService.UpdateForPerson(
-                    _editingId!.Value,
-                    LoginSession.PersonId.Value,
-                    consumedAt,
-                    fluidMl,
-                    _form.Amount!.Value,
-                    _form.Unit,
-                    beverageName,
-                    notes,
-                    LoginSession.UserName ?? string.Empty);
-
-                if (!updated)
-                {
-                    ShowError("The selected fluid intake could not be updated.");
-                    return;
-                }
-
-                successMessage = "Fluid intake updated.";
-            }
-            else
-            {
-                savedId = FluidService.Insert(
-                    LoginSession.PersonId.Value,
-                    consumedAt,
-                    fluidMl,
-                    _form.Amount!.Value,
-                    _form.Unit,
-                    beverageName,
-                    notes,
-                    LoginSession.UserName ?? string.Empty);
-
-                successMessage = wasEditing
-                    ? "Fluid intake saved as a new entry because the intake time changed."
-                    : "Fluid intake saved.";
-            }
-
-            LoadHistory();
-
-            var selected = _history.FirstOrDefault(x => x.FluidIntakeId == savedId);
-            if (selected is null)
-            {
-                ShowError("The fluid intake was saved, but it could not be reloaded in history. Refresh the page and try again.");
-                return;
-            }
-
-            SelectEntry(selected, clearToast: false);
-            ShowSuccess(
-                successMessage,
-                shouldInsert ? selected.CreatedAt : selected.UpdatedAt ?? selected.CreatedAt,
-                shouldInsert ? "Saved at" : "Updated at");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Fluid intake save failed.");
-            ShowError("Fluid intake entry could not be saved. Please try again.");
-        }
     }
 
     private void RequestDeleteSelected()
@@ -560,15 +494,6 @@
         }
     }
 
-    private bool TryGetConsumedAt(out DateTime consumedAt)
-    {
-        if (DateTime.TryParse(_consumedAtText, out consumedAt))
-            return true;
-
-        ShowError("Enter a valid intake time.");
-        return false;
-    }
-
     private void ShowSuccess(string message, DateTime? timestamp = null, string timestampLabel = "Saved at")
     {
         _messageClass = "page-message";
@@ -620,29 +545,10 @@
         return Math.Round(milliliters, 0, MidpointRounding.AwayFromZero);
     }
 
-    private bool TryGetFluidMl(out int fluidMl)
-    {
-        fluidMl = 0;
-        var convertedMl = GetConvertedFluidMl();
-
-        if (convertedMl < 1m || convertedMl > 10000m)
-        {
-            ShowError("Fluid amount must convert to between 1 and 10,000 mL.");
-            return false;
-        }
-
-        fluidMl = decimal.ToInt32(convertedMl);
-        return true;
-    }
-
     private sealed class FluidForm
     {
-        [Required(ErrorMessage = "Enter a beverage.")]
-        [StringLength(120, ErrorMessage = "Beverage must be 120 characters or less.")]
         public string? BeverageName { get; set; }
 
-        [Required(ErrorMessage = "Enter the fluid amount.")]
-        [Range(typeof(decimal), "0.1", "10000", ErrorMessage = "Fluid amount must be greater than 0.")]
         public decimal? Amount { get; set; }
 
         public string Unit { get; set; } = FluidOuncesUnit;

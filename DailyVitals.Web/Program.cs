@@ -644,6 +644,108 @@ app.MapPost("/exercise/delete", async (
     }
 }).DisableAntiforgery();
 
+app.MapPost("/fluid-intake/save", async (
+    HttpContext httpContext,
+    FluidIntakeService fluidIntakeService,
+    ILoggerFactory loggerFactory) =>
+{
+    const string fluidOuncesUnit = "fl oz";
+    const string millilitersUnit = "mL";
+    const decimal millilitersPerUsFluidOunce = 29.5735295625m;
+    var logger = loggerFactory.CreateLogger("FluidIntakeSaveEndpoint");
+    var principal = httpContext.User;
+    var personIdValue = principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.PersonId);
+    if (principal.Identity?.IsAuthenticated != true ||
+        !long.TryParse(personIdValue, out var personId) ||
+        personId <= 0)
+    {
+        return Results.Redirect("/?signin=invalid");
+    }
+
+    var isDemo = string.Equals(
+        principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.IsDemo),
+        bool.TrueString,
+        StringComparison.OrdinalIgnoreCase);
+    if (isDemo)
+        return Results.Redirect("/fluid-intake?status=demo");
+
+    var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+    var beverageName = form["BeverageName"].ToString().Trim();
+    var amountText = form["Amount"].ToString();
+    var unit = form["Unit"].ToString();
+    var consumedAtText = form["ConsumedAtText"].ToString();
+    var notes = form["Notes"].ToString().Trim();
+    var editingIdText = form["EditingId"].ToString();
+    var userName = principal.Identity.Name ?? string.Empty;
+
+    if (string.IsNullOrWhiteSpace(beverageName) || beverageName.Length > 120)
+        return Results.Redirect("/fluid-intake?status=missing-beverage");
+
+    if (!string.Equals(unit, fluidOuncesUnit, StringComparison.Ordinal) &&
+        !string.Equals(unit, millilitersUnit, StringComparison.Ordinal))
+    {
+        unit = fluidOuncesUnit;
+    }
+
+    if (!DateTime.TryParse(consumedAtText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var consumedAt))
+        return Results.Redirect("/fluid-intake?status=invalid-time");
+
+    if (!decimal.TryParse(amountText, NumberStyles.Number, CultureInfo.InvariantCulture, out var enteredAmount) ||
+        enteredAmount <= 0)
+    {
+        return Results.Redirect("/fluid-intake?status=invalid-amount");
+    }
+
+    var convertedMl = string.Equals(unit, fluidOuncesUnit, StringComparison.Ordinal)
+        ? enteredAmount * millilitersPerUsFluidOunce
+        : enteredAmount;
+
+    convertedMl = Math.Round(convertedMl, 0, MidpointRounding.AwayFromZero);
+    if (convertedMl < 1m || convertedMl > 10000m)
+        return Results.Redirect("/fluid-intake?status=invalid-amount");
+
+    var fluidMl = decimal.ToInt32(convertedMl);
+
+    try
+    {
+        if (long.TryParse(editingIdText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var editingId) &&
+            editingId > 0)
+        {
+            var updated = fluidIntakeService.UpdateForPerson(
+                editingId,
+                personId,
+                consumedAt,
+                fluidMl,
+                enteredAmount,
+                unit,
+                beverageName,
+                notes,
+                userName);
+
+            return Results.Redirect(updated
+                ? "/fluid-intake?status=updated"
+                : "/fluid-intake?status=not-found");
+        }
+
+        fluidIntakeService.Insert(
+            personId,
+            consumedAt,
+            fluidMl,
+            enteredAmount,
+            unit,
+            beverageName,
+            notes,
+            userName);
+
+        return Results.Redirect("/fluid-intake?status=saved");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Fluid intake server save failed.");
+        return Results.Redirect("/fluid-intake?status=save-error");
+    }
+}).DisableAntiforgery();
+
 app.MapPost("/auth/signout", async (HttpContext httpContext) =>
 {
     await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
