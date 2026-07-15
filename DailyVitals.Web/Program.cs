@@ -95,6 +95,18 @@ builder.Services.AddSingleton<AuthTicketService>();
 builder.Services.AddScoped<DemoAccountSeeder>();
 
 var app = builder.Build();
+var blazorRuntimePath = Path.Combine(
+    AppContext.BaseDirectory,
+    "wwwroot",
+    "_framework",
+    "blazor.web.js");
+
+if (!File.Exists(blazorRuntimePath))
+{
+    throw new FileNotFoundException(
+        "The published Blazor runtime is missing. Interactive pages cannot start.",
+        blazorRuntimePath);
+}
 
 var migrationRunner = new DatabaseMigrationRunner();
 if (args.Contains("--migrate-only", StringComparer.OrdinalIgnoreCase))
@@ -764,15 +776,8 @@ app.MapGet("/signout", async (HttpContext httpContext) =>
     return Results.Redirect("/");
 }).AllowAnonymous();
 
-app.MapGet("/client/blazor.web.js", (IWebHostEnvironment environment) =>
-    {
-        var runtimePath = Path.Combine(
-            environment.WebRootPath,
-            "_framework",
-            "blazor.web.js");
-
-        return Results.File(runtimePath, "text/javascript");
-    })
+app.MapGet("/client/blazor.web.js", () =>
+        Results.File(blazorRuntimePath, "text/javascript"))
     .AllowAnonymous();
 
 app.MapStaticAssets();
