@@ -152,6 +152,12 @@ app.UseWhen(
     context => !context.Request.Path.StartsWithSegments("/health"),
     branch => branch.UseHttpsRedirection());
 
+// MapStaticAssets provides optimized endpoint metadata, while UseStaticFiles
+// guarantees framework boot resources are served from the published wwwroot.
+// Without blazor.web.js, server-rendered pages display normally but none of the
+// interactive component event handlers can run.
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
