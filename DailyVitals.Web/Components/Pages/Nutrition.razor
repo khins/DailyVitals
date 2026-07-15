@@ -183,8 +183,6 @@
 
                     <EditForm Model="_form"
                               FormName="nutrition-entry-form"
-                              OnValidSubmit="SaveEntry"
-                              OnInvalidSubmit="HandleInvalidSubmit"
                               class="bp-form">
                         <DataAnnotationsValidator />
 
@@ -297,9 +295,8 @@
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewEntry" disabled="@LoginSession.IsDemo">New</button>
                             <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@LoginSession.IsDemo">Delete</button>
-                            <button type="submit" class="primary-action">Save</button>
+                            <button type="button" class="primary-action" @onclick="SaveEntry">Save</button>
                         </div>
-                        <ValidationSummary />
                         @if (ShowInlineFormMessage)
                         {
                             <div class="@($"{_messageClass} nutrition-inline-message")" role="status">@_message</div>
@@ -1086,6 +1083,12 @@
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(_form.MealType))
+        {
+            ShowError("Select a meal before saving.");
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_form.FoodName))
         {
             ShowError("Food item is required.");
@@ -1177,11 +1180,6 @@
             Logger.LogError(ex, "Nutrition entry save failed.");
             ShowError("Nutrition entry could not be saved. Please try again.");
         }
-    }
-
-    private void HandleInvalidSubmit()
-    {
-        ShowError("Complete the required fields before saving: Meal, Food Item, and Phosphorus.");
     }
 
     private void SaveFoodNotesFor(FoodPhosphorusIntake item)
