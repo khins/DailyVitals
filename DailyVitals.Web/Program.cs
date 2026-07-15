@@ -764,6 +764,17 @@ app.MapGet("/signout", async (HttpContext httpContext) =>
     return Results.Redirect("/");
 }).AllowAnonymous();
 
+app.MapGet("/client/blazor.web.js", (IWebHostEnvironment environment) =>
+    {
+        var runtimePath = Path.Combine(
+            environment.WebRootPath,
+            "_framework",
+            "blazor.web.js");
+
+        return Results.File(runtimePath, "text/javascript");
+    })
+    .AllowAnonymous();
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
