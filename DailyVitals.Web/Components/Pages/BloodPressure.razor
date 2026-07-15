@@ -137,7 +137,6 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewReading" disabled="@LoginSession.IsDemo">New</button>
-                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(LoginSession.IsDemo || !_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
 
@@ -200,28 +199,6 @@
                 </article>
             </section>
 
-            @if (_showDeleteConfirm)
-            {
-                <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
-                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="bp-delete-title" @onclick:stopPropagation="true">
-                        <div class="info-modal-header">
-                            <div>
-                                <span>Confirm Delete</span>
-                                <h2 id="bp-delete-title">Delete this blood pressure reading?</h2>
-                            </div>
-                            <button type="button" class="modal-close-button" aria-label="Cancel delete" @onclick="CancelDelete">×</button>
-                        </div>
-
-                        <p class="info-modal-note">This will permanently remove the selected reading from your blood pressure history.</p>
-                        <p class="confirm-modal-detail">@DeleteReadingSummary</p>
-
-                        <div class="confirm-modal-actions">
-                            <button type="button" class="secondary-link" @onclick="CancelDelete">Cancel</button>
-                            <button type="button" class="danger-action" @onclick="ConfirmDelete">Delete Reading</button>
-                        </div>
-                    </section>
-                </div>
-            }
         </main>
     </section>
 }
@@ -244,7 +221,6 @@
     private string? _message;
     private string _messageClass = "page-message";
     private string? _formToast;
-    private bool _showDeleteConfirm;
 
     protected override void OnParametersSet()
     {
@@ -363,11 +339,6 @@
             ? "None yet"
             : $"{_history[0].Systolic}/{_history[0].Diastolic} on {_history[0].ReadingTime:M/d/yyyy}";
 
-    private string DeleteReadingSummary =>
-        _editingId.HasValue
-            ? $"{Model.Systolic}/{Model.Diastolic}, pulse {Model.Pulse}, {Model.ReadingTimeText}"
-            : "No reading selected.";
-
     private List<BloodPressureReading> PagedHistory =>
         _history
             .Skip((_historyPage - 1) * HistoryPageSize)
@@ -428,7 +399,6 @@
         _createdAt = reading.CreatedAt;
         _updatedAt = reading.UpdatedAt;
         _message = null;
-        _showDeleteConfirm = false;
         if (clearToast)
             _formToast = null;
     }
@@ -438,7 +408,6 @@
         ResetForm();
         _message = null;
         _formToast = null;
-        _showDeleteConfirm = false;
     }
 
     private void ResetForm()
@@ -452,61 +421,6 @@
         Model.ReadingTimeText = ToDateTimeLocal(now);
         _createdAt = null;
         _updatedAt = null;
-    }
-
-    private void RequestDeleteSelected()
-    {
-        if (!_editingId.HasValue)
-            return;
-
-        _message = null;
-        _formToast = null;
-        _showDeleteConfirm = true;
-    }
-
-    private void CancelDelete()
-    {
-        _showDeleteConfirm = false;
-    }
-
-    private void ConfirmDelete()
-    {
-        _showDeleteConfirm = false;
-        DeleteSelected();
-    }
-
-    private void DeleteSelected()
-    {
-        if (LoginSession.IsDemo)
-        {
-            ShowError(DemoModeGuard.ReadOnlyMessage);
-            return;
-        }
-
-        if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
-            return;
-
-        try
-        {
-            var deleted = BloodPressureService.DeleteBloodPressureForPerson(
-                LoginSession.PersonId.Value,
-                _editingId.Value);
-
-            if (!deleted)
-            {
-                ShowError("The selected blood pressure record could not be deleted.");
-                return;
-            }
-
-            LoadHistory();
-            ResetForm();
-            ShowSuccess("Blood pressure reading deleted.");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Blood pressure delete failed.");
-            ShowError("Blood pressure entry could not be deleted. Please try again.");
-        }
     }
 
     private void ShowSuccess(string message)
