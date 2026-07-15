@@ -1,5 +1,5 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS build
 
 WORKDIR /src
 
@@ -33,7 +33,7 @@ RUN set -eu; \
     test -s /app/publish/wwwroot/_framework/blazor.web.js
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.10 AS runtime
 
 WORKDIR /app
 
