@@ -181,7 +181,11 @@
                         </div>
                     </div>
 
-                    <EditForm Model="_form" FormName="nutrition-entry-form" OnValidSubmit="SaveEntry" class="bp-form">
+                    <EditForm Model="_form"
+                              FormName="nutrition-entry-form"
+                              OnValidSubmit="SaveEntry"
+                              OnInvalidSubmit="HandleInvalidSubmit"
+                              class="bp-form">
                         <DataAnnotationsValidator />
 
                         <div class="form-row">
@@ -292,9 +296,10 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewEntry" disabled="@LoginSession.IsDemo">New</button>
-                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(LoginSession.IsDemo || !_editingId.HasValue)">Delete</button>
+                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@LoginSession.IsDemo">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
+                        <ValidationSummary />
                         @if (ShowInlineFormMessage)
                         {
                             <div class="@($"{_messageClass} nutrition-inline-message")" role="status">@_message</div>
@@ -818,7 +823,7 @@
         _isNutritionMenuOpen = true;
         _activeSection = NutritionSection.AddFood;
         ResetForm();
-        _message = null;
+        ShowSuccess("New food form ready.");
         RefreshSelectedDayTotal();
     }
 
@@ -1174,6 +1179,11 @@
         }
     }
 
+    private void HandleInvalidSubmit()
+    {
+        ShowError("Complete the required fields before saving: Meal, Food Item, and Phosphorus.");
+    }
+
     private void SaveFoodNotesFor(FoodPhosphorusIntake item)
     {
         var profileId = item.FoodPhosphorusFoodId ?? FoodService.EnsureFoodProfileForIntake(item);
@@ -1182,12 +1192,23 @@
 
     private void RequestDeleteSelected()
     {
-        if (!_editingId.HasValue || !LoginSession.PersonId.HasValue)
+        if (!LoginSession.PersonId.HasValue)
+        {
+            ShowError("This login is not linked to a person record yet.");
             return;
+        }
+
+        if (!_editingId.HasValue)
+        {
+            ShowError("Select an existing food entry from Today's Foods or Nutrition History before deleting.");
+            return;
+        }
 
         var item = FindEntryById(_editingId.Value);
         if (item is not null)
             RequestDeleteEntry(item);
+        else
+            ShowError("The selected food entry is no longer available. Select another entry and try again.");
     }
 
     private void RequestDeleteEntry(FoodPhosphorusIntake item)
