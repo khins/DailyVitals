@@ -6,6 +6,7 @@ using DailyVitals.Data.Configuration;
 using DailyVitals.Data.Migrations;
 using DailyVitals.Data.Services;
 using DailyVitals.Data.Services.DailyVitals.App.Services;
+using DailyVitals.Domain.Models.Calculations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -475,6 +476,126 @@ app.MapPost("/weight/save", async (
     {
         logger.LogError(ex, "Weight server save failed.");
         return Results.Redirect("/weight?status=save-error");
+    }
+}).DisableAntiforgery();
+
+app.MapPost("/exercise/save", async (
+    HttpContext httpContext,
+    ExerciseService exerciseService,
+    WeightService weightService,
+    ILoggerFactory loggerFactory) =>
+{
+    const long otherExerciseTypeId = -1;
+    var logger = loggerFactory.CreateLogger("ExerciseSaveEndpoint");
+    var principal = httpContext.User;
+    var personIdValue = principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.PersonId);
+    if (principal.Identity?.IsAuthenticated != true ||
+        !long.TryParse(personIdValue, out var personId) ||
+        personId <= 0)
+    {
+        return Results.Redirect("/?signin=invalid");
+    }
+
+    var isDemo = string.Equals(
+        principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.IsDemo),
+        bool.TrueString,
+        StringComparison.OrdinalIgnoreCase);
+    if (isDemo)
+        return Results.Redirect("/exercise?status=demo");
+
+    var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+    var exerciseTypeText = form["ExerciseTypeId"].ToString();
+    var otherExerciseName = form["OtherExerciseName"].ToString();
+    var durationText = form["DurationMinutes"].ToString();
+    var caloriesText = form["CaloriesExpended"].ToString();
+    var intensity = form["Intensity"].ToString();
+    var startTimeText = form["StartTimeText"].ToString();
+    var notes = form["Notes"].ToString();
+    var editingIdText = form["EditingId"].ToString();
+    var userName = principal.Identity.Name ?? string.Empty;
+
+    if (string.IsNullOrWhiteSpace(intensity))
+        intensity = "Moderate";
+
+    if (!long.TryParse(exerciseTypeText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var exerciseTypeId))
+        return Results.Redirect("/exercise?status=missing-exercise");
+
+    if (exerciseTypeId == otherExerciseTypeId)
+    {
+        if (string.IsNullOrWhiteSpace(otherExerciseName))
+            return Results.Redirect("/exercise?status=missing-other");
+
+        exerciseTypeId = exerciseService.GetOrCreateExerciseType(otherExerciseName);
+    }
+
+    if (!decimal.TryParse(durationText, NumberStyles.Number, CultureInfo.InvariantCulture, out var durationMinutes) ||
+        durationMinutes <= 0 ||
+        !DateTime.TryParse(startTimeText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var startTime))
+    {
+        return Results.Redirect("/exercise?status=invalid");
+    }
+
+    decimal? calories = null;
+    if (!string.IsNullOrWhiteSpace(caloriesText))
+    {
+        if (!decimal.TryParse(caloriesText, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedCalories) ||
+            parsedCalories < 0)
+        {
+            return Results.Redirect("/exercise?status=invalid-calories");
+        }
+
+        calories = parsedCalories;
+    }
+    else
+    {
+        var latestWeight = weightService.GetLatestForPerson(personId);
+        if (latestWeight is not null)
+        {
+            calories = ExerciseMetrics.EstimateCaloriesBurned(
+                durationMinutes,
+                intensity,
+                latestWeight.WeightValue,
+                latestWeight.WeightUnit);
+        }
+    }
+
+    try
+    {
+        if (long.TryParse(editingIdText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var editingId) &&
+            editingId > 0)
+        {
+            var updated = exerciseService.UpdateExerciseSessionForPerson(
+                editingId,
+                personId,
+                exerciseTypeId,
+                startTime,
+                durationMinutes,
+                calories,
+                intensity,
+                notes,
+                userName);
+
+            return Results.Redirect(updated
+                ? "/exercise?status=updated"
+                : "/exercise?status=not-found");
+        }
+
+        exerciseService.InsertExerciseSession(
+            personId,
+            exerciseTypeId,
+            startTime,
+            durationMinutes,
+            calories,
+            intensity,
+            notes,
+            userName);
+
+        return Results.Redirect("/exercise?status=saved");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Exercise server save failed.");
+        return Results.Redirect("/exercise?status=save-error");
     }
 }).DisableAntiforgery();
 
