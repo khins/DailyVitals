@@ -114,7 +114,6 @@
 
                         <div class="form-command-row">
                             <button type="button" class="secondary-link" @onclick="BeginNewReading" disabled="@LoginSession.IsDemo">New</button>
-                            <button type="button" class="secondary-link" @onclick="RequestDeleteSelected" disabled="@(LoginSession.IsDemo || !_editingId.HasValue)">Delete</button>
                             <button type="submit" class="primary-action">Save</button>
                         </div>
 
