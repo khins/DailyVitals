@@ -2,6 +2,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DailyVitals.Data\DailyVitals.Data.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets"
+                      Version="10.0.10"
+                      PrivateAssets="all" />
   </ItemGroup>
 
   <PropertyGroup>
