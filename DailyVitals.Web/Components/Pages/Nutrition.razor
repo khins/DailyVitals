@@ -303,6 +303,28 @@
                         }
                     </EditForm>
                 </article>
+
+                <article class="dashboard-card history-panel">
+                    <div class="card-heading">
+                        <div>
+                            <span>Today's Foods</span>
+                            <h2>@DateTime.Today.ToString("MMMM d, yyyy")</h2>
+                        </div>
+                        <strong>@TodayEntries.Count entries</strong>
+                    </div>
+
+                    @if (TodayEntries.Count == 0)
+                    {
+                        <div class="empty-state compact-empty">
+                            <h2>No foods logged today</h2>
+                            <p>Saved food entries for today will appear here.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @RenderFoodTable(TodayEntries, includeServing: true, includeActions: true)
+                    }
+                </article>
                 </section>
             }
             else if (_activeSection == NutritionSection.TodaysFoods)
@@ -572,6 +594,11 @@
         ResetForm();
     }
 
+    protected override void OnParametersSet()
+    {
+        ApplySectionFromQuery();
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await LoginSession.RestoreAsync();
@@ -591,7 +618,6 @@
 
         LoadPersonPreferences();
         LoadHistory();
-        ApplySectionFromQuery();
         ApplyDraftFoodFromQuery();
         RefreshSelectedDayTotal();
         StateHasChanged();
