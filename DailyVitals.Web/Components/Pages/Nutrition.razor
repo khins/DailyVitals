@@ -37,11 +37,11 @@
                 @if (_isNutritionMenuOpen)
                 {
                     <div class="rail-subnav" aria-label="Nutrition sections">
-                        <button type="button" class="@GetSectionButtonClass(NutritionSection.TodaysTotals)" @onclick="() => SetActiveSection(NutritionSection.TodaysTotals)">Today's Totals</button>
-                        <button type="button" class="@GetSectionButtonClass(NutritionSection.AddFood)" @onclick="BeginNewEntry">Add Food</button>
-                        <button type="button" class="@GetSectionButtonClass(NutritionSection.TodaysFoods)" @onclick="() => SetActiveSection(NutritionSection.TodaysFoods)">Today's Foods</button>
-                        <button type="button" class="@GetSectionButtonClass(NutritionSection.LastSevenDays)" @onclick="() => SetActiveSection(NutritionSection.LastSevenDays)">Last 7 Days</button>
-                        <button type="button" class="@GetSectionButtonClass(NutritionSection.History)" @onclick="() => SetActiveSection(NutritionSection.History)">Nutrition History</button>
+                        <a class="@GetSectionButtonClass(NutritionSection.TodaysTotals)" href="@GetSectionHref(NutritionSection.TodaysTotals)">Today's Totals</a>
+                        <a class="@GetSectionButtonClass(NutritionSection.AddFood)" href="@GetSectionHref(NutritionSection.AddFood)">Add Food</a>
+                        <a class="@GetSectionButtonClass(NutritionSection.TodaysFoods)" href="@GetSectionHref(NutritionSection.TodaysFoods)">Today's Foods</a>
+                        <a class="@GetSectionButtonClass(NutritionSection.LastSevenDays)" href="@GetSectionHref(NutritionSection.LastSevenDays)">Last 7 Days</a>
+                        <a class="@GetSectionButtonClass(NutritionSection.History)" href="@GetSectionHref(NutritionSection.History)">Nutrition History</a>
                     </div>
                     @if (_activeSection == NutritionSection.History)
                     {
@@ -562,6 +562,9 @@
     [SupplyParameterFromQuery(Name = "draftNotes")]
     public string? DraftFoodNotes { get; set; }
 
+    [SupplyParameterFromQuery(Name = "section")]
+    public string? Section { get; set; }
+
     protected override void OnInitialized()
     {
         ResetForm();
@@ -586,9 +589,21 @@
 
         LoadPersonPreferences();
         LoadHistory();
+        ApplySectionFromQuery();
         ApplyDraftFoodFromQuery();
         RefreshSelectedDayTotal();
         StateHasChanged();
+    }
+
+    private void ApplySectionFromQuery()
+    {
+        if (!TryParseSection(Section, out var requestedSection))
+            return;
+
+        _isNutritionMenuOpen = true;
+        _activeSection = requestedSection;
+        if (requestedSection == NutritionSection.History)
+            _historyPage = 1;
     }
 
     private void ApplyDraftFoodFromQuery()
@@ -841,6 +856,55 @@
         _activeSection == section
             ? "rail-subnav-button is-active"
             : "rail-subnav-button";
+
+    private static string GetSectionHref(NutritionSection section) =>
+        $"/nutrition?section={GetSectionQueryValue(section)}";
+
+    private static string GetSectionQueryValue(NutritionSection section) =>
+        section switch
+        {
+            NutritionSection.AddFood => "add-food",
+            NutritionSection.TodaysFoods => "todays-foods",
+            NutritionSection.LastSevenDays => "last-7-days",
+            NutritionSection.History => "history",
+            _ => "todays-totals"
+        };
+
+    private static bool TryParseSection(string? value, out NutritionSection section)
+    {
+        section = NutritionSection.TodaysTotals;
+
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        switch (value.Trim().ToLowerInvariant())
+        {
+            case "todays-totals":
+            case "today":
+            case "totals":
+                section = NutritionSection.TodaysTotals;
+                return true;
+            case "add-food":
+            case "add":
+                section = NutritionSection.AddFood;
+                return true;
+            case "todays-foods":
+            case "foods":
+                section = NutritionSection.TodaysFoods;
+                return true;
+            case "last-7-days":
+            case "last-seven-days":
+            case "seven-days":
+                section = NutritionSection.LastSevenDays;
+                return true;
+            case "history":
+            case "nutrition-history":
+                section = NutritionSection.History;
+                return true;
+            default:
+                return false;
+        }
+    }
 
     private void SetHistoryRange(int months)
     {
