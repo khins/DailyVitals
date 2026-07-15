@@ -18,6 +18,10 @@ RUN dotnet publish DailyVitals.Web/DailyVitals.Web.csproj \
     --output /app/publish \
     --no-restore
 
+# Do not produce a deployable image if the client runtime required by every
+# interactive Razor component was omitted from the publish output.
+RUN test -f /app/publish/wwwroot/_framework/blazor.web.js
+
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 
