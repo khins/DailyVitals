@@ -599,6 +599,51 @@ app.MapPost("/exercise/save", async (
     }
 }).DisableAntiforgery();
 
+app.MapPost("/exercise/delete", async (
+    HttpContext httpContext,
+    ExerciseService exerciseService,
+    ILoggerFactory loggerFactory) =>
+{
+    var logger = loggerFactory.CreateLogger("ExerciseDeleteEndpoint");
+    var principal = httpContext.User;
+    var personIdValue = principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.PersonId);
+    if (principal.Identity?.IsAuthenticated != true ||
+        !long.TryParse(personIdValue, out var personId) ||
+        personId <= 0)
+    {
+        return Results.Redirect("/?signin=invalid");
+    }
+
+    var isDemo = string.Equals(
+        principal.FindFirstValue(LocalLoginSession.AuthClaimTypes.IsDemo),
+        bool.TrueString,
+        StringComparison.OrdinalIgnoreCase);
+    if (isDemo)
+        return Results.Redirect("/exercise?status=demo");
+
+    var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+    var editingIdText = form["EditingId"].ToString();
+
+    if (!long.TryParse(editingIdText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var exerciseSessionId) ||
+        exerciseSessionId <= 0)
+    {
+        return Results.Redirect("/exercise?status=not-found");
+    }
+
+    try
+    {
+        var deleted = exerciseService.DeleteExerciseSessionForPerson(personId, exerciseSessionId);
+        return Results.Redirect(deleted
+            ? "/exercise?status=deleted"
+            : "/exercise?status=not-found");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Exercise server delete failed.");
+        return Results.Redirect("/exercise?status=delete-error");
+    }
+}).DisableAntiforgery();
+
 app.MapPost("/auth/signout", async (HttpContext httpContext) =>
 {
     await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
