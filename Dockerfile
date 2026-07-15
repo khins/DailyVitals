@@ -18,9 +18,19 @@ RUN dotnet publish DailyVitals.Web/DailyVitals.Web.csproj \
     --output /app/publish \
     --no-restore
 
-# Do not produce a deployable image if the client runtime required by every
-# interactive Razor component was omitted from the publish output.
-RUN test -f /app/publish/wwwroot/_framework/blazor.web.js
+# The Linux SDK publish currently omits the Blazor browser runtime from the
+# output even though it is present in the restored ASP.NET internal-assets
+# package. Copy it explicitly, then fail the image build if it is unavailable.
+RUN set -eu; \
+    runtime_asset="$(find /root/.nuget/packages/microsoft.aspnetcore.app.internal.assets \
+        -type f \
+        -path '*/_framework/blazor.web.js' \
+        | sort -V \
+        | tail -n 1)"; \
+    test -n "$runtime_asset"; \
+    mkdir -p /app/publish/wwwroot/_framework; \
+    cp "$runtime_asset" /app/publish/wwwroot/_framework/blazor.web.js; \
+    test -s /app/publish/wwwroot/_framework/blazor.web.js
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
