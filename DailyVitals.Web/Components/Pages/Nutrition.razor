@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
+@using System.Text.Json
 @using DailyVitals.Data.Services
 @using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
@@ -1055,6 +1056,21 @@
             _form.SourceNotes = estimate.SourceNotes;
             _foodNotes = BuildRenalFoodNotes(estimate) ?? _foodNotes;
             ShowSuccess($"Estimate ready: {estimate.EstimatedPhosphorusMg} mg phosphorus.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            Logger.LogWarning(ex, "Nutrition estimate was rejected.");
+            ShowError(ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Nutrition estimate could not reach OpenAI.");
+            ShowError("AI Lookup could not reach OpenAI. Check the deployment network and try again.");
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Nutrition estimate returned an unreadable response.");
+            ShowError("AI Lookup received an unexpected response. Check the configured model and try again.");
         }
         catch (Exception ex)
         {
