@@ -104,7 +104,13 @@
 
                         <div class="form-row">
                             <label for="reading-time">Reading Time</label>
-                            <input id="reading-time" name="ReadingTimeText" type="datetime-local" class="form-input" value="@Model.ReadingTimeText" required />
+                            <input id="reading-time"
+                                   name="ReadingTimeText"
+                                   type="datetime-local"
+                                   class="form-input"
+                                   value="@Model.ReadingTimeText"
+                                   @onchange="ReadingTimeChanged"
+                                   required />
                         </div>
 
                         <div class="bp-number-grid">
@@ -126,7 +132,10 @@
 
                         <div class="field-group">
                             <label for="notes">Notes</label>
-                            <textarea id="notes" name="Notes" class="form-input notes-input">@Model.Notes</textarea>
+                            <textarea id="notes"
+                                      name="Notes"
+                                      class="form-input notes-input"
+                                      @oninput="NotesChanged">@Model.Notes</textarea>
                         </div>
 
                         @if (!string.IsNullOrWhiteSpace(AuditText))
@@ -480,6 +489,19 @@
     </div>;
 
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");
+
+    private void ReadingTimeChanged(ChangeEventArgs args)
+    {
+        Model.ReadingTimeText = args.Value?.ToString();
+
+        if (DateTime.TryParse(Model.ReadingTimeText, out var readingTime))
+            SyncSeatedAtNote(readingTime);
+    }
+
+    private void NotesChanged(ChangeEventArgs args)
+    {
+        Model.Notes = args.Value?.ToString();
+    }
 
     private void SyncSeatedAtNote(DateTime readingTime)
     {
