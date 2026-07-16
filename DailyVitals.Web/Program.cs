@@ -95,13 +95,13 @@ builder.Services.AddSingleton<AuthTicketService>();
 builder.Services.AddScoped<DemoAccountSeeder>();
 
 var app = builder.Build();
-var blazorRuntimePath = Path.Combine(
+var blazorRuntimePath = app.Environment.IsDevelopment() ? null : Path.Combine(
     AppContext.BaseDirectory,
     "wwwroot",
     "_framework",
     "blazor.web.js");
 
-if (!File.Exists(blazorRuntimePath))
+if (blazorRuntimePath is not null && !File.Exists(blazorRuntimePath))
 {
     throw new FileNotFoundException(
         "The published Blazor runtime is missing. Interactive pages cannot start.",
@@ -776,9 +776,12 @@ app.MapGet("/signout", async (HttpContext httpContext) =>
     return Results.Redirect("/");
 }).AllowAnonymous();
 
-app.MapGet("/client/blazor.web.js", () =>
-        Results.File(blazorRuntimePath, "text/javascript"))
-    .AllowAnonymous();
+if (blazorRuntimePath is not null)
+{
+    app.MapGet("/client/blazor.web.js", () =>
+            Results.File(blazorRuntimePath, "text/javascript"))
+        .AllowAnonymous();
+}
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
