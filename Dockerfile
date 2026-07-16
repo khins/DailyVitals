@@ -40,6 +40,7 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV TZ=America/Chicago
 
 EXPOSE 8080
 
