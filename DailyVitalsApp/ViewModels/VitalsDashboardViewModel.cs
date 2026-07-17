@@ -136,7 +136,7 @@ namespace DailyVitals.App.ViewModels
         public string ExerciseRecommendationLine1 =>
             ExerciseMealRecommendations.Count >= 1
                 ? FormatRecommendation(ExerciseMealRecommendations[0])
-                : "Add allowed foods to renal_diet_food";
+                : "Add active foods to the shared renal_friendly_food catalog";
 
         public string ExerciseRecommendationLine2 =>
             ExerciseMealRecommendations.Count >= 2
@@ -205,7 +205,7 @@ namespace DailyVitals.App.ViewModels
             var exerciseHistory = _exerciseService.GetHistory(SelectedPerson.PersonId);
             LatestExercise = exerciseHistory.FirstOrDefault();
             ExerciseMealRecommendations =
-                _renalDietFoodService.GetWeightLossMealCombos(SelectedPerson.PersonId);
+                _renalDietFoodService.GetWeightLossMealCombos();
             EstimatedCaloriesBurned = LatestExercise?.CaloriesExpended;
             if (EstimatedCaloriesBurned == null && LatestExercise != null && LatestWeight != null)
             {
