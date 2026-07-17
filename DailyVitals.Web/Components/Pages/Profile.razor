@@ -280,7 +280,7 @@
 
         if (!LoginSession.IsSignedIn)
         {
-            Navigation.NavigateTo("/");
+            Navigation.NavigateTo("/signin");
             return;
         }
 
@@ -532,7 +532,7 @@
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/signin");
     }
 
     private decimal? SelectedHeightFt => Model.HeightFeet <= 0 ? null : Model.HeightFeet + (Model.HeightInches / 12m);

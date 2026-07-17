@@ -1,4 +1,4 @@
-@page "/"
+@page "/signin"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using DailyVitals.Web.Services
@@ -6,7 +6,7 @@
 @inject LocalLoginSession LoginSession
 @inject IConfiguration Configuration
 
-<PageTitle>Sign in | DailyVitals</PageTitle>
+<PageTitle>Sign in | My Active Vitals</PageTitle>
 
 <section class="login-page">
     <div class="login-visual" aria-hidden="true">
@@ -41,7 +41,7 @@
         <div class="brand-row">
             <div class="brand-mark" aria-hidden="true">DV</div>
             <div>
-                <p class="eyebrow">DailyVitals Web</p>
+                <p class="eyebrow">My Active Vitals</p>
                 <h1>Sign in</h1>
             </div>
         </div>

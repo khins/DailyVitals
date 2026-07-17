@@ -1,0 +1,55 @@
+@inherits LayoutComponentBase
+
+<div class="marketing-site">
+    <header class="marketing-header">
+        <a class="marketing-brand" href="/" aria-label="My Active Vitals home">
+            <span class="marketing-brand__mark" aria-hidden="true">MAV</span>
+            <span>My Active Vitals</span>
+        </a>
+
+        <nav class="marketing-nav" aria-label="Primary navigation">
+            <NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
+            <NavLink href="features">Features</NavLink>
+            <NavLink href="pricing">Pricing</NavLink>
+            <NavLink href="about">About</NavLink>
+            <NavLink href="contact">Contact</NavLink>
+        </nav>
+
+        <div class="marketing-actions">
+            <a class="marketing-button marketing-button--quiet" href="signin">Sign in</a>
+            <a class="marketing-button marketing-button--primary" href="pricing">Start free trial</a>
+        </div>
+    </header>
+
+    <main class="marketing-main">
+        @Body
+    </main>
+
+    <footer class="marketing-footer">
+        <div>
+            <a class="marketing-brand marketing-brand--footer" href="/">
+                <span class="marketing-brand__mark" aria-hidden="true">MAV</span>
+                <span>My Active Vitals</span>
+            </a>
+            <p>Personal health tracking that helps you see the whole picture.</p>
+        </div>
+        <nav aria-label="Footer navigation">
+            <a href="features">Features</a>
+            <a href="pricing">Pricing</a>
+            <a href="about">About</a>
+            <a href="privacy">Privacy</a>
+            <a href="terms">Terms</a>
+            <a href="contact">Contact</a>
+        </nav>
+        <p class="marketing-footer__disclaimer">
+            My Active Vitals is a personal tracking and awareness tool. It does not provide medical diagnosis, treatment, or emergency services.
+        </p>
+        <p class="marketing-footer__copyright">© @DateTime.UtcNow.Year My Active Vitals. All rights reserved.</p>
+    </footer>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">×</span>
+</div>
