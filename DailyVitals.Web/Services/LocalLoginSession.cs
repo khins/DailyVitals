@@ -106,7 +106,7 @@ public sealed class LocalLoginSession
     {
         await _jsRuntime.InvokeAsync<bool>("dailyVitalsAuth.signOut");
         SignOut();
-        _navigation.NavigateTo("/", forceLoad: true, replace: true);
+        _navigation.NavigateTo("/signin", forceLoad: true, replace: true);
     }
 
     public static class AuthClaimTypes
