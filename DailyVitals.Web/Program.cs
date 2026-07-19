@@ -267,6 +267,87 @@ app.MapPost("/auth/login", async (
     return Results.Redirect("/dashboard");
 }).DisableAntiforgery();
 
+app.MapPost("/auth/register", async (
+    HttpContext httpContext,
+    PersonService personService,
+    LoginUserService loginUserService,
+    ILoggerFactory loggerFactory) =>
+{
+    var logger = loggerFactory.CreateLogger("AccountRegistrationEndpoint");
+    var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
+    var firstName = form["FirstName"].ToString().Trim();
+    var lastName = form["LastName"].ToString().Trim();
+    var userName = form["UserName"].ToString().Trim();
+    var password = form["Password"].ToString();
+    var confirmPassword = form["ConfirmPassword"].ToString();
+
+    if (string.IsNullOrWhiteSpace(firstName) ||
+        string.IsNullOrWhiteSpace(lastName) ||
+        string.IsNullOrWhiteSpace(userName) ||
+        string.IsNullOrWhiteSpace(password) ||
+        string.IsNullOrWhiteSpace(confirmPassword))
+    {
+        return Results.Redirect("/create-account?registration=missing");
+    }
+
+    if (firstName.Length > 100 || lastName.Length > 100 || userName.Length > 255)
+        return Results.Redirect("/create-account?registration=invalid");
+
+    if (!System.Net.Mail.MailAddress.TryCreate(userName, out var emailAddress) ||
+        !string.Equals(emailAddress.Address, userName, StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.Redirect("/create-account?registration=invalid-email");
+    }
+
+    if (password.Length < 8)
+        return Results.Redirect("/create-account?registration=short-password");
+
+    if (!string.Equals(password, confirmPassword, StringComparison.Ordinal))
+        return Results.Redirect("/create-account?registration=password-mismatch");
+
+    if (loginUserService.UserNameExists(userName))
+        return Results.Redirect("/create-account?registration=email-in-use");
+
+    try
+    {
+        var personId = personService.InsertPerson(firstName, lastName, null, null, null);
+        var loginUser = loginUserService.CreateLoginUser(personId, userName, password);
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, loginUser.UserName),
+            new Claim(LocalLoginSession.AuthClaimTypes.PersonId, personId.ToString()),
+            new Claim(LocalLoginSession.AuthClaimTypes.IsDemo, bool.FalseString),
+            new Claim(LocalLoginSession.AuthClaimTypes.RememberDevice, bool.TrueString)
+        };
+        var principal = new ClaimsPrincipal(
+            new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
+        var properties = new AuthenticationProperties
+        {
+            IsPersistent = true,
+            AllowRefresh = true,
+            ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
+        };
+
+        await httpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            principal,
+            properties);
+
+        return Results.Redirect("/profile");
+    }
+    catch (InvalidOperationException ex) when (
+        ex.Message.Contains("already in use", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.Redirect("/create-account?registration=email-in-use");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Account registration failed for {UserName}.", userName);
+        return Results.Redirect("/create-account?registration=failed");
+    }
+}).DisableAntiforgery();
+
 app.MapPost("/blood-pressure/save", async (
     HttpContext httpContext,
     BloodPressureService bloodPressureService,

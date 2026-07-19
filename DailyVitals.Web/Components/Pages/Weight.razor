@@ -18,8 +18,8 @@
     <section class="dashboard-shell @(LoginSession.IsDemo ? "demo-mode" : null)">
         <aside class="dashboard-rail" aria-label="Primary navigation">
             <div class="rail-brand">
-                <span class="brand-mark brand-mark--compact" aria-hidden="true">DV</span>
-                <span>DailyVitals</span>
+                <span class="brand-mark brand-mark--compact" aria-hidden="true">MAV</span>
+                <span>My Active Vitals</span>
             </div>
 
             <nav class="rail-nav">
@@ -59,14 +59,14 @@
             <DemoModeBanner />
             <header class="dashboard-topbar">
                 <div>
-                    <p class="eyebrow">DailyVitals Web</p>
+                    <p class="eyebrow">My Active Vitals</p>
                     <h1>Weight</h1>
                 </div>
 
                 <div class="dashboard-actions">
                     <div class="person-switcher">
                         <span>Person</span>
-                        <strong>@LoginSession.UserName</strong>
+                        <strong>@LoginSession.PersonDisplayName</strong>
                     </div>
                     <button type="button" class="primary-action" @onclick="BeginNewReading">New Reading</button>
                 </div>

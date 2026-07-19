@@ -1,18 +1,8 @@
 @page "/create-account"
 @rendermode InteractiveServer
-@using System.ComponentModel.DataAnnotations
-@using System.Security.Claims
-@using DailyVitals.Data.Services
-@using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
-@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Authentication.Cookies
-@inject PersonService PersonService
-@inject LoginUserService LoginUserService
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
-@inject ILogger<CreateAccount> Logger
-@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Create Account | DailyVitals</PageTitle>
 
@@ -47,47 +37,40 @@
 
     <div class="login-panel account-panel">
         <div class="brand-row">
-            <div class="brand-mark" aria-hidden="true">DV</div>
+            <div class="brand-mark" aria-hidden="true">MAV</div>
             <div>
-                <p class="eyebrow">DailyVitals Web</p>
+                <p class="eyebrow">My Active Vitals</p>
                 <h1>Create Account</h1>
             </div>
         </div>
 
-        <EditForm Model="Model" FormName="create-account-form" OnValidSubmit="SubmitAccount" class="login-form account-form">
-            <DataAnnotationsValidator />
-
+        <form method="post" action="/auth/register" class="login-form account-form">
             <div class="account-form-grid">
                 <div class="field-group">
                     <label for="first-name">First Name</label>
-                    <InputText id="first-name" class="form-input" autocomplete="given-name" @bind-Value="Model!.FirstName" />
-                    <ValidationMessage For="() => Model!.FirstName" />
+                    <input id="first-name" name="FirstName" class="form-input" autocomplete="given-name" maxlength="100" required />
                 </div>
 
                 <div class="field-group">
                     <label for="last-name">Last Name</label>
-                    <InputText id="last-name" class="form-input" autocomplete="family-name" @bind-Value="Model!.LastName" />
-                    <ValidationMessage For="() => Model!.LastName" />
+                    <input id="last-name" name="LastName" class="form-input" autocomplete="family-name" maxlength="100" required />
                 </div>
             </div>
 
             <div class="field-group">
                 <label for="account-user-name">Email</label>
-                <InputText id="account-user-name" type="email" class="form-input" autocomplete="username" @bind-Value="Model!.UserName" />
-                <ValidationMessage For="() => Model!.UserName" />
+                <input id="account-user-name" name="UserName" type="email" class="form-input" autocomplete="username" maxlength="255" required />
             </div>
 
             <div class="account-form-grid">
                 <div class="field-group">
                     <label for="account-password">Password</label>
-                    <InputText id="account-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="Model!.Password" />
-                    <ValidationMessage For="() => Model!.Password" />
+                    <input id="account-password" name="Password" type="@PasswordInputType" class="form-input" autocomplete="new-password" minlength="8" required />
                 </div>
 
                 <div class="field-group">
                     <label for="confirm-password">Confirm Password</label>
-                    <InputText id="confirm-password" type="@PasswordInputType" class="form-input" autocomplete="new-password" @bind-Value="Model!.ConfirmPassword" />
-                    <ValidationMessage For="() => Model!.ConfirmPassword" />
+                    <input id="confirm-password" name="ConfirmPassword" type="@PasswordInputType" class="form-input" autocomplete="new-password" minlength="8" required />
                 </div>
             </div>
 
@@ -96,14 +79,10 @@
                 <span>Show Password</span>
             </label>
 
-            @if (!string.IsNullOrWhiteSpace(_message))
+            @if (!string.IsNullOrWhiteSpace(RegistrationMessage))
             {
-                <div class="@_messageClass" role="status">
-                    @if (_accountCreated)
-                    {
-                        <span class="profile-toast-icon" aria-hidden="true">✓</span>
-                    }
-                    <span>@_message</span>
+                <div class="login-message login-message--error" role="alert">
+                    <span>@RegistrationMessage</span>
                 </div>
             }
 
@@ -111,31 +90,30 @@
                 ActiveVitals is a personal health tracking and awareness tool. It helps users record and review their own wellness data over time. It does not provide medical diagnosis, treatment recommendations, or clinical advice.
             </p>
 
-            <button type="submit" class="primary-button" disabled="@_accountCreated">Create Account</button>
-            @if (_accountCreated)
-            {
-                <a class="form-link" href="profile">Visit Profile</a>
-            }
+            <button type="submit" class="primary-button">Create Account</button>
             <a class="form-link" href="signin">Back to sign in</a>
-        </EditForm>
+        </form>
     </div>
 </section>
 
 @code {
-    [SupplyParameterFromForm(FormName = "create-account-form")]
-    private CreateAccountModel? Model { get; set; }
+    [SupplyParameterFromQuery(Name = "registration")]
+    private string? RegistrationResult { get; set; }
 
-    private string? _message;
-    private string _messageClass = "login-message";
     private bool _showPassword;
-    private bool _accountCreated;
 
     private string PasswordInputType => _showPassword ? "text" : "password";
-
-    protected override void OnInitialized()
+    private string? RegistrationMessage => RegistrationResult switch
     {
-        Model ??= new CreateAccountModel();
-    }
+        "missing" => "Complete all required fields.",
+        "invalid" => "One or more account details are too long.",
+        "invalid-email" => "Enter a valid email address.",
+        "short-password" => "Password must be at least 8 characters.",
+        "password-mismatch" => "Passwords must match.",
+        "email-in-use" => "That email is already in use. Sign in or recover the existing account.",
+        "failed" => "Account could not be created. Please try again.",
+        _ => null
+    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -148,103 +126,4 @@
             Navigation.NavigateTo("/dashboard", replace: true);
     }
 
-    private async Task SubmitAccount()
-    {
-        if (!string.Equals(Model!.Password, Model.ConfirmPassword, StringComparison.Ordinal))
-        {
-            ShowError("Passwords must match.");
-            return;
-        }
-
-        if (LoginUserService.UserNameExists(Model.UserName ?? string.Empty))
-        {
-            ShowError("That email is already in use.");
-            return;
-        }
-
-        try
-        {
-            var personId = PersonService.InsertPerson(
-                Model.FirstName!.Trim(),
-                Model.LastName!.Trim(),
-                null,
-                null,
-                null);
-
-            var loginUser = LoginUserService.CreateLoginUser(
-                personId,
-                Model.UserName!.Trim(),
-                Model.Password!);
-
-            await SignInAfterAccountCreation(loginUser);
-            Navigation.NavigateTo("/profile", forceLoad: true, replace: true);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Account creation failed.");
-            ShowError("Account could not be created. Please try again.");
-        }
-    }
-
-    private void ShowError(string message)
-    {
-        _accountCreated = false;
-        _messageClass = "login-message login-message--error";
-        _message = message;
-    }
-
-    private async Task SignInAfterAccountCreation(LoginUser loginUser)
-    {
-        if (!loginUser.PersonId.HasValue)
-            throw new InvalidOperationException("A person record is required to create an authenticated session.");
-
-        var httpContext = HttpContextAccessor.HttpContext;
-        if (httpContext is not null)
-        {
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.Name, loginUser.UserName),
-                new Claim(LocalLoginSession.AuthClaimTypes.PersonId, loginUser.PersonId.Value.ToString()),
-                new Claim(LocalLoginSession.AuthClaimTypes.IsDemo, bool.FalseString),
-                new Claim(LocalLoginSession.AuthClaimTypes.RememberDevice, bool.TrueString)
-            };
-            var principal = new ClaimsPrincipal(
-                new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
-            var properties = new AuthenticationProperties
-            {
-                IsPersistent = true,
-                AllowRefresh = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
-            };
-
-            await httpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                principal,
-                properties);
-            LoginSession.SignIn(loginUser.UserName, loginUser.PersonId, rememberDevice: true);
-            return;
-        }
-
-        await LoginSession.SignInAsync(loginUser.UserName, loginUser.PersonId, rememberDevice: true);
-    }
-
-    private sealed class CreateAccountModel
-    {
-        [Required(ErrorMessage = "Enter a first name.")]
-        public string? FirstName { get; set; }
-
-        [Required(ErrorMessage = "Enter a last name.")]
-        public string? LastName { get; set; }
-
-        [Required(ErrorMessage = "Enter an email.")]
-        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
-        public string? UserName { get; set; }
-
-        [Required(ErrorMessage = "Enter a password.")]
-        [MinLength(8, ErrorMessage = "Password must be at least 8 characters.")]
-        public string? Password { get; set; }
-
-        [Required(ErrorMessage = "Confirm the password.")]
-        public string? ConfirmPassword { get; set; }
-    }
 }

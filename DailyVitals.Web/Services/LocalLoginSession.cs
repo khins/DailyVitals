@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using DailyVitals.Data.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
@@ -11,31 +12,38 @@ public sealed class LocalLoginSession
     private readonly AuthenticationStateProvider _authenticationStateProvider;
     private readonly AuthTicketService _authTicketService;
     private readonly NavigationManager _navigation;
+    private readonly PersonService _personService;
 
     public LocalLoginSession(
         IJSRuntime jsRuntime,
         AuthenticationStateProvider authenticationStateProvider,
         AuthTicketService authTicketService,
-        NavigationManager navigation)
+        NavigationManager navigation,
+        PersonService personService)
     {
         _jsRuntime = jsRuntime;
         _authenticationStateProvider = authenticationStateProvider;
         _authTicketService = authTicketService;
         _navigation = navigation;
+        _personService = personService;
     }
 
     public bool IsSignedIn { get; private set; }
     public string? UserName { get; private set; }
+    public string? PersonName { get; private set; }
     public long? PersonId { get; private set; }
     public bool IsDemo { get; private set; }
     public bool RememberDevice { get; private set; }
     public bool CanWrite => IsSignedIn && !IsDemo;
+    public string PersonDisplayName =>
+        string.IsNullOrWhiteSpace(PersonName) ? UserName ?? "Person" : PersonName;
 
     public void SignIn(string userName, long? personId, bool isDemo = false, bool rememberDevice = false)
     {
         IsSignedIn = true;
         UserName = userName;
         PersonId = personId;
+        PersonName = ResolvePersonName(personId);
         IsDemo = isDemo;
         RememberDevice = rememberDevice;
     }
@@ -98,6 +106,7 @@ public sealed class LocalLoginSession
         IsSignedIn = false;
         UserName = null;
         PersonId = null;
+        PersonName = null;
         IsDemo = false;
         RememberDevice = false;
     }
@@ -114,5 +123,25 @@ public sealed class LocalLoginSession
         public const string PersonId = "dailyvitals:person_id";
         public const string IsDemo = "dailyvitals:is_demo";
         public const string RememberDevice = "dailyvitals:remember_device";
+    }
+
+    private string? ResolvePersonName(long? personId)
+    {
+        if (!personId.HasValue)
+            return null;
+
+        try
+        {
+            var person = _personService.GetPersonById(personId.Value);
+            return string.IsNullOrWhiteSpace(person?.FullName)
+                ? null
+                : person.FullName.Trim();
+        }
+        catch
+        {
+            // Authentication should remain usable if profile display data cannot
+            // be loaded. PersonDisplayName will fall back to the account email.
+            return null;
+        }
     }
 }
