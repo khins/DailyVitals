@@ -204,11 +204,14 @@
                                     <InputText id="goal-effective-date" type="date" class="form-input" @bind-Value="Model.GoalEffectiveDateText" />
                                 </div>
 
-                                <div class="field-group">
-                                    <label for="phosphorus-limit">Phosphorus Limit (mg)</label>
-                                    <InputNumber id="phosphorus-limit" class="form-input" @bind-Value="Model.PhosphorusLimitMg" />
-                                    <ValidationMessage For="() => Model.PhosphorusLimitMg" />
-                                </div>
+                                @if (!Model.TrackWeightLoss)
+                                {
+                                    <div class="field-group">
+                                        <label for="phosphorus-limit">Phosphorus Limit (mg)</label>
+                                        <InputNumber id="phosphorus-limit" class="form-input" @bind-Value="Model.PhosphorusLimitMg" />
+                                        <ValidationMessage For="() => Model.PhosphorusLimitMg" />
+                                    </div>
+                                }
 
                                 <div class="field-group">
                                     <label for="sodium-limit">Sodium Limit (mg)</label>
@@ -227,15 +230,18 @@
                                     <InputNumber id="protein-target" class="form-input" @bind-Value="Model.ProteinTargetG" />
                                 </div>
 
-                                <div class="field-group">
-                                    <label for="potassium-limit">Potassium Limit (mg)</label>
-                                    <InputNumber id="potassium-limit" class="form-input" @bind-Value="Model.PotassiumLimitMg" />
-                                </div>
+                                @if (!Model.TrackWeightLoss)
+                                {
+                                    <div class="field-group">
+                                        <label for="potassium-limit">Potassium Limit (mg)</label>
+                                        <InputNumber id="potassium-limit" class="form-input" @bind-Value="Model.PotassiumLimitMg" />
+                                    </div>
 
-                                <div class="field-group">
-                                    <label for="fluid-limit">Fluid Limit (ml)</label>
-                                    <InputNumber id="fluid-limit" class="form-input" @bind-Value="Model.FluidLimitMl" />
-                                </div>
+                                    <div class="field-group">
+                                        <label for="fluid-limit">Fluid Limit (ml)</label>
+                                        <InputNumber id="fluid-limit" class="form-input" @bind-Value="Model.FluidLimitMl" />
+                                    </div>
+                                }
 
                                 @if (Model.IsDiabetic)
                                 {
