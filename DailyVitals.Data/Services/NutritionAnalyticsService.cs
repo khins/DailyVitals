@@ -62,15 +62,16 @@ namespace DailyVitals.Data.Services
                     COALESCE(fd.phosphorus_mg, 0) AS phosphorus_mg,
                     COALESCE(fd.net_phosphorus_mg, 0) AS net_phosphorus_mg,
                     wd.weight_value,
-                    ng.calorie_limit,
-                    ng.sodium_limit_mg,
-                    ng.phosphorus_limit_mg
+                    CASE WHEN ng.calorie_enabled THEN ng.calorie_limit END,
+                    CASE WHEN ng.sodium_enabled THEN ng.sodium_limit_mg END,
+                    CASE WHEN ng.phosphorus_enabled THEN ng.phosphorus_limit_mg END
                 FROM date_window dw
                 LEFT JOIN food_daily fd ON fd.day = dw.day
                 LEFT JOIN exercise_daily ed ON ed.day = dw.day
                 LEFT JOIN weight_daily wd ON wd.day = dw.day
                 LEFT JOIN LATERAL (
-                    SELECT calorie_limit, sodium_limit_mg, phosphorus_limit_mg
+                    SELECT calorie_limit, sodium_limit_mg, phosphorus_limit_mg,
+                           calorie_enabled, sodium_enabled, phosphorus_enabled
                     FROM public.nutrition_goal
                     WHERE person_id = @person_id
                       AND effective_date <= dw.day

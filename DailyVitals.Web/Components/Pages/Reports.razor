@@ -117,17 +117,20 @@
                             <dt>Food entries</dt>
                             <dd>@coachSnapshot.FoodEntries</dd>
                         </div>
-                        @if (ShowRenalTargets)
+                        @if (PhosphorusTargetEnabled)
                         {
                             <div>
                                 <dt>Phosphorus within goal</dt>
                                 <dd>@FormatCoachGoalDays(coachSnapshot.Phosphorus)</dd>
                             </div>
                         }
-                        <div>
-                            <dt>Sodium within goal</dt>
-                            <dd>@FormatCoachGoalDays(coachSnapshot.Sodium)</dd>
-                        </div>
+                        @if (SodiumTargetEnabled)
+                        {
+                            <div>
+                                <dt>Sodium within goal</dt>
+                                <dd>@FormatCoachGoalDays(coachSnapshot.Sodium)</dd>
+                            </div>
+                        }
                     </dl>
                 }
 
@@ -203,7 +206,7 @@
                             <dt>Overall</dt>
                             <dd>@NutritionComplianceText</dd>
                         </div>
-                        @if (ShowRenalTargets)
+                        @if (PhosphorusTargetEnabled)
                         {
                             <div>
                                 <dt>Phosphorus</dt>
@@ -221,6 +224,8 @@
                     </dl>
                 </article>
 
+                @if (SodiumTargetEnabled)
+                {
                 <article class="dashboard-card report-card">
                     <div class="card-heading">
                         <div>
@@ -245,6 +250,7 @@
                     </dl>
                     <a class="secondary-link report-card-action" href="@GetReportDetailHref("sodium")">Details</a>
                 </article>
+                }
 
                 <article class="dashboard-card report-card">
                     <div class="card-heading">
@@ -276,7 +282,7 @@
                     }
                 </article>
 
-                @if (ShowRenalTargets)
+                @if (PhosphorusTargetEnabled)
                 {
                 <article class="dashboard-card report-card">
                     <div class="card-heading">
@@ -304,6 +310,8 @@
                 </article>
                 }
 
+                @if (ProteinTargetEnabled)
+                {
                 <article class="dashboard-card report-card">
                     <div class="card-heading">
                         <div>
@@ -328,8 +336,9 @@
                     </dl>
                     <a class="secondary-link report-card-action" href="@GetReportDetailHref("protein")">Details</a>
                 </article>
+                }
 
-                @if (ShowRenalTargets)
+                @if (PotassiumTargetEnabled)
                 {
                 <article class="dashboard-card report-card">
                     <div class="card-heading">
@@ -541,7 +550,6 @@
     private string? _message;
     private string _messageClass = "page-message";
     private bool _showKidneyLabs;
-    private bool _trackWeightLoss;
     private string? _activeNutrientReportKey;
     private NutritionCoachSnapshot? _coachSnapshot;
     private NutritionCoachReview? _coachReview;
@@ -679,13 +687,28 @@
         _ => "status-pill status-info"
     };
 
-    private string NutritionComplianceText => _nutritionActiveDays == 0
-        ? "--"
-        : ShowRenalTargets
-            ? $"{Math.Round((_nutritionPhosphorusDaysInTarget + _nutritionSodiumDaysInTarget) / (decimal)(_nutritionActiveDays * 2) * 100m)}%"
-            : $"{Math.Round(_nutritionSodiumDaysInTarget / (decimal)_nutritionActiveDays * 100m)}%";
+    private string NutritionComplianceText
+    {
+        get
+        {
+            if (_nutritionActiveDays == 0)
+                return "--";
 
-    private bool ShowRenalTargets => !_trackWeightLoss;
+            var enabledGoalCount = (PhosphorusTargetEnabled ? 1 : 0) + (SodiumTargetEnabled ? 1 : 0);
+            if (enabledGoalCount == 0)
+                return "No active compliance goals";
+
+            var daysWithinGoals =
+                (PhosphorusTargetEnabled ? _nutritionPhosphorusDaysInTarget : 0) +
+                (SodiumTargetEnabled ? _nutritionSodiumDaysInTarget : 0);
+            return $"{Math.Round(daysWithinGoals / (decimal)(_nutritionActiveDays * enabledGoalCount) * 100m)}%";
+        }
+    }
+
+    private bool PhosphorusTargetEnabled => _nutritionGoal?.PhosphorusEnabled ?? true;
+    private bool SodiumTargetEnabled => _nutritionGoal?.SodiumEnabled ?? true;
+    private bool ProteinTargetEnabled => _nutritionGoal?.ProteinEnabled ?? true;
+    private bool PotassiumTargetEnabled => _nutritionGoal?.PotassiumEnabled ?? true;
 
     private string PhosphorusComplianceText => _nutritionActiveDays == 0
         ? "--"
@@ -901,7 +924,7 @@
     [
         new("Weight progress", WeightChange.HasValue ? $"Current trend is {WeightChangeText} from first to latest logged weight." : "Add at least two weight entries to show a progress trend."),
         new("Nutrition compliance", _nutritionActiveDays > 0
-            ? ShowRenalTargets
+            ? PhosphorusTargetEnabled
                 ? "Compared logged days against current phosphorus and sodium targets."
                 : "Compared logged days against the current sodium target."
             : "Add nutrition entries to build compliance reporting."),
@@ -922,10 +945,12 @@
             var personId = LoginSession.PersonId.Value;
             var person = PersonService.GetPersonById(personId);
             _showKidneyLabs = person?.TrackKidneyLabs == true;
-            _trackWeightLoss = person?.TrackWeightLoss == true;
-            if (!ShowRenalTargets && _activeNutrientReportKey is "phosphorus" or "potassium")
-                _activeNutrientReportKey = null;
             _nutritionGoal = NutritionGoalService.GetActiveGoal(personId, DateTime.Today);
+            if ((!PhosphorusTargetEnabled && _activeNutrientReportKey == "phosphorus") ||
+                (!SodiumTargetEnabled && _activeNutrientReportKey == "sodium") ||
+                (!ProteinTargetEnabled && _activeNutrientReportKey == "protein") ||
+                (!PotassiumTargetEnabled && _activeNutrientReportKey == "potassium"))
+                _activeNutrientReportKey = null;
 
             _weightHistory.Clear();
             _exerciseHistory.Clear();
