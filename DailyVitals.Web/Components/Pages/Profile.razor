@@ -1,4 +1,5 @@
 @page "/profile"
+@implements IDisposable
 @attribute [Authorize]
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
@@ -265,6 +266,10 @@
                         </section>
 
                         <div class="form-command-row">
+                            @if (_updatedAt.HasValue)
+                            {
+                                <span class="profile-last-updated">Last updated @_updatedAt.Value.ToString("MMM d, yyyy h:mm tt")</span>
+                            }
                             @if (!string.IsNullOrWhiteSpace(_profileToast))
                             {
                                 <div class="profile-toast" role="status">
@@ -292,6 +297,7 @@
     private string? _message;
     private string _messageClass = "page-message";
     private string? _profileToast;
+    private CancellationTokenSource? _profileToastDismissal;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -553,7 +559,7 @@
             _updatedAt = LoginSession.CurrentLocalTime;
             _messageClass = "page-message";
             _message = null;
-            _profileToast = "Profile and nutrition targets updated.";
+            ShowProfileToast("Profile and nutrition targets updated.");
         }
         catch (Exception ex)
         {
@@ -566,12 +572,52 @@
     {
         _messageClass = "page-message page-message--error";
         _message = message;
-        _profileToast = null;
+        DismissProfileToast();
     }
 
     private void DismissProfileToast()
     {
+        _profileToastDismissal?.Cancel();
+        _profileToastDismissal?.Dispose();
+        _profileToastDismissal = null;
         _profileToast = null;
+    }
+
+    private void ShowProfileToast(string message)
+    {
+        DismissProfileToast();
+        _profileToast = message;
+        _profileToastDismissal = new CancellationTokenSource();
+        _ = AutoDismissProfileToastAsync(_profileToastDismissal);
+    }
+
+    private async Task AutoDismissProfileToastAsync(CancellationTokenSource dismissal)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5), dismissal.Token);
+            await InvokeAsync(() =>
+            {
+                if (!ReferenceEquals(_profileToastDismissal, dismissal))
+                    return;
+
+                _profileToastDismissal.Dispose();
+                _profileToastDismissal = null;
+                _profileToast = null;
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer toast, manual dismissal, or component disposal superseded this timer.
+        }
+    }
+
+    public void Dispose()
+    {
+        _profileToastDismissal?.Cancel();
+        _profileToastDismissal?.Dispose();
+        _profileToastDismissal = null;
     }
 
     private async Task SignOut()
