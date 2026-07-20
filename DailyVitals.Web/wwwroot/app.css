@@ -1471,6 +1471,30 @@ h1 {
     opacity: 0.75;
 }
 
+.estimate-guidance {
+    display: grid;
+    gap: 4px;
+    border: 1px solid #c9dbd8;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #f3f8f7;
+    color: #304542;
+}
+
+.estimate-guidance strong {
+    color: #173f4a;
+}
+
+.estimate-guidance span {
+    color: #5d6a68;
+    font-size: 0.9rem;
+}
+
+.estimate-guidance p {
+    margin: 8px 0 0;
+    white-space: pre-line;
+}
+
 .nutrition-number-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -281,6 +281,15 @@
                             <InputText id="serving" class="form-input" @bind-Value="_form.ServingDescription" />
                         </div>
 
+                        @if (!string.IsNullOrWhiteSpace(_estimateGuidance))
+                        {
+                            <aside class="estimate-guidance" aria-live="polite">
+                                <strong>AI estimate guidance</strong>
+                                <span>Shown for reference only—not saved with the food entry.</span>
+                                <p>@_estimateGuidance</p>
+                            </aside>
+                        }
+
                         <div class="field-group">
                             <label for="food-notes">Food Notes</label>
                             <InputTextArea id="food-notes" class="form-input notes-input nutrition-notes-input" @bind-Value="_foodNotes" />
@@ -544,6 +553,7 @@
     private DateTime? _updatedAt;
     private string _consumedAtText = string.Empty;
     private string _foodNotes = string.Empty;
+    private string? _estimateGuidance;
     private string _searchText = string.Empty;
     private string? _message;
     private string _messageClass = "page-message";
@@ -816,6 +826,7 @@
         _form.AiConfidence = item.AiConfidence;
         _form.SourceNotes = item.SourceNotes;
         _foodNotes = item.FoodNotes ?? string.Empty;
+        _estimateGuidance = null;
         _consumedAtText = ToDateTimeLocal(item.ConsumedAt);
         _createdAt = item.CreatedAt;
         _updatedAt = item.UpdatedAt;
@@ -1017,6 +1028,7 @@
         _form.AiConfidence = null;
         _form.SourceNotes = null;
         _foodNotes = string.Empty;
+        _estimateGuidance = null;
         _consumedAtText = ToDateTimeLocal(LoginSession.CurrentLocalTime);
         _createdAt = null;
         _updatedAt = null;
@@ -1038,6 +1050,7 @@
 
         _isEstimating = true;
         _message = null;
+        _estimateGuidance = null;
 
         try
         {
@@ -1053,9 +1066,9 @@
             _form.PotassiumMg = estimate.EstimatedPotassiumMg ?? _form.PotassiumMg;
             _form.ServingDescription = estimate.ServingDescription ?? _form.ServingDescription;
             _form.EstimatedByAi = true;
-            _form.AiConfidence = estimate.Confidence;
-            _form.SourceNotes = estimate.SourceNotes;
-            _foodNotes = BuildRenalFoodNotes(estimate) ?? _foodNotes;
+            _form.AiConfidence = null;
+            _form.SourceNotes = null;
+            _estimateGuidance = BuildEstimateGuidance(estimate);
             ShowSuccess($"Estimate ready: {estimate.EstimatedPhosphorusMg} mg phosphorus.");
         }
         catch (InvalidOperationException ex)
@@ -1084,19 +1097,24 @@
         }
     }
 
-    private static string? BuildRenalFoodNotes(FoodPhosphorusEstimate estimate)
+    private static string? BuildEstimateGuidance(FoodPhosphorusEstimate estimate)
     {
+        var guidance = new List<string>();
+
         if (estimate.RenalRating is >= 1 and <= 5 && !string.IsNullOrWhiteSpace(estimate.RenalReason))
         {
-            return
+            guidance.Add(
                 $"Renal Rating: {BuildStarRating(estimate.RenalRating)}" +
                 $"{Environment.NewLine}{Environment.NewLine}" +
-                $"Reason: {estimate.RenalReason.Trim()}";
+                $"Reason: {estimate.RenalReason.Trim()}");
         }
 
-        return string.IsNullOrWhiteSpace(estimate.SourceNotes)
+        if (!string.IsNullOrWhiteSpace(estimate.SourceNotes))
+            guidance.Add($"Estimate notes: {estimate.SourceNotes.Trim()}");
+
+        return guidance.Count == 0
             ? null
-            : estimate.SourceNotes;
+            : string.Join($"{Environment.NewLine}{Environment.NewLine}", guidance);
     }
 
     private static string BuildStarRating(int rating)
