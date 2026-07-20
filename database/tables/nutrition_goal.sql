@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS public.nutrition_goal (
     protein_target_g int4 NULL,
     potassium_limit_mg int4 NULL,
     fluid_limit_ml int4 NULL,
+    sugar_limit_g int4 NULL,
     phosphorus_enabled boolean NOT NULL DEFAULT true,
     sodium_enabled boolean NOT NULL DEFAULT true,
     calorie_enabled boolean NOT NULL DEFAULT true,
@@ -21,6 +22,7 @@ CREATE TABLE IF NOT EXISTS public.nutrition_goal (
     CONSTRAINT nutrition_goal_protein_target_check CHECK (protein_target_g IS NULL OR protein_target_g >= 0),
     CONSTRAINT nutrition_goal_potassium_limit_check CHECK (potassium_limit_mg IS NULL OR potassium_limit_mg >= 0),
     CONSTRAINT nutrition_goal_fluid_limit_check CHECK (fluid_limit_ml IS NULL OR fluid_limit_ml >= 0),
+    CONSTRAINT nutrition_goal_sugar_limit_check CHECK (sugar_limit_g IS NULL OR sugar_limit_g > 0),
     CONSTRAINT fk_nutrition_goal_person FOREIGN KEY (person_id) REFERENCES public.person(person_id) ON DELETE CASCADE
 );
 

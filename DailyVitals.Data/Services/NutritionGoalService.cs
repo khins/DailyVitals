@@ -28,7 +28,8 @@ namespace DailyVitals.Data.Services
                     calorie_enabled,
                     protein_enabled,
                     potassium_enabled,
-                    fluid_enabled
+                    fluid_enabled,
+                    sugar_limit_g
                 FROM public.nutrition_goal
                 WHERE person_id = @person_id
                   AND effective_date <= @as_of_date
@@ -59,7 +60,8 @@ namespace DailyVitals.Data.Services
                 CalorieEnabled = reader.GetBoolean(11),
                 ProteinEnabled = reader.GetBoolean(12),
                 PotassiumEnabled = reader.GetBoolean(13),
-                FluidEnabled = reader.GetBoolean(14)
+                FluidEnabled = reader.GetBoolean(14),
+                SugarLimitG = reader.IsDBNull(15) ? null : reader.GetInt32(15)
             };
         }
 
@@ -85,7 +87,8 @@ namespace DailyVitals.Data.Services
                         calorie_enabled = @calorie_enabled,
                         protein_enabled = @protein_enabled,
                         potassium_enabled = @potassium_enabled,
-                        fluid_enabled = @fluid_enabled
+                        fluid_enabled = @fluid_enabled,
+                        sugar_limit_g = @sugar_limit_g
                     WHERE nutrition_goal_id = @nutrition_goal_id
                       AND person_id = @person_id
                     RETURNING nutrition_goal_id;";
@@ -112,7 +115,8 @@ namespace DailyVitals.Data.Services
                     calorie_enabled,
                     protein_enabled,
                     potassium_enabled,
-                    fluid_enabled
+                    fluid_enabled,
+                    sugar_limit_g
                 )
                 VALUES (
                     @person_id,
@@ -128,7 +132,8 @@ namespace DailyVitals.Data.Services
                     @calorie_enabled,
                     @protein_enabled,
                     @potassium_enabled,
-                    @fluid_enabled
+                    @fluid_enabled,
+                    @sugar_limit_g
                 )
                 RETURNING nutrition_goal_id;";
 
@@ -158,6 +163,7 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("protein_enabled", goal.ProteinEnabled);
             cmd.Parameters.AddWithValue("potassium_enabled", goal.PotassiumEnabled);
             cmd.Parameters.AddWithValue("fluid_enabled", goal.FluidEnabled);
+            cmd.Parameters.AddWithValue("sugar_limit_g", (object?)goal.SugarLimitG ?? DBNull.Value);
         }
 
     }

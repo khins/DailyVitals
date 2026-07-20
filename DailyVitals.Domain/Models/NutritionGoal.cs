@@ -13,6 +13,7 @@ namespace DailyVitals.Domain.Models
         public int? ProteinTargetG { get; set; }
         public int? PotassiumLimitMg { get; set; }
         public int? FluidLimitMl { get; set; }
+        public int? SugarLimitG { get; set; }
         public bool PhosphorusEnabled { get; set; } = true;
         public bool SodiumEnabled { get; set; } = true;
         public bool CalorieEnabled { get; set; } = true;
