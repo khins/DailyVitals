@@ -14,6 +14,7 @@ namespace DailyVitals.Domain.Models
         public int? GlucoseTargetMgDl { get; set; }
         public bool TrackKidneyLabs { get; set; }
         public bool TrackWeightLoss { get; set; }
+        public string TimeZoneId { get; set; } = "America/Chicago";
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 

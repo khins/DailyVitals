@@ -420,7 +420,7 @@
 
     private void ResetForm()
     {
-        var now = DateTime.Now;
+        var now = LoginSession.CurrentLocalTime;
         _editingId = null;
         Model.Systolic = null;
         Model.Diastolic = null;

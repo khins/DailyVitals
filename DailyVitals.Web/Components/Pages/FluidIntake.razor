@@ -262,7 +262,7 @@
     private DateTime? _updatedAt;
     private bool _showKidneyLabs = true;
     private bool _showDeleteConfirm;
-    private string _consumedAtText = ToDateTimeLocal(DateTime.Now);
+    private string _consumedAtText = string.Empty;
     private string? _message;
     private string _messageClass = "page-message";
     private string? _formToast;
@@ -292,6 +292,8 @@
             return;
         }
 
+        ResetForm();
+
         try
         {
             _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
@@ -312,10 +314,10 @@
         switch (Status)
         {
             case "saved":
-                ShowSuccess("Fluid intake saved.", DateTime.Now);
+                ShowSuccess("Fluid intake saved.", LoginSession.CurrentLocalTime);
                 break;
             case "updated":
-                ShowSuccess("Fluid intake updated.", DateTime.Now, "Updated at");
+                ShowSuccess("Fluid intake updated.", LoginSession.CurrentLocalTime, "Updated at");
                 break;
             case "demo":
                 ShowError(DemoModeGuard.ReadOnlyMessage);
@@ -429,7 +431,7 @@
     {
         _editingId = null;
         _editingConsumedAt = null;
-        _consumedAtText = ToDateTimeLocal(DateTime.Now);
+        _consumedAtText = ToDateTimeLocal(LoginSession.CurrentLocalTime);
         _form.BeverageName = "Water";
         _form.Amount = null;
         _form.Unit = FluidOuncesUnit;
@@ -484,7 +486,7 @@
 
             LoadHistory();
             ResetForm();
-            ShowSuccess("Fluid intake deleted.", DateTime.Now, "Deleted at");
+            ShowSuccess("Fluid intake deleted.", LoginSession.CurrentLocalTime, "Deleted at");
         }
         catch (Exception ex)
         {

@@ -211,7 +211,7 @@
     private DateTime? _updatedAt;
     private bool _showKidneyLabs = true;
     private bool _showDeleteConfirm;
-    private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
+    private string _readingTimeText = string.Empty;
     private string? _message;
     private string _messageClass = "page-message";
     private string? _formToast;
@@ -237,6 +237,8 @@
             StateHasChanged();
             return;
         }
+
+        ResetForm();
 
         try
         {
@@ -389,7 +391,7 @@
         _editingId = null;
         _form.GlucoseValue = null;
         _form.Notes = "Morning reading";
-        _readingTimeText = ToDateTimeLocal(DateTime.Now);
+        _readingTimeText = ToDateTimeLocal(LoginSession.CurrentLocalTime);
         _createdAt = null;
         _updatedAt = null;
     }

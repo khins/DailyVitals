@@ -31,12 +31,14 @@ public sealed class LocalLoginSession
     public bool IsSignedIn { get; private set; }
     public string? UserName { get; private set; }
     public string? PersonName { get; private set; }
+    public string TimeZoneId { get; private set; } = "America/Chicago";
     public long? PersonId { get; private set; }
     public bool IsDemo { get; private set; }
     public bool RememberDevice { get; private set; }
     public bool CanWrite => IsSignedIn && !IsDemo;
     public string PersonDisplayName =>
         string.IsNullOrWhiteSpace(PersonName) ? UserName ?? "Person" : PersonName;
+    public DateTime CurrentLocalTime => GetCurrentLocalTime(TimeZoneId);
 
     public void SignIn(string userName, long? personId, bool isDemo = false, bool rememberDevice = false)
     {
@@ -44,6 +46,7 @@ public sealed class LocalLoginSession
         UserName = userName;
         PersonId = personId;
         PersonName = ResolvePersonName(personId);
+        TimeZoneId = ResolveTimeZoneId(personId);
         IsDemo = isDemo;
         RememberDevice = rememberDevice;
     }
@@ -107,6 +110,7 @@ public sealed class LocalLoginSession
         UserName = null;
         PersonId = null;
         PersonName = null;
+        TimeZoneId = "America/Chicago";
         IsDemo = false;
         RememberDevice = false;
     }
@@ -143,5 +147,52 @@ public sealed class LocalLoginSession
             // be loaded. PersonDisplayName will fall back to the account email.
             return null;
         }
+    }
+
+    public void UpdateTimeZone(string timeZoneId)
+    {
+        TimeZoneId = NormalizeTimeZoneId(timeZoneId);
+    }
+
+    private string ResolveTimeZoneId(long? personId)
+    {
+        if (!personId.HasValue)
+            return "America/Chicago";
+
+        try
+        {
+            return NormalizeTimeZoneId(_personService.GetPersonById(personId.Value)?.TimeZoneId);
+        }
+        catch
+        {
+            return "America/Chicago";
+        }
+    }
+
+    private static string NormalizeTimeZoneId(string? timeZoneId)
+    {
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+            return "America/Chicago";
+
+        try
+        {
+            _ = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            return timeZoneId;
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return "America/Chicago";
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return "America/Chicago";
+        }
+    }
+
+    private static DateTime GetCurrentLocalTime(string timeZoneId)
+    {
+        var normalizedId = NormalizeTimeZoneId(timeZoneId);
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(normalizedId);
+        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
     }
 }
