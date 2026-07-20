@@ -56,8 +56,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/";
-        options.AccessDeniedPath = "/";
+        options.LoginPath = "/signin";
+        options.AccessDeniedPath = "/signin";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
@@ -95,13 +95,13 @@ builder.Services.AddSingleton<AuthTicketService>();
 builder.Services.AddScoped<DemoAccountSeeder>();
 
 var app = builder.Build();
-var blazorRuntimePath = Path.Combine(
+var blazorRuntimePath = app.Environment.IsDevelopment() ? null : Path.Combine(
     AppContext.BaseDirectory,
     "wwwroot",
     "_framework",
     "blazor.web.js");
 
-if (!File.Exists(blazorRuntimePath))
+if (blazorRuntimePath is not null && !File.Exists(blazorRuntimePath))
 {
     throw new FileNotFoundException(
         "The published Blazor runtime is missing. Interactive pages cannot start.",
@@ -233,15 +233,15 @@ app.MapPost("/auth/login", async (
     var rememberDevice = IsChecked(form["RememberMe"].ToString());
 
     if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
-        return Results.Redirect("/?signin=missing");
+        return Results.Redirect("/signin?signin=missing");
 
     var loginResult = loginService.Authenticate(userName, password);
     if (loginResult.IsLocked)
-        return Results.Redirect("/?signin=locked");
+        return Results.Redirect("/signin?signin=locked");
 
     var loginUser = loginResult.LoginUser;
     if (loginUser?.PersonId is not > 0)
-        return Results.Redirect("/?signin=invalid");
+        return Results.Redirect("/signin?signin=invalid");
 
     var claims = new[]
     {
@@ -360,7 +360,7 @@ app.MapPost("/blood-pressure/save", async (
         !long.TryParse(personIdValue, out var personId) ||
         personId <= 0)
     {
-        return Results.Redirect("/?signin=invalid");
+        return Results.Redirect("/signin?signin=invalid");
     }
 
     var isDemo = string.Equals(
@@ -440,7 +440,7 @@ app.MapPost("/blood-glucose/save", async (
         !long.TryParse(personIdValue, out var personId) ||
         personId <= 0)
     {
-        return Results.Redirect("/?signin=invalid");
+        return Results.Redirect("/signin?signin=invalid");
     }
 
     var isDemo = string.Equals(
@@ -509,7 +509,7 @@ app.MapPost("/weight/save", async (
         !long.TryParse(personIdValue, out var personId) ||
         personId <= 0)
     {
-        return Results.Redirect("/?signin=invalid");
+        return Results.Redirect("/signin?signin=invalid");
     }
 
     var isDemo = string.Equals(
@@ -592,7 +592,7 @@ app.MapPost("/exercise/save", async (
         !long.TryParse(personIdValue, out var personId) ||
         personId <= 0)
     {
-        return Results.Redirect("/?signin=invalid");
+        return Results.Redirect("/signin?signin=invalid");
     }
 
     var isDemo = string.Equals(
@@ -710,7 +710,7 @@ app.MapPost("/exercise/delete", async (
         !long.TryParse(personIdValue, out var personId) ||
         personId <= 0)
     {
-        return Results.Redirect("/?signin=invalid");
+        return Results.Redirect("/signin?signin=invalid");
     }
 
     var isDemo = string.Equals(
@@ -758,7 +758,7 @@ app.MapPost("/fluid-intake/save", async (
         !long.TryParse(personIdValue, out var personId) ||
         personId <= 0)
     {
-        return Results.Redirect("/?signin=invalid");
+        return Results.Redirect("/signin?signin=invalid");
     }
 
     var isDemo = string.Equals(
@@ -857,9 +857,12 @@ app.MapGet("/signout", async (HttpContext httpContext) =>
     return Results.Redirect("/");
 }).AllowAnonymous();
 
-app.MapGet("/client/blazor.web.js", () =>
-        Results.File(blazorRuntimePath, "text/javascript"))
-    .AllowAnonymous();
+if (blazorRuntimePath is not null)
+{
+    app.MapGet("/client/blazor.web.js", () =>
+            Results.File(blazorRuntimePath, "text/javascript"))
+        .AllowAnonymous();
+}
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

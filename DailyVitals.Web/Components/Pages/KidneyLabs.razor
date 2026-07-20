@@ -439,7 +439,7 @@
     private long? _editingId;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
-    private string _resultMonthText = ToMonthText(DateTime.Now);
+    private string _resultMonthText = string.Empty;
     private string? _message;
     private string _messageClass = "page-message";
     private string? _formToast;
@@ -457,7 +457,7 @@
 
         if (!LoginSession.IsSignedIn)
         {
-            Navigation.NavigateTo("/");
+            Navigation.NavigateTo("/signin");
             return;
         }
 
@@ -467,6 +467,8 @@
             StateHasChanged();
             return;
         }
+
+        ResetForm();
 
         if (PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs == false)
         {
@@ -651,7 +653,7 @@
     private void ResetForm()
     {
         _editingId = null;
-        _resultMonthText = ToMonthText(DateTime.Now);
+        _resultMonthText = ToMonthText(LoginSession.CurrentLocalTime);
         _form.Albumin = null;
         _form.NPCR = null;
         _form.Potassium = null;
@@ -1004,7 +1006,7 @@
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/signin");
     }
 
     private static DateTime NormalizeMonth(DateTime value) => new(value.Year, value.Month, 1);

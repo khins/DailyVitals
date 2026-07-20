@@ -337,7 +337,7 @@
     private bool _showCaloriesFormulaModal;
     private bool _isCaloriesManualOverride;
     private string? _caloriesTip;
-    private string _startTimeText = ToDateTimeLocal(DateTime.Now);
+    private string _startTimeText = string.Empty;
     private string? _message;
     private string _messageClass = "page-message";
     private bool ShowInlineFormMessage => !string.IsNullOrWhiteSpace(_message);
@@ -353,7 +353,7 @@
 
         if (!LoginSession.IsSignedIn)
         {
-            Navigation.NavigateTo("/");
+            Navigation.NavigateTo("/signin");
             return;
         }
 
@@ -363,6 +363,8 @@
             StateHasChanged();
             return;
         }
+
+        ResetForm();
 
         try
         {
@@ -574,7 +576,7 @@
         _form.CaloriesExpended = null;
         _form.Intensity = "Moderate";
         _form.Notes = string.Empty;
-        _startTimeText = ToDateTimeLocal(DateTime.Now);
+        _startTimeText = ToDateTimeLocal(LoginSession.CurrentLocalTime);
         _createdAt = null;
         _updatedAt = null;
         _showAdvancedCalories = false;
@@ -735,7 +737,7 @@
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/signin");
     }
 
     private RenderFragment RenderHistoryPager() => @<div class="table-pager">

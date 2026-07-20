@@ -1,6 +1,8 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 
+@inject IWebHostEnvironment HostEnvironment
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,6 +10,7 @@
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["marketing.css"]" />
     <link rel="stylesheet" href="@Assets["DailyVitals.Web.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
@@ -20,7 +23,7 @@
     <script src="@Assets["auth.js"]"></script>
     <script src="@Assets["exercise-other.js"]"></script>
     <script src="@Assets["weight-bmi.js"]"></script>
-    <script src="/client/blazor.web.js"></script>
+    <script src="@(HostEnvironment.IsDevelopment() ? "/_framework/blazor.web.js" : "/client/blazor.web.js")"></script>
 </body>
 
 </html>

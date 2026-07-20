@@ -241,7 +241,7 @@
 
         if (!LoginSession.IsSignedIn)
         {
-            Navigation.NavigateTo("/");
+            Navigation.NavigateTo("/signin");
             return;
         }
 
@@ -420,7 +420,7 @@
 
     private void ResetForm()
     {
-        var now = DateTime.Now;
+        var now = LoginSession.CurrentLocalTime;
         _editingId = null;
         Model.Systolic = null;
         Model.Diastolic = null;
@@ -479,7 +479,7 @@
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/signin");
     }
 
     private RenderFragment RenderHistoryPager() => @<div class="table-pager">

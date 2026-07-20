@@ -542,7 +542,7 @@
     private DateTime? _editingConsumedAt;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
-    private string _consumedAtText = ToDateTimeLocal(DateTime.Now);
+    private string _consumedAtText = string.Empty;
     private string _foodNotes = string.Empty;
     private string _searchText = string.Empty;
     private string? _message;
@@ -605,7 +605,7 @@
 
         if (!LoginSession.IsSignedIn)
         {
-            Navigation.NavigateTo("/");
+            Navigation.NavigateTo("/signin");
             return;
         }
 
@@ -616,6 +616,7 @@
             return;
         }
 
+        ResetForm();
         LoadPersonPreferences();
         LoadHistory();
         ApplyDraftFoodFromQuery();
@@ -1016,7 +1017,7 @@
         _form.AiConfidence = null;
         _form.SourceNotes = null;
         _foodNotes = string.Empty;
-        _consumedAtText = ToDateTimeLocal(DateTime.Now);
+        _consumedAtText = ToDateTimeLocal(LoginSession.CurrentLocalTime);
         _createdAt = null;
         _updatedAt = null;
     }
@@ -1350,7 +1351,7 @@
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/signin");
     }
 
     private static string ToDateTimeLocal(DateTime value) => value.ToString("yyyy-MM-ddTHH:mm");

@@ -313,7 +313,7 @@
     private bool _showBmiHelp;
     private DateTime? _createdAt;
     private DateTime? _updatedAt;
-    private string _readingTimeText = ToDateTimeLocal(DateTime.Now);
+    private string _readingTimeText = string.Empty;
     private string? _message;
     private string _messageClass = "page-message";
     private string? _formToast;
@@ -330,7 +330,7 @@
 
         if (!LoginSession.IsSignedIn)
         {
-            Navigation.NavigateTo("/");
+            Navigation.NavigateTo("/signin");
             return;
         }
 
@@ -340,6 +340,8 @@
             StateHasChanged();
             return;
         }
+
+        ResetForm();
 
         try
         {
@@ -529,7 +531,7 @@
 
     private void ResetForm()
     {
-        var now = DateTime.Now;
+        var now = LoginSession.CurrentLocalTime;
         _editingId = null;
         _form.WeightValue = null;
         _form.WeightUnit = "lb";
@@ -652,7 +654,7 @@
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/signin");
     }
 
     private RenderFragment RenderHistoryPager() => @<div class="table-pager">

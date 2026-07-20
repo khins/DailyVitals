@@ -1,0 +1,586 @@
+:root {
+    --marketing-ink: #12333c;
+    --marketing-muted: #587076;
+    --marketing-teal: #174a57;
+    --marketing-teal-dark: #103943;
+    --marketing-mint: #dff2eb;
+    --marketing-surface: #ffffff;
+    --marketing-border: #d4e1df;
+    --marketing-warm: #f4f7f5;
+}
+
+.marketing-site {
+    min-height: 100vh;
+    background: var(--marketing-surface);
+    color: var(--marketing-ink);
+}
+
+.marketing-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 32px;
+    min-height: 76px;
+    padding: 12px clamp(20px, 5vw, 76px);
+    border-bottom: 1px solid rgba(212, 225, 223, 0.8);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+}
+
+.marketing-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    color: var(--marketing-ink);
+    font-size: 1.08rem;
+    font-weight: 800;
+}
+
+.marketing-brand:hover,
+.marketing-button:hover {
+    text-decoration: none;
+}
+
+.marketing-brand__mark {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: var(--marketing-teal);
+    color: #fff;
+    font-size: 0.76rem;
+    letter-spacing: 0.03em;
+}
+
+.marketing-nav {
+    display: flex;
+    justify-content: center;
+    gap: clamp(18px, 3vw, 38px);
+}
+
+.marketing-nav a {
+    padding: 10px 0;
+    color: #405b61;
+    font-weight: 700;
+}
+
+.marketing-nav a.active {
+    color: var(--marketing-teal);
+    box-shadow: inset 0 -2px var(--marketing-teal);
+}
+
+.marketing-actions,
+.marketing-hero__actions,
+.pricing-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.marketing-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    border: 1px solid var(--marketing-teal);
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 800;
+}
+
+.marketing-button--primary {
+    background: var(--marketing-teal);
+    color: #fff;
+}
+
+.marketing-button--primary:hover {
+    background: var(--marketing-teal-dark);
+    color: #fff;
+}
+
+.marketing-button--quiet {
+    border-color: transparent;
+    color: var(--marketing-teal);
+}
+
+.marketing-button--outline {
+    background: #fff;
+    color: var(--marketing-teal);
+}
+
+.marketing-main {
+    min-height: 60vh;
+}
+
+.marketing-hero,
+.marketing-page-hero,
+.marketing-section,
+.marketing-cta,
+.legal-page,
+.contact-page {
+    width: min(1180px, calc(100% - 40px));
+    margin-inline: auto;
+}
+
+.marketing-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+    align-items: center;
+    gap: clamp(40px, 7vw, 94px);
+    min-height: 680px;
+    padding: 86px 0;
+}
+
+.marketing-kicker {
+    margin-bottom: 15px;
+    color: #28705d;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.marketing-hero h1,
+.marketing-page-hero h1 {
+    max-width: 820px;
+    margin-bottom: 22px;
+    font-size: clamp(2.7rem, 6vw, 5.4rem);
+    line-height: 0.98;
+    letter-spacing: -0.055em;
+}
+
+.marketing-hero__lead,
+.marketing-page-hero > p,
+.marketing-section__heading > p {
+    max-width: 720px;
+    color: var(--marketing-muted);
+    font-size: clamp(1.08rem, 2vw, 1.3rem);
+    line-height: 1.7;
+}
+
+.marketing-hero__actions {
+    margin-top: 30px;
+}
+
+.marketing-trust-note {
+    margin-top: 18px;
+    color: var(--marketing-muted);
+    font-size: 0.92rem;
+}
+
+.marketing-dashboard-preview {
+    padding: 22px;
+    border: 1px solid #c9dfd8;
+    border-radius: 28px;
+    background: linear-gradient(145deg, #e8f7f0, #f8fbfa);
+    box-shadow: 0 30px 80px rgba(23, 74, 87, 0.18);
+}
+
+.marketing-dashboard-preview__top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    color: var(--marketing-muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.marketing-dashboard-preview__status {
+    color: #237255;
+}
+
+.marketing-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.marketing-preview-card {
+    min-height: 132px;
+    padding: 18px;
+    border: 1px solid rgba(212, 225, 223, 0.85);
+    border-radius: 16px;
+    background: #fff;
+}
+
+.marketing-preview-card span,
+.marketing-preview-card small {
+    display: block;
+    color: var(--marketing-muted);
+}
+
+.marketing-preview-card strong {
+    display: block;
+    margin: 16px 0 5px;
+    font-size: 1.55rem;
+}
+
+.marketing-section {
+    padding: 88px 0;
+}
+
+.marketing-section--tint {
+    width: 100%;
+    max-width: none;
+    padding-inline: max(20px, calc((100% - 1180px) / 2));
+    background: var(--marketing-warm);
+}
+
+.marketing-section__heading {
+    max-width: 760px;
+    margin-bottom: 42px;
+}
+
+.marketing-section__heading h2,
+.marketing-cta h2 {
+    margin-bottom: 14px;
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1.06;
+    letter-spacing: -0.04em;
+}
+
+.marketing-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.marketing-card-grid--four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.marketing-card {
+    padding: 28px;
+    border: 1px solid var(--marketing-border);
+    border-radius: 18px;
+    background: #fff;
+}
+
+.marketing-card__icon {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    margin-bottom: 24px;
+    border-radius: 13px;
+    background: var(--marketing-mint);
+    color: var(--marketing-teal);
+    font-weight: 900;
+}
+
+.marketing-card h2,
+.marketing-card h3 {
+    margin-bottom: 10px;
+}
+
+.marketing-card p,
+.marketing-card li,
+.marketing-copy p,
+.marketing-copy li {
+    color: var(--marketing-muted);
+    line-height: 1.7;
+}
+
+.marketing-page-hero {
+    padding: 92px 0 60px;
+}
+
+.marketing-page-hero h1 {
+    font-size: clamp(2.7rem, 5vw, 4.7rem);
+}
+
+.marketing-feature-row,
+.contact-grid,
+.about-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 42px;
+    align-items: start;
+}
+
+.marketing-feature-row + .marketing-feature-row {
+    margin-top: 70px;
+}
+
+.marketing-feature-panel {
+    min-height: 280px;
+    padding: 34px;
+    border-radius: 24px;
+    background: linear-gradient(145deg, #e1f3ec, #f7faf9);
+}
+
+.marketing-feature-panel strong {
+    display: block;
+    margin-bottom: 14px;
+    font-size: 1.45rem;
+}
+
+.marketing-feature-panel ul,
+.marketing-copy ul,
+.pricing-card ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.marketing-feature-panel li,
+.pricing-card li {
+    margin: 10px 0;
+    color: var(--marketing-muted);
+    line-height: 1.5;
+}
+
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+    max-width: 880px;
+    margin: 0 auto;
+}
+
+.pricing-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 510px;
+    padding: 36px;
+    border: 1px solid var(--marketing-border);
+    border-radius: 22px;
+    background: #fff;
+}
+
+.pricing-card--featured {
+    border: 2px solid var(--marketing-teal);
+    box-shadow: 0 24px 60px rgba(23, 74, 87, 0.13);
+}
+
+.pricing-badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    border-radius: 999px;
+    padding: 7px 11px;
+    background: var(--marketing-mint);
+    color: #24634f;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.pricing-price {
+    margin: 20px 0 8px;
+    font-size: 3.2rem;
+    font-weight: 900;
+    letter-spacing: -0.055em;
+}
+
+.pricing-price span {
+    color: var(--marketing-muted);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.pricing-card ul {
+    flex: 1;
+    margin: 24px 0;
+}
+
+.pricing-card__actions .marketing-button {
+    width: 100%;
+}
+
+.pricing-note {
+    max-width: 800px;
+    margin: 28px auto 0;
+    color: var(--marketing-muted);
+    text-align: center;
+    line-height: 1.65;
+}
+
+.marketing-cta {
+    margin-top: 70px;
+    margin-bottom: 90px;
+    padding: 56px;
+    border-radius: 26px;
+    background: var(--marketing-teal);
+    color: #fff;
+    text-align: center;
+}
+
+.marketing-cta p {
+    max-width: 660px;
+    margin: 0 auto 28px;
+    color: #d6e8e8;
+    font-size: 1.12rem;
+    line-height: 1.6;
+}
+
+.marketing-cta .marketing-button {
+    border-color: #fff;
+    background: #fff;
+    color: var(--marketing-teal);
+}
+
+.legal-page,
+.contact-page {
+    max-width: 860px;
+    padding: 80px 0 100px;
+}
+
+.legal-page h1,
+.contact-page h1 {
+    margin-bottom: 12px;
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    letter-spacing: -0.045em;
+}
+
+.legal-updated {
+    margin-bottom: 44px;
+    color: var(--marketing-muted);
+}
+
+.legal-page section {
+    margin-top: 38px;
+}
+
+.legal-page h2 {
+    margin-bottom: 12px;
+}
+
+.legal-page p,
+.legal-page li,
+.contact-page p {
+    color: var(--marketing-muted);
+    line-height: 1.75;
+}
+
+.contact-grid {
+    margin-top: 42px;
+}
+
+.contact-card {
+    min-height: 220px;
+    padding: 28px;
+    border: 1px solid var(--marketing-border);
+    border-radius: 18px;
+    background: var(--marketing-warm);
+}
+
+.contact-card a {
+    font-weight: 800;
+}
+
+.marketing-footer {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 30px 70px;
+    padding: 58px clamp(20px, 5vw, 76px) 32px;
+    background: #102f37;
+    color: #fff;
+}
+
+.marketing-brand--footer {
+    color: #fff;
+}
+
+.marketing-footer > div > p,
+.marketing-footer__disclaimer,
+.marketing-footer__copyright {
+    color: #bfd0d2;
+    line-height: 1.6;
+}
+
+.marketing-footer nav {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 24px;
+}
+
+.marketing-footer nav a {
+    color: #e6f0f0;
+    font-weight: 700;
+}
+
+.marketing-footer__disclaimer,
+.marketing-footer__copyright {
+    margin: 0;
+    font-size: 0.88rem;
+}
+
+.marketing-footer__copyright {
+    text-align: right;
+}
+
+@media (max-width: 980px) {
+    .marketing-header {
+        grid-template-columns: 1fr auto;
+    }
+
+    .marketing-nav {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-content: flex-start;
+        overflow-x: auto;
+    }
+
+    .marketing-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .marketing-card-grid--four {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .marketing-header {
+        gap: 12px;
+    }
+
+    .marketing-actions .marketing-button--quiet {
+        display: none;
+    }
+
+    .marketing-actions .marketing-button {
+        padding-inline: 12px;
+    }
+
+    .marketing-hero {
+        min-height: auto;
+        padding: 58px 0;
+    }
+
+    .marketing-hero h1,
+    .marketing-page-hero h1 {
+        font-size: 2.75rem;
+    }
+
+    .marketing-card-grid,
+    .marketing-card-grid--four,
+    .pricing-grid,
+    .marketing-feature-row,
+    .contact-grid,
+    .about-grid,
+    .marketing-footer {
+        grid-template-columns: 1fr;
+    }
+
+    .marketing-preview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pricing-card {
+        min-height: auto;
+    }
+
+    .marketing-cta {
+        padding: 40px 24px;
+    }
+
+    .marketing-footer__copyright {
+        text-align: left;
+    }
+}

@@ -27,6 +27,7 @@ namespace DailyVitals.Data.Services
                     glucose_target_mg_dl,
                     track_kidney_labs,
                     track_weight_loss,
+                    time_zone_id,
                     created_at,
                     updated_at
                 FROM person
@@ -50,8 +51,9 @@ namespace DailyVitals.Data.Services
                     GlucoseTargetMgDl = reader.IsDBNull(7) ? null : reader.GetInt32(7),
                     TrackKidneyLabs = reader.GetBoolean(8),
                     TrackWeightLoss = reader.GetBoolean(9),
-                    CreatedAt = reader.GetDateTime(10),
-                    UpdatedAt = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
+                    TimeZoneId = reader.GetString(10),
+                    CreatedAt = reader.GetDateTime(11),
+                    UpdatedAt = reader.IsDBNull(12) ? null : reader.GetDateTime(12)
                 });
             }
 
@@ -80,6 +82,7 @@ namespace DailyVitals.Data.Services
                     glucose_target_mg_dl,
                     track_kidney_labs,
                     track_weight_loss,
+                    time_zone_id,
                     created_at,
                     updated_at
                 FROM public.person
@@ -105,8 +108,9 @@ namespace DailyVitals.Data.Services
                 GlucoseTargetMgDl = reader.IsDBNull(7) ? null : reader.GetInt32(7),
                 TrackKidneyLabs = reader.GetBoolean(8),
                 TrackWeightLoss = reader.GetBoolean(9),
-                CreatedAt = reader.GetDateTime(10),
-                UpdatedAt = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
+                TimeZoneId = reader.GetString(10),
+                CreatedAt = reader.GetDateTime(11),
+                UpdatedAt = reader.IsDBNull(12) ? null : reader.GetDateTime(12)
             };
         }
 
@@ -238,7 +242,8 @@ namespace DailyVitals.Data.Services
             bool isDiabetic = false,
             int? glucoseTargetMgDl = null,
             bool trackKidneyLabs = false,
-            bool trackWeightLoss = false)
+            bool trackWeightLoss = false,
+            string timeZoneId = "America/Chicago")
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
@@ -254,6 +259,7 @@ namespace DailyVitals.Data.Services
                     glucose_target_mg_dl = @glucose_target_mg_dl,
                     track_kidney_labs = @track_kidney_labs,
                     track_weight_loss = @track_weight_loss,
+                    time_zone_id = @time_zone_id,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE person_id = @person_id;";
 
@@ -268,6 +274,7 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("glucose_target_mg_dl", (object?)glucoseTargetMgDl ?? DBNull.Value);
             cmd.Parameters.AddWithValue("track_kidney_labs", trackKidneyLabs);
             cmd.Parameters.AddWithValue("track_weight_loss", trackWeightLoss);
+            cmd.Parameters.AddWithValue("time_zone_id", timeZoneId);
             cmd.ExecuteNonQuery();
         }
 

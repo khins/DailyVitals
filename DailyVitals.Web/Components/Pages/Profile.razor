@@ -131,6 +131,18 @@
                                     </InputSelect>
                                 </div>
                             </div>
+
+                            <div class="field-group form-grid-span-all">
+                                <label for="profile-time-zone">Time Zone Region</label>
+                                <InputSelect id="profile-time-zone" class="form-input" @bind-Value="Model.TimeZoneId">
+                                    @foreach (var timeZone in TimeZoneOptions)
+                                    {
+                                        <option value="@timeZone.Id">@timeZone.Label</option>
+                                    }
+                                </InputSelect>
+                                <p class="field-hint">Used for default entry times and time-based notes. Daylight saving changes are applied automatically.</p>
+                                <ValidationMessage For="() => Model.TimeZoneId" />
+                            </div>
                         </div>
 
                         <fieldset class="gender-options profile-gender-options">
@@ -280,7 +292,7 @@
 
         if (!LoginSession.IsSignedIn)
         {
-            Navigation.NavigateTo("/");
+            Navigation.NavigateTo("/signin");
             return;
         }
 
@@ -382,6 +394,7 @@
             Model.GlucoseTargetMgDl = person.GlucoseTargetMgDl ?? 100;
             Model.TrackKidneyLabs = person.TrackKidneyLabs;
             Model.TrackWeightLoss = person.TrackWeightLoss;
+            Model.TimeZoneId = person.TimeZoneId;
             Model.BirthDateText = person.BirthDate?.ToString("yyyy-MM-dd") ?? string.Empty;
             _createdAt = person.CreatedAt;
             _updatedAt = person.UpdatedAt;
@@ -469,7 +482,10 @@
                 Model.IsDiabetic,
                 Model.GlucoseTargetMgDl,
                 Model.TrackKidneyLabs,
-                Model.TrackWeightLoss);
+                Model.TrackWeightLoss,
+                Model.TimeZoneId);
+
+            LoginSession.UpdateTimeZone(Model.TimeZoneId);
 
             var trimmedUserName = Model.UserName!.Trim();
             if (!string.Equals(trimmedUserName, LoginSession.UserName, StringComparison.OrdinalIgnoreCase))
@@ -505,7 +521,7 @@
                 maxValue: Model.DiastolicThresholdMax);
 
             Model.BirthDate = birthDate;
-            _updatedAt = DateTime.Now;
+            _updatedAt = LoginSession.CurrentLocalTime;
             _messageClass = "page-message";
             _message = null;
             _profileToast = "Profile and nutrition targets updated.";
@@ -532,10 +548,38 @@
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/signin");
     }
 
     private decimal? SelectedHeightFt => Model.HeightFeet <= 0 ? null : Model.HeightFeet + (Model.HeightInches / 12m);
+
+    private static readonly IReadOnlyList<TimeZoneOption> TimeZoneOptions = BuildTimeZoneOptions();
+
+    private static IReadOnlyList<TimeZoneOption> BuildTimeZoneOptions()
+    {
+        var options = TimeZoneInfo.GetSystemTimeZones()
+            .Select(zone =>
+            {
+                var id = zone.Id;
+                if (!id.Contains('/') &&
+                    TimeZoneInfo.TryConvertWindowsIdToIanaId(id, out var ianaId) &&
+                    !string.IsNullOrWhiteSpace(ianaId))
+                {
+                    id = ianaId;
+                }
+
+                return new TimeZoneOption(id, $"{zone.DisplayName} — {id}");
+            })
+            .GroupBy(option => option.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(option => option.Label, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (!options.Any(option => string.Equals(option.Id, "America/Chicago", StringComparison.OrdinalIgnoreCase)))
+            options.Add(new TimeZoneOption("America/Chicago", "Central Time — America/Chicago"));
+
+        return options;
+    }
 
     private void SetHeightSelectors(decimal? heightFt)
     {
@@ -589,6 +633,9 @@
 
         public bool TrackWeightLoss { get; set; }
 
+        [Required(ErrorMessage = "Select a time zone region.")]
+        public string TimeZoneId { get; set; } = "America/Chicago";
+
         [Required(ErrorMessage = "Enter a phosphorus limit.")]
         [Range(1, int.MaxValue, ErrorMessage = "Phosphorus limit must be greater than zero.")]
         public int? PhosphorusLimitMg { get; set; } = 1000;
@@ -613,6 +660,8 @@
 
         public int? DiastolicThresholdMax { get; set; } = 80;
     }
+
+    private sealed record TimeZoneOption(string Id, string Label);
 }
 
 

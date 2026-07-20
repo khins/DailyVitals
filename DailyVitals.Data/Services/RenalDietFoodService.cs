@@ -18,24 +18,31 @@ namespace DailyVitals.Data.Services
 
             const string sql = @"
                 SELECT
-                    rdf.renal_food_id,
-                    rdf.person_id,
+                    rdf.renal_friendly_food_id,
                     rdf.food_name,
-                    rdf.serving_size,
-                    rdf.calories,
-                    rdf.sodium_mg,
-                    rdf.potassium_mg,
-                    rdf.phosphorus_mg,
+                    rdf.serving_description,
+                    ROUND(rdf.calories)::int,
+                    ROUND(rdf.sodium_mg)::int,
+                    ROUND(rdf.potassium_mg)::int,
+                    ROUND(rdf.phosphorus_mg)::int,
                     rdf.protein_g,
-                    rdf.allowed,
-                    rdf.restriction_notes,
-                    rfc.category_name
-                FROM renal_diet_food rdf
-                LEFT JOIN renal_food_category rfc
-                    ON rfc.category_id = rdf.category_id
+                    rdf.category,
+                    rdf.renal_rating,
+                    rdf.guidance_notes,
+                    rdf.source_notes,
+                    rdf.is_active
+                FROM public.renal_friendly_food rdf
+                WHERE rdf.is_active = TRUE
                 ORDER BY
-                    rdf.allowed DESC,
-                    rfc.category_name,
+                    CASE lower(COALESCE(rdf.renal_rating, ''))
+                        WHEN 'preferred' THEN 0
+                        WHEN 'friendly' THEN 0
+                        WHEN 'good' THEN 0
+                        WHEN 'limit' THEN 1
+                        WHEN 'avoid' THEN 2
+                        ELSE 1
+                    END,
+                    rdf.category,
                     rdf.food_name;";
 
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -46,26 +53,27 @@ namespace DailyVitals.Data.Services
                 list.Add(new RenalDietFood
                 {
                     RenalFoodId = reader.GetInt64(0),
-                    PersonId = reader.IsDBNull(1) ? 0 : reader.GetInt64(1),
-                    FoodName = reader.GetString(2),
-                    ServingSize = reader.IsDBNull(3) ? null : reader.GetString(3),
-                    Calories = reader.IsDBNull(4) ? null : reader.GetInt32(4),
-                    SodiumMg = reader.IsDBNull(5) ? null : reader.GetInt32(5),
-                    PotassiumMg = reader.IsDBNull(6) ? null : reader.GetInt32(6),
-                    PhosphorusMg = reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                    ProteinG = reader.IsDBNull(8) ? null : reader.GetDecimal(8),
-                    Allowed = reader.GetBoolean(9),
-                    RestrictionNotes = reader.IsDBNull(10) ? null : reader.GetString(10),
-                    CategoryName = reader.IsDBNull(11) ? null : reader.GetString(11)
+                    FoodName = reader.GetString(1),
+                    ServingSize = reader.IsDBNull(2) ? null : reader.GetString(2),
+                    Calories = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                    SodiumMg = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                    PotassiumMg = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                    PhosphorusMg = reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                    ProteinG = reader.IsDBNull(7) ? null : reader.GetDecimal(7),
+                    CategoryName = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    RenalRating = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    GuidanceNotes = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    SourceNotes = reader.IsDBNull(11) ? null : reader.GetString(11),
+                    IsActive = reader.GetBoolean(12)
                 });
             }
 
             return list;
         }
 
-        public List<RenalMealCombo> GetWeightLossMealCombos(long personId, int maxItems = 2)
+        public List<RenalMealCombo> GetWeightLossMealCombos(int maxItems = 2)
         {
-            var foods = GetRankedFoods(personId, 12);
+            var foods = GetRankedFoods(12);
             var combos = BuildMealCombos(foods);
 
             return combos
@@ -73,7 +81,7 @@ namespace DailyVitals.Data.Services
                 .ToList();
         }
 
-        private List<RenalDietFood> GetRankedFoods(long personId, int maxItems)
+        private List<RenalDietFood> GetRankedFoods(int maxItems)
         {
             var list = new List<RenalDietFood>();
 
@@ -82,23 +90,22 @@ namespace DailyVitals.Data.Services
 
             const string sql = @"
                 SELECT
-                    rdf.renal_food_id,
-                    rdf.person_id,
+                    rdf.renal_friendly_food_id,
                     rdf.food_name,
-                    rdf.serving_size,
-                    rdf.calories,
-                    rdf.sodium_mg,
-                    rdf.potassium_mg,
-                    rdf.phosphorus_mg,
+                    rdf.serving_description,
+                    ROUND(rdf.calories)::int,
+                    ROUND(rdf.sodium_mg)::int,
+                    ROUND(rdf.potassium_mg)::int,
+                    ROUND(rdf.phosphorus_mg)::int,
                     rdf.protein_g,
-                    rdf.allowed,
-                    rdf.restriction_notes,
-                    rfc.category_name
-                FROM renal_diet_food rdf
-                LEFT JOIN renal_food_category rfc
-                    ON rfc.category_id = rdf.category_id
-                WHERE rdf.person_id = @person_id
-                  AND rdf.allowed = TRUE
+                    rdf.category,
+                    rdf.renal_rating,
+                    rdf.guidance_notes,
+                    rdf.source_notes,
+                    rdf.is_active
+                FROM public.renal_friendly_food rdf
+                WHERE rdf.is_active = TRUE
+                  AND lower(COALESCE(rdf.renal_rating, '')) NOT IN ('avoid', 'restricted')
                 ORDER BY
                     CASE
                         WHEN COALESCE(rdf.protein_g, 0) > 0
@@ -115,7 +122,6 @@ namespace DailyVitals.Data.Services
             ";
 
             using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("person_id", personId);
             cmd.Parameters.AddWithValue("limit", maxItems);
 
             using var reader = cmd.ExecuteReader();
@@ -124,17 +130,18 @@ namespace DailyVitals.Data.Services
                 list.Add(new RenalDietFood
                 {
                     RenalFoodId = reader.GetInt64(0),
-                    PersonId = reader.GetInt64(1),
-                    FoodName = reader.GetString(2),
-                    ServingSize = reader.IsDBNull(3) ? null : reader.GetString(3),
-                    Calories = reader.IsDBNull(4) ? null : reader.GetInt32(4),
-                    SodiumMg = reader.IsDBNull(5) ? null : reader.GetInt32(5),
-                    PotassiumMg = reader.IsDBNull(6) ? null : reader.GetInt32(6),
-                    PhosphorusMg = reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                    ProteinG = reader.IsDBNull(8) ? null : reader.GetDecimal(8),
-                    Allowed = reader.GetBoolean(9),
-                    RestrictionNotes = reader.IsDBNull(10) ? null : reader.GetString(10),
-                    CategoryName = reader.IsDBNull(11) ? null : reader.GetString(11)
+                    FoodName = reader.GetString(1),
+                    ServingSize = reader.IsDBNull(2) ? null : reader.GetString(2),
+                    Calories = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                    SodiumMg = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                    PotassiumMg = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                    PhosphorusMg = reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                    ProteinG = reader.IsDBNull(7) ? null : reader.GetDecimal(7),
+                    CategoryName = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    RenalRating = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    GuidanceNotes = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    SourceNotes = reader.IsDBNull(11) ? null : reader.GetString(11),
+                    IsActive = reader.GetBoolean(12)
                 });
             }
 

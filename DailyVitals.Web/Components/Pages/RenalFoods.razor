@@ -67,7 +67,7 @@
                 <div>
                     <span class="status-dot"></span>
                     <strong>@FoodSummaryTitle</strong>
-                    <p>Foods are pulled from the shared renal_diet_food catalog.</p>
+                    <p>Foods are pulled from the shared renal_friendly_food catalog for every My Active Vitals user.</p>
                 </div>
                 <div>
                     <span>Available foods</span>
@@ -81,14 +81,14 @@
                         <span>Kidney Program</span>
                         <h2>Renal Friendly Foods</h2>
                     </div>
-                    <strong>@AllowedSummary</strong>
+                    <strong>@RatingSummary</strong>
                 </div>
 
                 @if (_foods.Count == 0)
                 {
                     <div class="empty-state compact-empty">
                         <h2>No renal foods found</h2>
-                        <p>Add foods to renal_diet_food to populate this shared catalog.</p>
+                        <p>Add active foods to renal_friendly_food to populate this shared catalog.</p>
                     </div>
                 }
                 else
@@ -141,11 +141,11 @@
                                         <td>@FormatNumber(food.PhosphorusMg, "mg")</td>
                                         <td>@FormatProtein(food.ProteinG)</td>
                                         <td>
-                                            <span class="renal-food-pill @(food.Allowed ? "renal-food-pill--allowed" : "renal-food-pill--restricted")">
-                                                @(food.Allowed ? "Allowed" : "Restricted")
+                                            <span class="renal-food-pill @(food.IsPreferred ? "renal-food-pill--allowed" : "renal-food-pill--restricted")">
+                                                @DisplayValue(food.RenalRating)
                                             </span>
                                         </td>
-                                        <td>@DisplayValue(food.RestrictionNotes)</td>
+                                        <td>@DisplayValue(food.GuidanceNotes)</td>
                                     </tr>
                                 }
                             </tbody>
@@ -168,10 +168,10 @@
             ? "No foods configured"
             : $"{_foods.Count} renal food options";
 
-    private string AllowedSummary =>
+    private string RatingSummary =>
         _foods.Count == 0
             ? "No data"
-            : $"{_foods.Count(x => x.Allowed)} allowed / {_foods.Count(x => !x.Allowed)} restricted";
+            : $"{_foods.Count(x => x.IsPreferred)} preferred / {_foods.Count(x => !x.IsPreferred)} review guidance";
 
     protected override async Task OnInitializedAsync()
     {
@@ -179,7 +179,7 @@
 
         if (!LoginSession.IsSignedIn)
         {
-            Navigation.NavigateTo("/");
+            Navigation.NavigateTo("/signin");
             return;
         }
 
@@ -237,7 +237,7 @@
             ["draftPotassium"] = food.PotassiumMg,
             ["draftPhosphorus"] = food.PhosphorusMg,
             ["draftProtein"] = food.ProteinG,
-            ["draftNotes"] = food.RestrictionNotes
+            ["draftNotes"] = food.GuidanceNotes
         };
 
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameters("/nutrition", query));
@@ -288,7 +288,7 @@
 
         try
         {
-            var consumedAt = DateTime.Now;
+            var consumedAt = LoginSession.CurrentLocalTime;
 
             foreach (var food in selectedFoods)
             {
@@ -308,9 +308,9 @@
                     false,
                     null,
                     null,
-                    string.IsNullOrWhiteSpace(food.RestrictionNotes)
+                    string.IsNullOrWhiteSpace(food.GuidanceNotes)
                         ? "Selected from the renal friendly foods catalog."
-                        : food.RestrictionNotes,
+                        : food.GuidanceNotes,
                     LoginSession.UserName ?? string.Empty);
             }
 
@@ -334,7 +334,7 @@
     private async Task SignOut()
     {
         await LoginSession.SignOutAsync();
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/signin");
     }
 
     private static string DisplayValue(string? value) =>
