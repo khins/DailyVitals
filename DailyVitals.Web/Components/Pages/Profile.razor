@@ -174,7 +174,7 @@
 
                             <div class="profile-toggle-grid">
                                 <label class="toggle-card">
-                                    <InputCheckbox @bind-Value="Model.IsDiabetic" />
+                                    <InputCheckbox @bind-Value="Model.IsDiabetic" @bind-Value:after="OnDiabeticPreferenceChanged" />
                                     <span>
                                         <strong>Diabetic</strong>
                                         <small>Enable glucose-focused dashboard alerts.</small>
@@ -237,10 +237,13 @@
                                     <InputNumber id="fluid-limit" class="form-input" @bind-Value="Model.FluidLimitMl" />
                                 </div>
 
-                                <div class="field-group">
-                                    <label for="glucose-target">Glucose Target (mg/dL)</label>
-                                    <InputNumber id="glucose-target" class="form-input" @bind-Value="Model.GlucoseTargetMgDl" />
-                                </div>
+                                @if (Model.IsDiabetic)
+                                {
+                                    <div class="field-group">
+                                        <label for="glucose-target">Glucose Target (mg/dL)</label>
+                                        <InputNumber id="glucose-target" class="form-input" @bind-Value="Model.GlucoseTargetMgDl" />
+                                    </div>
+                                }
 
                                 <div class="field-group">
                                     <label for="systolic-threshold">Systolic Alert Max</label>
@@ -425,6 +428,13 @@
         Model.FluidLimitMl = goal?.FluidLimitMl ?? 2500;
     }
 
+    private void OnDiabeticPreferenceChanged()
+    {
+        Model.GlucoseTargetMgDl = Model.IsDiabetic
+            ? Model.GlucoseTargetMgDl ?? 100
+            : null;
+    }
+
     private void LoadBloodPressureThresholds(long personId)
     {
         var systolic = VitalThresholdService.GetActiveThreshold(personId, VitalThresholdService.BloodPressureSystolic);
@@ -483,7 +493,7 @@
                 birthDate,
                 Model.Gender,
                 Model.IsDiabetic,
-                Model.GlucoseTargetMgDl,
+                Model.IsDiabetic ? Model.GlucoseTargetMgDl ?? 100 : null,
                 Model.TrackKidneyLabs,
                 Model.TrackWeightLoss,
                 Model.TimeZoneId);
