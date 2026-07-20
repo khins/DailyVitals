@@ -247,6 +247,12 @@
                                         <label for="glucose-target">Glucose Target (mg/dL)</label>
                                         <InputNumber id="glucose-target" class="form-input" @bind-Value="Model.GlucoseTargetMgDl" />
                                     </div>
+
+                                    <div class="field-group">
+                                        <label for="sugar-limit">Sugar Limit (g/day)</label>
+                                        <InputNumber id="sugar-limit" class="form-input" @bind-Value="Model.SugarLimitG" />
+                                        <ValidationMessage For="() => Model.SugarLimitG" />
+                                    </div>
                                 }
 
                                 <div class="field-group">
@@ -435,6 +441,7 @@
         Model.ProteinTargetG = goal?.ProteinTargetG ?? 100;
         Model.PotassiumLimitMg = goal?.PotassiumLimitMg ?? 2500;
         Model.FluidLimitMl = goal?.FluidLimitMl ?? 2500;
+        Model.SugarLimitG = goal?.SugarLimitG ?? 50;
         Model.PhosphorusEnabled = goal?.PhosphorusEnabled ?? true;
         Model.SodiumEnabled = goal?.SodiumEnabled ?? true;
         Model.CalorieEnabled = goal?.CalorieEnabled ?? true;
@@ -540,7 +547,8 @@
                 CalorieEnabled = Model.CalorieEnabled,
                 ProteinEnabled = Model.ProteinEnabled,
                 PotassiumEnabled = Model.PotassiumEnabled,
-                FluidEnabled = Model.FluidEnabled
+                FluidEnabled = Model.FluidEnabled,
+                SugarLimitG = Model.SugarLimitG
             });
 
             VitalThresholdService.SavePersonThreshold(
@@ -730,6 +738,9 @@
         public int? PotassiumLimitMg { get; set; } = 2500;
 
         public int? FluidLimitMl { get; set; } = 2500;
+
+        [Range(1, int.MaxValue, ErrorMessage = "Sugar limit must be greater than zero.")]
+        public int? SugarLimitG { get; set; } = 50;
 
         public bool PhosphorusEnabled { get; set; } = true;
         public bool SodiumEnabled { get; set; } = true;
