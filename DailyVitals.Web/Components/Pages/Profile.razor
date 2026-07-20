@@ -204,44 +204,41 @@
                                     <InputText id="goal-effective-date" type="date" class="form-input" @bind-Value="Model.GoalEffectiveDateText" />
                                 </div>
 
-                                @if (!Model.TrackWeightLoss)
-                                {
-                                    <div class="field-group">
+                                <div class="field-group goal-toggle-field">
+                                    <div class="goal-field-heading">
                                         <label for="phosphorus-limit">Phosphorus Limit (mg)</label>
-                                        <InputNumber id="phosphorus-limit" class="form-input" @bind-Value="Model.PhosphorusLimitMg" />
-                                        <ValidationMessage For="() => Model.PhosphorusLimitMg" />
+                                        <label class="goal-toggle"><InputCheckbox @bind-Value="Model.PhosphorusEnabled" /><span>@(Model.PhosphorusEnabled ? "On" : "Off")</span></label>
                                     </div>
-                                }
+                                    <InputNumber id="phosphorus-limit" class="form-input" @bind-Value="Model.PhosphorusLimitMg" disabled="@(!Model.PhosphorusEnabled)" />
+                                    <ValidationMessage For="() => Model.PhosphorusLimitMg" />
+                                </div>
 
-                                <div class="field-group">
-                                    <label for="sodium-limit">Sodium Limit (mg)</label>
-                                    <InputNumber id="sodium-limit" class="form-input" @bind-Value="Model.SodiumLimitMg" />
+                                <div class="field-group goal-toggle-field">
+                                    <div class="goal-field-heading"><label for="sodium-limit">Sodium Limit (mg)</label><label class="goal-toggle"><InputCheckbox @bind-Value="Model.SodiumEnabled" /><span>@(Model.SodiumEnabled ? "On" : "Off")</span></label></div>
+                                    <InputNumber id="sodium-limit" class="form-input" @bind-Value="Model.SodiumLimitMg" disabled="@(!Model.SodiumEnabled)" />
                                     <ValidationMessage For="() => Model.SodiumLimitMg" />
                                 </div>
 
-                                <div class="field-group">
-                                    <label for="calorie-limit">Calorie Limit</label>
-                                    <InputNumber id="calorie-limit" class="form-input" @bind-Value="Model.CalorieLimit" />
+                                <div class="field-group goal-toggle-field">
+                                    <div class="goal-field-heading"><label for="calorie-limit">Calorie Limit</label><label class="goal-toggle"><InputCheckbox @bind-Value="Model.CalorieEnabled" /><span>@(Model.CalorieEnabled ? "On" : "Off")</span></label></div>
+                                    <InputNumber id="calorie-limit" class="form-input" @bind-Value="Model.CalorieLimit" disabled="@(!Model.CalorieEnabled)" />
                                     <ValidationMessage For="() => Model.CalorieLimit" />
                                 </div>
 
-                                <div class="field-group">
-                                    <label for="protein-target">Protein Target (g)</label>
-                                    <InputNumber id="protein-target" class="form-input" @bind-Value="Model.ProteinTargetG" />
+                                <div class="field-group goal-toggle-field">
+                                    <div class="goal-field-heading"><label for="protein-target">Protein Target (g)</label><label class="goal-toggle"><InputCheckbox @bind-Value="Model.ProteinEnabled" /><span>@(Model.ProteinEnabled ? "On" : "Off")</span></label></div>
+                                    <InputNumber id="protein-target" class="form-input" @bind-Value="Model.ProteinTargetG" disabled="@(!Model.ProteinEnabled)" />
                                 </div>
 
-                                @if (!Model.TrackWeightLoss)
-                                {
-                                    <div class="field-group">
-                                        <label for="potassium-limit">Potassium Limit (mg)</label>
-                                        <InputNumber id="potassium-limit" class="form-input" @bind-Value="Model.PotassiumLimitMg" />
-                                    </div>
+                                <div class="field-group goal-toggle-field">
+                                    <div class="goal-field-heading"><label for="potassium-limit">Potassium Limit (mg)</label><label class="goal-toggle"><InputCheckbox @bind-Value="Model.PotassiumEnabled" /><span>@(Model.PotassiumEnabled ? "On" : "Off")</span></label></div>
+                                    <InputNumber id="potassium-limit" class="form-input" @bind-Value="Model.PotassiumLimitMg" disabled="@(!Model.PotassiumEnabled)" />
+                                </div>
 
-                                    <div class="field-group">
-                                        <label for="fluid-limit">Fluid Limit (ml)</label>
-                                        <InputNumber id="fluid-limit" class="form-input" @bind-Value="Model.FluidLimitMl" />
-                                    </div>
-                                }
+                                <div class="field-group goal-toggle-field">
+                                    <div class="goal-field-heading"><label for="fluid-limit">Fluid Limit (ml)</label><label class="goal-toggle"><InputCheckbox @bind-Value="Model.FluidEnabled" /><span>@(Model.FluidEnabled ? "On" : "Off")</span></label></div>
+                                    <InputNumber id="fluid-limit" class="form-input" @bind-Value="Model.FluidLimitMl" disabled="@(!Model.FluidEnabled)" />
+                                </div>
 
                                 @if (Model.IsDiabetic)
                                 {
@@ -432,6 +429,12 @@
         Model.ProteinTargetG = goal?.ProteinTargetG ?? 100;
         Model.PotassiumLimitMg = goal?.PotassiumLimitMg ?? 2500;
         Model.FluidLimitMl = goal?.FluidLimitMl ?? 2500;
+        Model.PhosphorusEnabled = goal?.PhosphorusEnabled ?? true;
+        Model.SodiumEnabled = goal?.SodiumEnabled ?? true;
+        Model.CalorieEnabled = goal?.CalorieEnabled ?? true;
+        Model.ProteinEnabled = goal?.ProteinEnabled ?? true;
+        Model.PotassiumEnabled = goal?.PotassiumEnabled ?? true;
+        Model.FluidEnabled = goal?.FluidEnabled ?? true;
     }
 
     private void OnDiabeticPreferenceChanged()
@@ -525,7 +528,13 @@
                 EffectiveDate = goalEffectiveDate.Date,
                 ProteinTargetG = Model.ProteinTargetG,
                 PotassiumLimitMg = Model.PotassiumLimitMg,
-                FluidLimitMl = Model.FluidLimitMl
+                FluidLimitMl = Model.FluidLimitMl,
+                PhosphorusEnabled = Model.PhosphorusEnabled,
+                SodiumEnabled = Model.SodiumEnabled,
+                CalorieEnabled = Model.CalorieEnabled,
+                ProteinEnabled = Model.ProteinEnabled,
+                PotassiumEnabled = Model.PotassiumEnabled,
+                FluidEnabled = Model.FluidEnabled
             });
 
             VitalThresholdService.SavePersonThreshold(
@@ -675,6 +684,13 @@
         public int? PotassiumLimitMg { get; set; } = 2500;
 
         public int? FluidLimitMl { get; set; } = 2500;
+
+        public bool PhosphorusEnabled { get; set; } = true;
+        public bool SodiumEnabled { get; set; } = true;
+        public bool CalorieEnabled { get; set; } = true;
+        public bool ProteinEnabled { get; set; } = true;
+        public bool PotassiumEnabled { get; set; } = true;
+        public bool FluidEnabled { get; set; } = true;
 
         public int? SystolicThresholdMax { get; set; } = 130;
 

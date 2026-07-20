@@ -22,7 +22,13 @@ namespace DailyVitals.Data.Services
                     effective_date,
                     protein_target_g,
                     potassium_limit_mg,
-                    fluid_limit_ml
+                    fluid_limit_ml,
+                    phosphorus_enabled,
+                    sodium_enabled,
+                    calorie_enabled,
+                    protein_enabled,
+                    potassium_enabled,
+                    fluid_enabled
                 FROM public.nutrition_goal
                 WHERE person_id = @person_id
                   AND effective_date <= @as_of_date
@@ -47,7 +53,13 @@ namespace DailyVitals.Data.Services
                 EffectiveDate = reader.GetDateTime(5),
                 ProteinTargetG = reader.IsDBNull(6) ? null : reader.GetInt32(6),
                 PotassiumLimitMg = reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                FluidLimitMl = reader.IsDBNull(8) ? null : reader.GetInt32(8)
+                FluidLimitMl = reader.IsDBNull(8) ? null : reader.GetInt32(8),
+                PhosphorusEnabled = reader.GetBoolean(9),
+                SodiumEnabled = reader.GetBoolean(10),
+                CalorieEnabled = reader.GetBoolean(11),
+                ProteinEnabled = reader.GetBoolean(12),
+                PotassiumEnabled = reader.GetBoolean(13),
+                FluidEnabled = reader.GetBoolean(14)
             };
         }
 
@@ -67,7 +79,13 @@ namespace DailyVitals.Data.Services
                         effective_date = @effective_date,
                         protein_target_g = @protein_target_g,
                         potassium_limit_mg = @potassium_limit_mg,
-                        fluid_limit_ml = @fluid_limit_ml
+                        fluid_limit_ml = @fluid_limit_ml,
+                        phosphorus_enabled = @phosphorus_enabled,
+                        sodium_enabled = @sodium_enabled,
+                        calorie_enabled = @calorie_enabled,
+                        protein_enabled = @protein_enabled,
+                        potassium_enabled = @potassium_enabled,
+                        fluid_enabled = @fluid_enabled
                     WHERE nutrition_goal_id = @nutrition_goal_id
                       AND person_id = @person_id
                     RETURNING nutrition_goal_id;";
@@ -88,7 +106,13 @@ namespace DailyVitals.Data.Services
                     effective_date,
                     protein_target_g,
                     potassium_limit_mg,
-                    fluid_limit_ml
+                    fluid_limit_ml,
+                    phosphorus_enabled,
+                    sodium_enabled,
+                    calorie_enabled,
+                    protein_enabled,
+                    potassium_enabled,
+                    fluid_enabled
                 )
                 VALUES (
                     @person_id,
@@ -98,7 +122,13 @@ namespace DailyVitals.Data.Services
                     @effective_date,
                     @protein_target_g,
                     @potassium_limit_mg,
-                    @fluid_limit_ml
+                    @fluid_limit_ml,
+                    @phosphorus_enabled,
+                    @sodium_enabled,
+                    @calorie_enabled,
+                    @protein_enabled,
+                    @potassium_enabled,
+                    @fluid_enabled
                 )
                 RETURNING nutrition_goal_id;";
 
@@ -122,6 +152,12 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("protein_target_g", (object?)goal.ProteinTargetG ?? DBNull.Value);
             cmd.Parameters.AddWithValue("potassium_limit_mg", (object?)goal.PotassiumLimitMg ?? DBNull.Value);
             cmd.Parameters.AddWithValue("fluid_limit_ml", (object?)goal.FluidLimitMl ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("phosphorus_enabled", goal.PhosphorusEnabled);
+            cmd.Parameters.AddWithValue("sodium_enabled", goal.SodiumEnabled);
+            cmd.Parameters.AddWithValue("calorie_enabled", goal.CalorieEnabled);
+            cmd.Parameters.AddWithValue("protein_enabled", goal.ProteinEnabled);
+            cmd.Parameters.AddWithValue("potassium_enabled", goal.PotassiumEnabled);
+            cmd.Parameters.AddWithValue("fluid_enabled", goal.FluidEnabled);
         }
 
     }

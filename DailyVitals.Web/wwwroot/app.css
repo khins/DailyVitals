@@ -2426,6 +2426,57 @@ h1 {
     gap: 14px;
 }
 
+.goal-field-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.goal-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.goal-toggle input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.goal-toggle span {
+    min-width: 52px;
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: #dce6e4;
+    color: #60706d;
+    text-align: center;
+}
+
+.goal-toggle input:checked + span {
+    background: #173f4a;
+    color: #ffffff;
+}
+
+.goal-toggle input:focus-visible + span {
+    outline: 3px solid rgba(23, 63, 74, 0.25);
+    outline-offset: 2px;
+}
+
+.goal-toggle-field .form-input:disabled {
+    background: #edf2f1;
+    color: #879492;
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
 .profile-disclaimer {
     margin: 0;
     border-left: 4px solid #d39b2d;

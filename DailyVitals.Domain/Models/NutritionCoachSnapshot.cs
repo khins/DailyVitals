@@ -23,6 +23,7 @@ namespace DailyVitals.Domain.Models
 
     public class NutritionCoachMetric
     {
+        public bool Enabled { get; set; } = true;
         public decimal Goal { get; set; }
         public decimal AverageOnLoggedDays { get; set; }
         public int DaysMeetingGoal { get; set; }

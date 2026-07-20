@@ -510,7 +510,12 @@
 
     private bool ShowKidneyLabs => _person?.TrackKidneyLabs ?? true;
 
-    private bool ShowRenalTargets => !(_person?.TrackWeightLoss ?? false);
+    private bool PhosphorusTargetEnabled => _nutritionGoal?.PhosphorusEnabled ?? true;
+    private bool SodiumTargetEnabled => _nutritionGoal?.SodiumEnabled ?? true;
+    private bool CalorieTargetEnabled => _nutritionGoal?.CalorieEnabled ?? true;
+    private bool ProteinTargetEnabled => _nutritionGoal?.ProteinEnabled ?? true;
+    private bool PotassiumTargetEnabled => _nutritionGoal?.PotassiumEnabled ?? true;
+    private bool FluidTargetEnabled => _nutritionGoal?.FluidEnabled ?? true;
 
     private bool ShowGlucoseAlerts => _person?.IsDiabetic ?? true;
 
@@ -803,7 +808,7 @@
 
     private void AddNutritionAlerts(List<AttentionItem> items)
     {
-        if (ShowRenalTargets && TodayPhosphorusMg > TodayPhosphorusLimitMg)
+        if (PhosphorusTargetEnabled && TodayPhosphorusMg > TodayPhosphorusLimitMg)
         {
             items.Add(new(
                 "Phosphorus",
@@ -811,7 +816,7 @@
                 "attention-marker marker-watch"));
         }
 
-        if (TodaySodiumMg > TodaySodiumLimitMg)
+        if (SodiumTargetEnabled && TodaySodiumMg > TodaySodiumLimitMg)
         {
             items.Add(new(
                 "Sodium",
@@ -819,7 +824,7 @@
                 "attention-marker marker-watch"));
         }
 
-        if (TodayCalories > TodayCalorieLimit)
+        if (CalorieTargetEnabled && TodayCalories > TodayCalorieLimit)
         {
             items.Add(new(
                 "Calories",
@@ -827,7 +832,7 @@
                 "attention-marker marker-watch"));
         }
 
-        if (TodayProteinTargetG.HasValue && TodayProteinG < TodayProteinTargetG.Value)
+        if (ProteinTargetEnabled && TodayProteinTargetG.HasValue && TodayProteinG < TodayProteinTargetG.Value)
         {
             items.Add(new(
                 "Protein",
@@ -835,7 +840,7 @@
                 "attention-marker marker-info"));
         }
 
-        if (ShowRenalTargets && TodayPotassiumLimitMg.HasValue && TodayPotassiumMg > TodayPotassiumLimitMg.Value)
+        if (PotassiumTargetEnabled && TodayPotassiumLimitMg.HasValue && TodayPotassiumMg > TodayPotassiumLimitMg.Value)
         {
             items.Add(new(
                 "Potassium",
@@ -900,7 +905,7 @@
     private string TodayFluidSummaryText =>
         $"{TodayFluidMl / 1000m:0.##} liters logged across {TodayFluidEntryText}.";
 
-    private int? FluidTargetMl => ShowRenalTargets && _nutritionGoal?.FluidLimitMl is > 0
+    private int? FluidTargetMl => FluidTargetEnabled && _nutritionGoal?.FluidLimitMl is > 0
         ? _nutritionGoal.FluidLimitMl
         : null;
 
@@ -984,16 +989,19 @@
         {
             var rows = new List<DailyNutritionTargetRow>();
 
-            if (ShowRenalTargets)
+            if (PhosphorusTargetEnabled)
                 rows.Add(BuildLimitRow("Phosphorus", TodayPhosphorusMg, TodayPhosphorusLimitMg, "mg", decimals: 0));
 
-            rows.Add(BuildLimitRow("Sodium", TodaySodiumMg, TodaySodiumLimitMg, "mg", decimals: 0));
-            rows.Add(BuildLimitRow("Calories", TodayCalories, TodayCalorieLimit, "cal", decimals: 0));
+            if (SodiumTargetEnabled)
+                rows.Add(BuildLimitRow("Sodium", TodaySodiumMg, TodaySodiumLimitMg, "mg", decimals: 0));
 
-            if (TodayProteinTargetG.HasValue)
+            if (CalorieTargetEnabled)
+                rows.Add(BuildLimitRow("Calories", TodayCalories, TodayCalorieLimit, "cal", decimals: 0));
+
+            if (ProteinTargetEnabled && TodayProteinTargetG.HasValue)
                 rows.Add(BuildTargetRow("Protein", TodayProteinG, TodayProteinTargetG.Value, "g", decimals: 0));
 
-            if (ShowRenalTargets && TodayPotassiumLimitMg.HasValue)
+            if (PotassiumTargetEnabled && TodayPotassiumLimitMg.HasValue)
                 rows.Add(BuildLimitRow("Potassium", TodayPotassiumMg, TodayPotassiumLimitMg.Value, "mg", decimals: 0));
 
             return rows;
@@ -1002,7 +1010,7 @@
 
     private string TodayNutritionSummaryText =>
         TodayNutritionRows.Any()
-            ? ShowRenalTargets
+            ? PhosphorusTargetEnabled
                 ? $"Targets for {DateTime.Today:M/d/yyyy}. {TodayPhosphorusMg:N0} mg phosphorus logged today after binder adjustment."
                 : $"Targets for {DateTime.Today:M/d/yyyy} based on the active tracking preferences."
             : "No food entries logged today yet.";

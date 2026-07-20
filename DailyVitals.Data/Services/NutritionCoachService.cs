@@ -56,10 +56,10 @@ namespace DailyVitals.Data.Services
                 DaysLogged = daily.Count,
                 FoodEntries = entries.Count,
                 BindersLogged = entries.Sum(x => x.Binders),
-                Sodium = BuildLimitMetric(daily.Select(x => (decimal)x.Sodium), sodiumGoal, "mg"),
-                Phosphorus = BuildLimitMetric(daily.Select(x => (decimal)x.Phosphorus), phosphorusGoal, "mg"),
-                Protein = BuildTargetMetric(daily.Select(x => x.Protein), proteinGoal, "g"),
-                Potassium = BuildLimitMetric(daily.Select(x => (decimal)x.Potassium), potassiumGoal, "mg"),
+                Sodium = SetEnabled(BuildLimitMetric(daily.Select(x => (decimal)x.Sodium), sodiumGoal, "mg"), goal?.SodiumEnabled ?? true),
+                Phosphorus = SetEnabled(BuildLimitMetric(daily.Select(x => (decimal)x.Phosphorus), phosphorusGoal, "mg"), goal?.PhosphorusEnabled ?? true),
+                Protein = SetEnabled(BuildTargetMetric(daily.Select(x => x.Protein), proteinGoal, "g"), goal?.ProteinEnabled ?? true),
+                Potassium = SetEnabled(BuildLimitMetric(daily.Select(x => (decimal)x.Potassium), potassiumGoal, "mg"), goal?.PotassiumEnabled ?? true),
                 TopSodiumSources = BuildSources(entries, x => x.SodiumMg ?? 0, "mg"),
                 TopPhosphorusSources = BuildSources(entries, x => x.PhosphorusMg, "mg"),
                 TopProteinSources = BuildSources(entries, x => x.ProteinG ?? 0, "g"),
@@ -304,8 +304,15 @@ namespace DailyVitals.Data.Services
                 "All compliance statements must use DaysLogged as the denominator, not DaysInPeriod. " +
                 "Mention incomplete tracking when DaysLogged is less than DaysInPeriod. " +
                 "Phosphorus values are logged dietary phosphorus; BindersLogged is context only and must not be converted into absorbed phosphorus. " +
+                "Only evaluate metrics whose Enabled value is true; do not mention goals, compliance, or advice for disabled metrics. " +
                 "Do not claim that a food caused a medical outcome. Keep each list item to one sentence.\n\n" +
                 JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private static NutritionCoachMetric SetEnabled(NutritionCoachMetric metric, bool enabled)
+        {
+            metric.Enabled = enabled;
+            return metric;
         }
 
         private static NutritionCoachStoredReview SaveResponse(
