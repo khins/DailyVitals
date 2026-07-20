@@ -32,6 +32,7 @@ public sealed class LocalLoginSession
     public string? UserName { get; private set; }
     public string? PersonName { get; private set; }
     public string TimeZoneId { get; private set; } = "America/Chicago";
+    public bool IsDiabetic { get; private set; }
     public long? PersonId { get; private set; }
     public bool IsDemo { get; private set; }
     public bool RememberDevice { get; private set; }
@@ -47,6 +48,7 @@ public sealed class LocalLoginSession
         PersonId = personId;
         PersonName = ResolvePersonName(personId);
         TimeZoneId = ResolveTimeZoneId(personId);
+        IsDiabetic = ResolveIsDiabetic(personId);
         IsDemo = isDemo;
         RememberDevice = rememberDevice;
     }
@@ -111,6 +113,7 @@ public sealed class LocalLoginSession
         PersonId = null;
         PersonName = null;
         TimeZoneId = "America/Chicago";
+        IsDiabetic = false;
         IsDemo = false;
         RememberDevice = false;
     }
@@ -152,6 +155,26 @@ public sealed class LocalLoginSession
     public void UpdateTimeZone(string timeZoneId)
     {
         TimeZoneId = NormalizeTimeZoneId(timeZoneId);
+    }
+
+    public void UpdateIsDiabetic(bool isDiabetic)
+    {
+        IsDiabetic = isDiabetic;
+    }
+
+    private bool ResolveIsDiabetic(long? personId)
+    {
+        if (!personId.HasValue)
+            return false;
+
+        try
+        {
+            return _personService.GetPersonById(personId.Value)?.IsDiabetic ?? false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private string ResolveTimeZoneId(long? personId)

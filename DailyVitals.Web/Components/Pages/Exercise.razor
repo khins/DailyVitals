@@ -27,7 +27,10 @@
             <nav class="rail-nav">
                 <a href="dashboard">Dashboard</a>
                 <a href="blood-pressure">Blood Pressure</a>
-                <a href="blood-glucose">Glucose</a>
+                @if (LoginSession.IsDiabetic)
+                {
+                    <a href="blood-glucose">Glucose</a>
+                }
                 <a href="weight">Weight</a>
                 <a class="is-active" href="exercise">Exercise</a>
                 <a href="reports">Reports</a>
