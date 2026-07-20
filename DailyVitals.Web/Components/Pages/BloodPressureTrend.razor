@@ -34,7 +34,10 @@
                         <a class="rail-subnav-button is-active" href="blood-pressure-trend">Trend</a>
                     </div>
                 }
-                <a href="blood-glucose">Glucose</a>
+                @if (LoginSession.IsDiabetic)
+                {
+                    <a href="blood-glucose">Glucose</a>
+                }
                 <a href="weight">Weight</a>
                 <a href="exercise">Exercise</a>
                 <a href="reports">Reports</a>

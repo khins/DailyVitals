@@ -23,7 +23,10 @@
             <nav class="rail-nav">
                 <a href="dashboard">Dashboard</a>
                 <a href="blood-pressure">Blood Pressure</a>
-                <a href="blood-glucose">Glucose</a>
+                @if (LoginSession.IsDiabetic)
+                {
+                    <a href="blood-glucose">Glucose</a>
+                }
                 <button type="button" class="rail-nav-toggle is-active" aria-expanded="@_isWeightMenuOpen" @onclick="ToggleWeightMenu">
                     <span>Weight</span>
                     <span aria-hidden="true">@(_isWeightMenuOpen ? "-" : "+")</span>
