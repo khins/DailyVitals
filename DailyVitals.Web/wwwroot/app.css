@@ -2827,6 +2827,14 @@ h1 {
     font-weight: 700;
 }
 
+.profile-last-updated {
+    align-self: center;
+    margin-right: auto;
+    color: #5d6a68;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
 .profile-toast-icon {
     display: inline-grid;
     place-items: center;
