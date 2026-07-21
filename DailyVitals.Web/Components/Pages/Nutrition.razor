@@ -6,6 +6,7 @@
 @using DailyVitals.Data.Services
 @using DailyVitals.Domain.Models
 @using DailyVitals.Web.Services
+@using Npgsql
 @inject FoodPhosphorusIntakeService FoodService
 @inject FoodPhosphorusEstimateService EstimateService
 @inject PersonService PersonService
@@ -1237,6 +1238,11 @@
             ShowSuccess(shouldInsert
                 ? "Food entry saved. Nutrition values are estimates only and are not intended to be exact results."
                 : "Food entry updated. Nutrition values are estimates only and are not intended to be exact results.");
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.StringDataRightTruncation)
+        {
+            Logger.LogError(ex, "Nutrition entry save failed because a value exceeded its database field length.");
+            ShowError("Nutrition entry contains text that is too long to save. Apply the latest database migration and try again.");
         }
         catch (Exception ex)
         {

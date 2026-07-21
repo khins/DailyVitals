@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.food_phosphorus_intake (
     binders integer NOT NULL DEFAULT 0,
     consumed_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     notes text NULL,
-    serving_description varchar(200) NULL,
+    serving_description text NULL,
     estimated_by_ai boolean NOT NULL DEFAULT false,
     ai_provider varchar(50) NULL,
     ai_confidence varchar(20) NULL,
