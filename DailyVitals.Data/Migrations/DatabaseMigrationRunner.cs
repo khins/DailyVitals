@@ -191,6 +191,17 @@ public sealed class DatabaseMigrationRunner
     {
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
+        // Schema migrations may need to backfill rows belonging to the seeded
+        // demo person. Permit those writes only inside this privileged,
+        // transaction-scoped migration; normal runtime writes remain blocked.
+        await using (var allowDemoWritesCommand = new NpgsqlCommand(
+            "SET LOCAL dailyvitals.allow_demo_write = 'on';",
+            connection,
+            transaction))
+        {
+            await allowDemoWritesCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
         if (!migration.IsBaseline || !await HasExistingCoreSchemaAsync(connection, transaction, cancellationToken))
         {
             await using var migrationCommand = new NpgsqlCommand(migration.Sql, connection, transaction)
