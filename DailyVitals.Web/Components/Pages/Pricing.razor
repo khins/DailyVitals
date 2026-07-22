@@ -1,5 +1,6 @@
 @page "/pricing"
 @layout MarketingLayout
+@inject IConfiguration Configuration
 
 <PageTitle>Pricing | My Active Vitals</PageTitle>
 
@@ -24,7 +25,14 @@
                 <li>Monthly allowance of AI nutrition estimates</li>
             </ul>
             <div class="pricing-card__actions">
-                <a class="marketing-button marketing-button--outline" href="create-account">Start 7-day trial</a>
+                @if (RegistrationEnabled)
+                {
+                    <a class="marketing-button marketing-button--outline" href="create-account">Start 7-day trial</a>
+                }
+                else
+                {
+                    <span class="marketing-button marketing-button--outline marketing-button--disabled">Subscriptions coming soon</span>
+                }
             </div>
         </article>
 
@@ -42,7 +50,14 @@
                 <li>Cancel renewal anytime</li>
             </ul>
             <div class="pricing-card__actions">
-                <a class="marketing-button marketing-button--primary" href="create-account">Start 7-day trial</a>
+                @if (RegistrationEnabled)
+                {
+                    <a class="marketing-button marketing-button--primary" href="create-account">Start 7-day trial</a>
+                }
+                else
+                {
+                    <span class="marketing-button marketing-button--primary marketing-button--disabled">Subscriptions coming soon</span>
+                }
             </div>
         </article>
     </div>
@@ -50,6 +65,10 @@
         A payment method will be required for the trial when subscription checkout launches. You will not be charged until the seven-day trial ends. AI estimate allowance details will be shown before purchase. Pricing and trial enrollment shown here are currently in development and are not yet an offer to purchase.
     </p>
 </section>
+
+@code {
+    private bool RegistrationEnabled => Configuration.GetValue("AccountRegistration:Enabled", false);
+}
 
 <section class="marketing-section marketing-section--tint">
     <div class="marketing-section__heading">
