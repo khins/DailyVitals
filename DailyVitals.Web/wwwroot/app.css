@@ -2662,14 +2662,28 @@ h1 {
     padding: 20px;
 }
 
+.report-card {
+    display: flex;
+    flex-direction: column;
+}
+
 .report-card h2 {
     margin: 4px 0 0;
     font-size: 1.6rem;
 }
 
 .report-card-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
-    margin-top: 16px;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.report-card-action-row {
+    margin-top: auto;
+    padding-top: 16px;
 }
 
 .meal-sodium-note {
