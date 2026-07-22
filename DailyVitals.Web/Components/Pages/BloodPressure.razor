@@ -428,7 +428,7 @@
         Model.Systolic = null;
         Model.Diastolic = null;
         Model.Pulse = null;
-        Model.Notes = $"Morning reading, seated at {now:h:mm tt}";
+        Model.Notes = $"Blood Pressure reading, seated at {now:h:mm tt}";
         Model.ReadingTimeText = ToDateTimeLocal(now);
         _createdAt = null;
         _updatedAt = null;
@@ -513,7 +513,7 @@
 
         if (string.IsNullOrWhiteSpace(currentNotes))
         {
-            Model.Notes = $"Morning reading, {seatedText}";
+            Model.Notes = $"Blood Pressure reading, {seatedText}";
             return;
         }
 
