@@ -88,7 +88,10 @@
             }
 
             <button type="submit" class="primary-button">Sign in</button>
-            <a class="form-link" href="create-account">Create account</a>
+            @if (RegistrationEnabled)
+            {
+                <a class="form-link" href="create-account">Create account</a>
+            }
 
             @if (DemoModeEnabled)
             {
@@ -113,12 +116,14 @@
 
     private string PasswordInputType => _showPassword ? "text" : "password";
     private bool DemoModeEnabled => Configuration.GetValue("DemoMode:Enabled", false);
+    private bool RegistrationEnabled => Configuration.GetValue("AccountRegistration:Enabled", false);
     private string DemoUserName => Configuration["DemoMode:UserName"] ?? "demo@activevitals.app";
     private string? SignInMessage => SignInResult switch
     {
         "missing" => "Enter your email and password.",
         "locked" => "Too many failed attempts. Try again later.",
         "invalid" => "The email or password is incorrect.",
+        "registration-closed" => "New account registration is not currently available. Existing users can still sign in.",
         _ => null
     };
 

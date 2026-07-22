@@ -269,10 +269,14 @@ app.MapPost("/auth/login", async (
 
 app.MapPost("/auth/register", async (
     HttpContext httpContext,
+    IConfiguration configuration,
     PersonService personService,
     LoginUserService loginUserService,
     ILoggerFactory loggerFactory) =>
 {
+    if (!configuration.GetValue("AccountRegistration:Enabled", false))
+        return Results.Redirect("/signin?signin=registration-closed");
+
     var logger = loggerFactory.CreateLogger("AccountRegistrationEndpoint");
     var form = await httpContext.Request.ReadFormAsync(httpContext.RequestAborted);
     var firstName = form["FirstName"].ToString().Trim();

@@ -3,6 +3,7 @@
 @using DailyVitals.Web.Services
 @inject LocalLoginSession LoginSession
 @inject NavigationManager Navigation
+@inject IConfiguration Configuration
 
 <PageTitle>Create Account | DailyVitals</PageTitle>
 
@@ -44,6 +45,17 @@
             </div>
         </div>
 
+        @if (!RegistrationEnabled)
+        {
+            <div class="login-form account-form">
+                <div class="login-message" role="status">
+                    New account registration is not currently available. Existing users can still sign in.
+                </div>
+                <a class="primary-button form-link" href="signin">Back to sign in</a>
+            </div>
+        }
+        else
+        {
         <form method="post" action="/auth/register" class="login-form account-form">
             <div class="account-form-grid">
                 <div class="field-group">
@@ -93,6 +105,7 @@
             <button type="submit" class="primary-button">Create Account</button>
             <a class="form-link" href="signin">Back to sign in</a>
         </form>
+        }
     </div>
 </section>
 
@@ -102,6 +115,7 @@
 
     private bool _showPassword;
 
+    private bool RegistrationEnabled => Configuration.GetValue("AccountRegistration:Enabled", false);
     private string PasswordInputType => _showPassword ? "text" : "password";
     private string? RegistrationMessage => RegistrationResult switch
     {
