@@ -564,7 +564,7 @@
     private string? _lookupTip;
     private int _selectedDayTotal;
     private bool _isEstimating;
-    private bool _showKidneyLabs = true;
+    private bool _showKidneyLabs;
     private bool _draftApplied;
     private bool _showHistoryModal;
     private FoodPhosphorusIntake? _pendingDeleteEntry;
@@ -674,7 +674,7 @@
         if (!LoginSession.PersonId.HasValue)
             return;
 
-        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs ?? true;
+        _showKidneyLabs = PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs == true;
     }
 
     private List<FoodPhosphorusIntake> FilteredHistory
