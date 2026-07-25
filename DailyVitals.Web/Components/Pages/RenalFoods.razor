@@ -35,6 +35,7 @@
                 <a href="nutrition">Nutrition</a>
                 <a href="fluid-intake">Fluid Intake</a>
                 <a href="labs">Kidney Labs</a>
+                <a class="is-active" href="renal-foods">Renal Friendly Foods</a>
             </nav>
 
             <a class="rail-profile" href="profile" aria-label="Profile">
@@ -193,7 +194,7 @@
             return;
         }
 
-        if (PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs == false)
+        if (PersonService.GetPersonById(LoginSession.PersonId.Value)?.TrackKidneyLabs != true)
         {
             Navigation.NavigateTo("/dashboard", replace: true);
             return;
