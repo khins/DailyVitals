@@ -546,11 +546,12 @@
         gap: 12px;
     }
 
-    .marketing-actions .marketing-button--quiet {
+    .marketing-actions .marketing-button--primary {
         display: none;
     }
 
-    .marketing-actions .marketing-button {
+    .marketing-actions .marketing-button--quiet {
+        border-color: var(--marketing-teal);
         padding-inline: 12px;
     }
 
