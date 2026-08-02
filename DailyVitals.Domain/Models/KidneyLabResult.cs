@@ -25,5 +25,6 @@ namespace DailyVitals.Domain.Models
         public string? Notes { get; set; }
 
         public string DisplayMonth => ResultMonth.ToString("MMM yyyy");
+        public string DisplayDate => ResultMonth.ToString("MMM d, yyyy");
     }
 }

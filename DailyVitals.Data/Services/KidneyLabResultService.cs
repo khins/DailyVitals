@@ -56,7 +56,7 @@ namespace DailyVitals.Data.Services
             const string sql = @"
                 WITH updated AS (
                     UPDATE public.kidney_lab_result
-                    SET result_month = date_trunc('month', @p_result_month)::date,
+                    SET result_month = @p_result_month,
                         albumin = @p_albumin,
                         npcr = @p_npcr,
                         potassium = @p_potassium,
@@ -229,7 +229,7 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.Add(
                 new NpgsqlParameter("p_result_month", NpgsqlDbType.Date)
                 {
-                    Value = NormalizeMonth(result.ResultMonth).Date
+                    Value = result.ResultMonth.Date
                 });
             cmd.Parameters.AddWithValue("p_albumin", result.Albumin);
             cmd.Parameters.AddWithValue("p_npcr", result.NPCR);
@@ -246,9 +246,6 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("p_creatinine", result.Creatinine);
             cmd.Parameters.AddWithValue("p_notes", (object?)result.Notes ?? DBNull.Value);
         }
-
-        private static DateTime NormalizeMonth(DateTime value) =>
-            new(value.Year, value.Month, 1);
 
     }
 }
