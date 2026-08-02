@@ -104,21 +104,24 @@
 
                         <div class="field-group">
                             <label for="exercise-type">Exercise</label>
-                            <select id="exercise-type" name="ExerciseTypeId" class="form-input" data-other-exercise-select data-other-exercise-value="@OtherExerciseTypeId" required>
+                            <select id="exercise-type" name="ExerciseTypeId" class="form-input" @bind="_form.ExerciseTypeId" required>
                                 <option value="">Select exercise</option>
                                 @foreach (var exerciseType in _exerciseTypes)
                                 {
-                                    <option value="@exerciseType.ExerciseTypeId" selected="@IsExerciseTypeSelected(exerciseType.ExerciseTypeId)">@exerciseType.ExerciseName</option>
+                                    <option value="@exerciseType.ExerciseTypeId">@exerciseType.ExerciseName</option>
                                 }
-                                <option value="@OtherExerciseTypeId" selected="@IsExerciseTypeSelected(OtherExerciseTypeId)">Other</option>
+                                <option value="@OtherExerciseTypeId">Other</option>
                             </select>
                         </div>
 
-                        <div class="field-group @(IsOtherExerciseSelected ? null : "is-hidden")" data-other-exercise-field>
-                            <label for="other-exercise">Other Exercise</label>
-                            <input id="other-exercise" name="OtherExerciseName" class="form-input" value="@_form.OtherExerciseName" disabled="@(!IsOtherExerciseSelected)" data-other-exercise-input />
-                            <p class="field-hint">Existing exercise names are checked before a new option is added.</p>
-                        </div>
+                        @if (IsOtherExerciseSelected)
+                        {
+                            <div class="field-group">
+                                <label for="other-exercise">Other Exercise</label>
+                                <input id="other-exercise" name="OtherExerciseName" class="form-input" @bind="_form.OtherExerciseName" required autofocus />
+                                <p class="field-hint">Existing exercise names are checked before a new option is added.</p>
+                            </div>
+                        }
 
                         <div class="exercise-number-grid">
                             <div class="field-group">
@@ -486,8 +489,6 @@
             return _exerciseTypes.FirstOrDefault(x => x.ExerciseTypeId == _form.ExerciseTypeId)?.ExerciseName ?? "Exercise";
         }
     }
-
-    private bool IsExerciseTypeSelected(long exerciseTypeId) => _form.ExerciseTypeId == exerciseTypeId;
 
     private bool IsIntensitySelected(string intensity) =>
         string.Equals(_form.Intensity, intensity, StringComparison.OrdinalIgnoreCase);
