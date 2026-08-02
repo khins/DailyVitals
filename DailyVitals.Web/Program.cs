@@ -2,6 +2,7 @@ using DailyVitals.Web.Components;
 using DailyVitals.Web.Configuration;
 using DailyVitals.Web.Health;
 using DailyVitals.Web.Services;
+using DailyVitals.Web.Services.Email;
 using DailyVitals.Data.Configuration;
 using DailyVitals.Data.Migrations;
 using DailyVitals.Data.Services;
@@ -69,6 +70,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<ResendEmailOptions>(
+    builder.Configuration.GetSection(ResendEmailOptions.SectionName));
+builder.Services.AddHttpClient<ITransactionalEmailSender, ResendTransactionalEmailSender>(client =>
+{
+    client.BaseAddress = new Uri("https://api.resend.com/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseReadinessHealthCheck>(
         "database",
@@ -272,6 +280,7 @@ app.MapPost("/auth/register", async (
     IConfiguration configuration,
     PersonService personService,
     LoginUserService loginUserService,
+    ITransactionalEmailSender emailSender,
     ILoggerFactory loggerFactory) =>
 {
     if (!configuration.GetValue("AccountRegistration:Enabled", false))
@@ -337,6 +346,23 @@ app.MapPost("/auth/register", async (
             CookieAuthenticationDefaults.AuthenticationScheme,
             principal,
             properties);
+
+        try
+        {
+            var safeFirstName = System.Net.WebUtility.HtmlEncode(firstName);
+            await emailSender.SendAsync(
+                new TransactionalEmailMessage(
+                    loginUser.UserName,
+                    "Welcome to My Active Vitals",
+                    $"<p>Hi {safeFirstName},</p><p>Your My Active Vitals account is ready.</p><p>You can now sign in and begin tracking your health information.</p>",
+                    $"Hi {firstName},\n\nYour My Active Vitals account is ready.\n\nYou can now sign in and begin tracking your health information."),
+                httpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            // Account creation must not be rolled back because a welcome email failed.
+            logger.LogWarning(ex, "Welcome email could not be sent for the newly created account.");
+        }
 
         return Results.Redirect("/profile");
     }

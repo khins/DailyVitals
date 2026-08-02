@@ -47,6 +47,7 @@ Use environment-specific secret management for:
 
 - PostgreSQL connection string
 - OpenAI API key
+- Resend API key
 - Production identity-provider credentials
 - Encryption or key-store credentials
 
@@ -73,6 +74,12 @@ Provide the OpenAI key through the hosting platform's secret manager using
 `OpenAI__ApiKey` or `OPENAI_API_KEY`. `OpenAI__Model` or `OPENAI_MODEL` can override
 the non-secret model default. Never copy a developer user-secrets file or a local
 environment file into the deployment artifact.
+
+Transactional email uses Resend's HTTPS API. Verify `myactivevitals.com` in the
+Resend dashboard, including the DNS records Resend supplies, then create a
+send-only API key. Configure Railway with `Resend__ApiKey`; the non-secret sender
+defaults are committed as `no-reply@myactivevitals.com` and `My Active Vitals`.
+The API key must never be committed to an appsettings file.
 
 Do not deploy development login fallback values or local `App.config` secrets. The
 WPF `App.config` remains machine-local and must never be copied into a web artifact.

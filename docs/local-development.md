@@ -74,6 +74,16 @@ dotnet user-secrets set "OpenAI:ApiKey" "YOUR_API_KEY" `
   --project DailyVitals.Web\DailyVitals.Web.csproj
 ```
 
+To exercise transactional email locally, store the Resend key in user-secrets:
+
+```powershell
+dotnet user-secrets set "Resend:ApiKey" "YOUR_RESEND_API_KEY" `
+  --project DailyVitals.Web\DailyVitals.Web.csproj
+```
+
+The configured sender is `no-reply@myactivevitals.com`; Resend must show
+`myactivevitals.com` as verified before that address can send successfully.
+
 For the WPF client, set the supported Windows user environment variable and restart
 the client after changing it:
 
