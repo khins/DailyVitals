@@ -98,7 +98,7 @@ namespace DailyVitals.App.ViewModels
         public void BeginNew()
         {
             SelectedHistory = null;
-            ResultMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            ResultMonth = DateTime.Today;
             Albumin = string.Empty;
             NPCR = string.Empty;
             Potassium = string.Empty;
@@ -123,20 +123,20 @@ namespace DailyVitals.App.ViewModels
             if (SelectedPerson == null)
                 throw new InvalidOperationException("Please select a person.");
 
-            var normalizedMonth = NormalizeMonth(ResultMonth);
+            var resultDate = ResultMonth.Date;
 
             if (SelectedHistory == null &&
-                History.Any(item => NormalizeMonth(item.ResultMonth) == normalizedMonth))
+                History.Any(item => item.ResultMonth.Date == resultDate))
             {
                 throw new InvalidOperationException(
-                    $"A kidney lab result already exists for {normalizedMonth:MMM yyyy}. Select it from history to update it.");
+                    $"A kidney lab result already exists for {resultDate:MMM d, yyyy}. Select it from history to update it.");
             }
 
             var result = new KidneyLabResult
             {
                 KidneyLabResultId = SelectedHistory?.KidneyLabResultId ?? 0,
                 PersonId = SelectedPerson.PersonId,
-                ResultMonth = normalizedMonth,
+                ResultMonth = resultDate,
                 Albumin = ParseRequiredDecimal(Albumin, "Albumin"),
                 NPCR = ParseRequiredDecimal(NPCR, "nPCR"),
                 Potassium = ParseRequiredDecimal(Potassium, "Potassium"),
@@ -195,7 +195,7 @@ namespace DailyVitals.App.ViewModels
             if (SelectedHistory == null)
                 return;
 
-            ResultMonth = NormalizeMonth(SelectedHistory.ResultMonth);
+            ResultMonth = SelectedHistory.ResultMonth.Date;
             Albumin = SelectedHistory.Albumin.ToString("0.##", CultureInfo.CurrentCulture);
             NPCR = SelectedHistory.NPCR.ToString("0.##", CultureInfo.CurrentCulture);
             Potassium = SelectedHistory.Potassium.ToString("0.##", CultureInfo.CurrentCulture);
@@ -233,7 +233,5 @@ namespace DailyVitals.App.ViewModels
             return parsed;
         }
 
-        private static DateTime NormalizeMonth(DateTime date) =>
-            new(date.Year, date.Month, 1);
     }
 }

@@ -78,9 +78,9 @@
                   IsReadOnly="True"
                   SelectionMode="Single">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Month"
-                                    Width="100"
-                                    Binding="{Binding DisplayMonth}"/>
+                <DataGridTextColumn Header="Date"
+                                    Width="110"
+                                    Binding="{Binding DisplayDate}"/>
                 <DataGridTextColumn Header="Albumin"
                                     Width="75"
                                     Binding="{Binding Albumin}"/>
@@ -129,7 +129,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Result Month:" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Lab Date:" VerticalAlignment="Center"/>
                 <DatePicker Grid.Row="0" Grid.Column="1"
                             Width="140"
                             Margin="0,4,20,4"
