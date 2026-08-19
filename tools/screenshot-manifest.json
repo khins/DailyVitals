@@ -1,0 +1,57 @@
+[
+  {
+    "route": "/dashboard",
+    "file": "dashboard-overview-desktop.png",
+    "selector": ".dashboard-shell.demo-mode"
+  },
+  {
+    "route": "/blood-pressure",
+    "file": "blood-pressure-entry-desktop.png",
+    "selector": ".entry-grid"
+  },
+  {
+    "route": "/blood-glucose",
+    "file": "glucose-entry-desktop.png",
+    "selector": ".entry-grid"
+  },
+  {
+    "route": "/weight",
+    "file": "weight-entry-desktop.png",
+    "selector": ".entry-grid"
+  },
+  {
+    "route": "/exercise",
+    "file": "exercise-entry-desktop.png",
+    "selector": ".entry-grid"
+  },
+  {
+    "route": "/reports",
+    "file": "reports-overview-desktop.png",
+    "selector": ".report-card-grid"
+  },
+  {
+    "route": "/nutrition",
+    "file": "nutrition-entry-desktop.png",
+    "selector": ".dashboard-shell.demo-mode"
+  },
+  {
+    "route": "/fluid-intake",
+    "file": "fluid-intake-tracking.png",
+    "selector": ".entry-grid"
+  },
+  {
+    "route": "/labs",
+    "file": "kidney-labs-synthetic.png",
+    "selector": ".kidney-lab-entry-grid"
+  },
+  {
+    "route": "/renal-foods",
+    "file": "renal-friendly-foods-desktop.png",
+    "selector": ".renal-food-panel"
+  },
+  {
+    "route": "/profile",
+    "file": "profile-desktop.png",
+    "selector": ".profile-grid"
+  }
+]
