@@ -198,6 +198,80 @@
                     </div>
                 </article>
 
+                <section class="nutrition-trend-grid" aria-label="Nutrition percentage-of-goal trends">
+                    @foreach (var trend in NutritionTrends)
+                    {
+                        <article class="dashboard-card nutrition-trend-panel">
+                            <div class="card-heading">
+                                <div>
+                                    <span>Nutrition trend</span>
+                                    <h2>@trend.Title</h2>
+                                </div>
+                                <strong>@trend.GoalLabel</strong>
+                            </div>
+
+                            @if (!trend.Points.Any(x => x.Percent.HasValue))
+                            {
+                                <div class="empty-state compact-empty">
+                                    <h2>No nutrition trend yet</h2>
+                                    <p>Log food entries to build this percentage-of-goal chart.</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="nutrition-trend-legend" aria-hidden="true">
+                                    <span><i class="nutrition-daily-key"></i>Daily value</span>
+                                    <span><i class="nutrition-goal-key"></i>100% goal line</span>
+                                    @if (trend.HasRollingAverage)
+                                    {
+                                        <span><i class="nutrition-average-key"></i>7-day average</span>
+                                    }
+                                </div>
+
+                                <div class="nutrition-percent-chart" role="img" aria-label="@trend.AccessibleLabel">
+                                    <span class="nutrition-axis-top">@trend.ScaleMaximum%</span>
+                                    <span class="nutrition-axis-goal">100%</span>
+                                    <svg viewBox="0 0 100 56" preserveAspectRatio="none">
+                                        <line class="nutrition-goal-line" x1="0" y1="@trend.GoalY" x2="100" y2="@trend.GoalY" />
+                                        <polyline class="nutrition-daily-line" points="@trend.DailyPolyline" />
+                                        @if (trend.HasRollingAverage)
+                                        {
+                                            <polyline class="nutrition-average-line" points="@trend.RollingAveragePolyline" />
+                                        }
+                                        @foreach (var point in trend.Points.Where(x => x.Percent.HasValue))
+                                        {
+                                            <circle class="@(point.IsPartial ? "nutrition-point nutrition-point--partial" : "nutrition-point")"
+                                                    cx="@point.X" cy="@point.Y" r="1.45">
+                                                <title>@point.Tooltip</title>
+                                            </circle>
+                                        }
+                                    </svg>
+                                    <div class="nutrition-trend-labels" style="grid-template-columns: repeat(@trend.Points.Count, minmax(0, 1fr));">
+                                        @foreach (var point in trend.Points)
+                                        {
+                                            <span class="@(point.IsPartial ? "is-partial" : point.Percent.HasValue ? null : "is-missing")">
+                                                <strong>@point.DisplayPercent</strong>
+                                                <small>@point.Date.ToString("M/d")</small>
+                                                @if (point.IsPartial)
+                                                {
+                                                    <em>Partial</em>
+                                                }
+                                                else if (!point.Percent.HasValue)
+                                                {
+                                                    <em>No log</em>
+                                                }
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <p class="nutrition-trend-summary">@trend.Summary</p>
+                                <p class="nutrition-trend-note">@trend.Definition</p>
+                            }
+                        </article>
+                    }
+                </section>
+
                 <article class="dashboard-card fluid-summary-panel">
                     <div class="card-heading">
                         <div>
@@ -1016,6 +1090,131 @@
                 : $"Targets for {DateTime.Today:M/d/yyyy} based on the active tracking preferences."
             : "No food entries logged today yet.";
 
+    private decimal ProteinTrendTargetG =>
+        ProteinTargetEnabled && TodayProteinTargetG is > 0
+            ? TodayProteinTargetG.Value
+            : 100m;
+
+    private decimal PhosphorusTrendMaximumMg =>
+        PhosphorusTargetEnabled && TodayPhosphorusLimitMg > 0
+            ? TodayPhosphorusLimitMg
+            : 1000m;
+
+    private IReadOnlyList<NutritionTrendPanel> NutritionTrends =>
+    [
+        BuildNutritionTrend(
+            "Protein vs target",
+            ProteinTrendTargetG,
+            "g protein",
+            rows => rows.Sum(x => x.ProteinG),
+            $"Protein close to goal {CountCompletedNutritionDays(percent => percent is >= 80m and <= 120m, ProteinTrendTargetG, rows => rows.Sum(x => x.ProteinG))} of 7 days.",
+            "Close means 80%–120% of the protein target. Today is marked partial and excluded from the summary and rolling average."),
+        BuildNutritionTrend(
+            "Net phosphorus vs maximum",
+            PhosphorusTrendMaximumMg,
+            "mg net phosphorus",
+            rows => rows.Sum(x => x.NetItemPhosphorusMg),
+            $"Phosphorus under maximum {CountCompletedNutritionDays(percent => percent <= 100m, PhosphorusTrendMaximumMg, rows => rows.Sum(x => x.NetItemPhosphorusMg))} of 7 days.",
+            "Net phosphorus reflects logged intake after binder adjustment. Today is marked partial and excluded from the summary and rolling average.")
+    ];
+
+    private NutritionTrendPanel BuildNutritionTrend(
+        string title,
+        decimal goal,
+        string unit,
+        Func<IEnumerable<FoodPhosphorusRunningTotal>, decimal> totalSelector,
+        string summary,
+        string definition)
+    {
+        const int displayDays = 14;
+        var startDate = DateTime.Today.AddDays(-(displayDays - 1));
+        var totalsByDate = _nutritionRows
+            .Where(x => x.IntakeDate.Date >= startDate && x.IntakeDate.Date <= DateTime.Today)
+            .GroupBy(x => x.IntakeDate.Date)
+            .ToDictionary(group => group.Key, group => totalSelector(group));
+
+        var rawPoints = Enumerable.Range(0, displayDays)
+            .Select(index =>
+            {
+                var date = startDate.AddDays(index);
+                var hasLog = totalsByDate.TryGetValue(date, out var total);
+                var percent = hasLog && goal > 0 ? total * 100m / goal : (decimal?)null;
+                return new NutritionTrendRawPoint(date, total, percent, date == DateTime.Today);
+            })
+            .ToList();
+
+        var maximumObserved = rawPoints.Where(x => x.Percent.HasValue).Select(x => x.Percent!.Value).DefaultIfEmpty(100m).Max();
+        var scaleMaximum = Math.Max(140, (int)Math.Ceiling((double)Math.Min(maximumObserved, 200m) / 20d) * 20);
+        var completeLoggedDays = rawPoints.Count(x => x.Percent.HasValue && !x.IsPartial);
+
+        var points = rawPoints.Select((point, index) =>
+        {
+            decimal? rollingAverage = null;
+            if (completeLoggedDays >= 8 && !point.IsPartial)
+            {
+                var eligible = rawPoints
+                    .Take(index + 1)
+                    .Where(x => x.Percent.HasValue && !x.IsPartial)
+                    .TakeLast(7)
+                    .Select(x => x.Percent!.Value)
+                    .ToList();
+                if (eligible.Count == 7)
+                    rollingAverage = eligible.Average();
+            }
+
+            var x = index * 100m / (displayDays - 1);
+            return new NutritionTrendPoint(
+                point.Date,
+                point.Percent,
+                rollingAverage,
+                point.IsPartial,
+                x,
+                ScaleNutritionPercent(point.Percent, scaleMaximum),
+                ScaleNutritionPercent(rollingAverage, scaleMaximum),
+                point.Percent.HasValue ? $"{point.Percent.Value:0}%" : "—",
+                point.Percent.HasValue
+                    ? $"{point.Date:MMM d}: {point.Total:0.#} {unit}, {point.Percent.Value:0}% of goal{(point.IsPartial ? ", partial day" : string.Empty)}"
+                    : $"{point.Date:MMM d}: no log" );
+        }).ToList();
+
+        return new NutritionTrendPanel(
+            title,
+            $"Goal {goal:N0} {unit.Replace(" net phosphorus", string.Empty).Replace(" protein", string.Empty)}",
+            $"{title}. Daily percentage values with a horizontal goal line at 100 percent.",
+            summary,
+            definition,
+            scaleMaximum,
+            ScaleNutritionPercent(100m, scaleMaximum) ?? 28m,
+            points,
+            BuildNutritionPolyline(points, x => x.Percent, x => x.Y),
+            BuildNutritionPolyline(points, x => x.RollingAveragePercent, x => x.RollingAverageY));
+    }
+
+    private int CountCompletedNutritionDays(
+        Func<decimal, bool> predicate,
+        decimal goal,
+        Func<IEnumerable<FoodPhosphorusRunningTotal>, decimal> totalSelector)
+    {
+        var startDate = DateTime.Today.AddDays(-7);
+        return _nutritionRows
+            .Where(x => x.IntakeDate.Date >= startDate && x.IntakeDate.Date < DateTime.Today)
+            .GroupBy(x => x.IntakeDate.Date)
+            .Count(group => goal > 0 && predicate(totalSelector(group) * 100m / goal));
+    }
+
+    private static decimal? ScaleNutritionPercent(decimal? percent, int scaleMaximum) =>
+        percent.HasValue
+            ? 52m - Math.Clamp(percent.Value, 0m, scaleMaximum) / scaleMaximum * 46m
+            : null;
+
+    private static string BuildNutritionPolyline(
+        IReadOnlyList<NutritionTrendPoint> points,
+        Func<NutritionTrendPoint, decimal?> valueSelector,
+        Func<NutritionTrendPoint, decimal?> ySelector) =>
+        string.Join(" ", points
+            .Where(point => valueSelector(point).HasValue && ySelector(point).HasValue)
+            .Select(point => $"{point.X:0.##},{ySelector(point)!.Value:0.##}"));
+
     private IReadOnlyList<WeightSparklinePoint> WeightSparklinePoints
     {
         get
@@ -1344,6 +1543,34 @@
         string Target,
         string Remaining,
         string RemainingClass);
+
+    private sealed record NutritionTrendRawPoint(DateTime Date, decimal Total, decimal? Percent, bool IsPartial);
+
+    private sealed record NutritionTrendPoint(
+        DateTime Date,
+        decimal? Percent,
+        decimal? RollingAveragePercent,
+        bool IsPartial,
+        decimal X,
+        decimal? Y,
+        decimal? RollingAverageY,
+        string DisplayPercent,
+        string Tooltip);
+
+    private sealed record NutritionTrendPanel(
+        string Title,
+        string GoalLabel,
+        string AccessibleLabel,
+        string Summary,
+        string Definition,
+        int ScaleMaximum,
+        decimal GoalY,
+        IReadOnlyList<NutritionTrendPoint> Points,
+        string DailyPolyline,
+        string RollingAveragePolyline)
+    {
+        public bool HasRollingAverage => Points.Any(x => x.RollingAveragePercent.HasValue);
+    }
 
     private sealed record ExerciseTrendPoint(DateTime StartTime, decimal Calories, decimal DurationMinutes);
 

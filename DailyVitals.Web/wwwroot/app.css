@@ -883,6 +883,7 @@ h1 {
 .trend-panel,
 .attention-panel,
 .nutrition-panel,
+.nutrition-trend-panel,
 .fluid-summary-panel,
 .activity-panel,
 .weight-sparkline-panel,
@@ -973,6 +974,169 @@ h1 {
 
 .nutrition-panel {
     grid-column: 1;
+}
+
+.nutrition-trend-grid {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.nutrition-trend-panel {
+    padding: 20px;
+}
+
+.nutrition-trend-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin-top: 18px;
+    color: #5d6a68;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.nutrition-trend-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nutrition-trend-legend i {
+    width: 16px;
+    height: 4px;
+    border-radius: 999px;
+}
+
+.nutrition-daily-key {
+    background: #23776e;
+}
+
+.nutrition-goal-key {
+    border-top: 2px dashed #a26a16;
+}
+
+.nutrition-average-key {
+    background: #6f55aa;
+}
+
+.nutrition-percent-chart {
+    position: relative;
+    margin-top: 12px;
+    padding-left: 34px;
+}
+
+.nutrition-percent-chart svg {
+    width: 100%;
+    height: 210px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #f8fbfa 0%, #eef5f3 100%);
+}
+
+.nutrition-percent-chart polyline {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.nutrition-daily-line {
+    stroke: #23776e;
+    stroke-width: 2.2;
+}
+
+.nutrition-average-line {
+    stroke: #6f55aa;
+    stroke-width: 2;
+}
+
+.nutrition-goal-line {
+    stroke: #a26a16;
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+    vector-effect: non-scaling-stroke;
+}
+
+.nutrition-point {
+    fill: #23776e;
+    stroke: #ffffff;
+    stroke-width: 0.8;
+    vector-effect: non-scaling-stroke;
+}
+
+.nutrition-point--partial {
+    fill: #ffffff;
+    stroke: #d28722;
+    stroke-width: 1.5;
+}
+
+.nutrition-axis-top,
+.nutrition-axis-goal {
+    position: absolute;
+    left: 0;
+    color: #71807d;
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+.nutrition-axis-top {
+    top: 0;
+}
+
+.nutrition-axis-goal {
+    top: 34%;
+    color: #8b641f;
+}
+
+.nutrition-trend-labels {
+    display: grid;
+    gap: 2px;
+    margin-top: 7px;
+}
+
+.nutrition-trend-labels span,
+.nutrition-trend-labels strong,
+.nutrition-trend-labels small,
+.nutrition-trend-labels em {
+    display: block;
+    min-width: 0;
+    text-align: center;
+}
+
+.nutrition-trend-labels strong {
+    color: #22302d;
+    font-size: 0.7rem;
+}
+
+.nutrition-trend-labels small {
+    color: #71807d;
+    font-size: 0.62rem;
+}
+
+.nutrition-trend-labels em {
+    margin-top: 2px;
+    color: #9a681a;
+    font-size: 0.58rem;
+    font-style: normal;
+    font-weight: 750;
+}
+
+.nutrition-trend-labels .is-missing strong {
+    color: #97a29f;
+}
+
+.nutrition-trend-summary {
+    margin: 16px 0 0;
+    color: #1f302d;
+    font-weight: 850;
+}
+
+.nutrition-trend-note {
+    margin: 6px 0 0;
+    color: #66736f;
+    font-size: 0.82rem;
+    line-height: 1.45;
 }
 
 .fluid-summary-panel {
@@ -3065,10 +3229,20 @@ h1 {
     }
 
     .nutrition-panel,
+    .nutrition-trend-grid,
     .fluid-summary-panel,
     .activity-panel {
         grid-column: auto;
         grid-row: auto;
+    }
+
+    .nutrition-trend-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nutrition-trend-labels strong,
+    .nutrition-trend-labels em {
+        display: none;
     }
 
     .fluid-summary-content {
