@@ -1,0 +1,15 @@
+{
+  "name": "daily-vitals-e2e",
+  "private": true,
+  "scripts": {
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "test:e2e": "cypress run"
+  },
+  "devDependencies": {
+    "cypress": "15.19.0"
+  },
+  "allowScripts": {
+    "cypress@15.19.0": true
+  }
+}
