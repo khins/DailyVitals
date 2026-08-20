@@ -2,12 +2,26 @@
 
 ## Current State
 
-The repository currently relies primarily on build validation and manual workflow checks. There is no dedicated automated test project in the solution yet. This is the largest opportunity for strengthening reliability and portfolio evidence.
+The repository includes a focused Cypress end-to-end suite for synthetic Demo Mode browser journeys. Unit, integration, and Blazor component test projects remain future work.
 
 The minimum validation for changes is:
 
 ```powershell
 dotnet build DailyVitals.slnx
+```
+
+Run the complete browser suite, including an isolated build and Demo Mode server:
+
+```powershell
+.\tools\run-cypress.ps1
+```
+
+To run Cypress against an already-running app, set its URL and call npm directly:
+
+```powershell
+$env:ELECTRON_RUN_AS_NODE = $null
+$env:CYPRESS_BASE_URL = "http://127.0.0.1:5085"
+npm run test:e2e
 ```
 
 For web-only changes when the normal output is locked:
