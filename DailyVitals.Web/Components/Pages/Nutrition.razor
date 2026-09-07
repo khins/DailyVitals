@@ -118,7 +118,7 @@
                 <div>
                     <span class="status-dot"></span>
                     <strong>Today: @TodaySummary.PhosphorusMg mg net phosphorus</strong>
-                    <p>@TodaySummary.Entries food @(TodaySummary.Entries == 1 ? "entry" : "entries") logged for @DateTime.Today.ToString("M/d/yyyy").</p>
+                    <p>@TodaySummary.Entries food @(TodaySummary.Entries == 1 ? "entry" : "entries") logged for @LoginSession.CurrentLocalTime.Date.ToString("M/d/yyyy").</p>
                 </div>
                 <div>
                     <span>Calories</span>
@@ -133,7 +133,7 @@
                         <div class="card-heading">
                             <div>
                                 <span>Today's Totals</span>
-                                <h2>@DateTime.Today.ToString("MMMM d, yyyy")</h2>
+                                <h2>@LoginSession.CurrentLocalTime.Date.ToString("MMMM d, yyyy")</h2>
                             </div>
                             <strong>@TodaySummary.Entries entries</strong>
                         </div>
@@ -322,7 +322,7 @@
                     <div class="card-heading">
                         <div>
                             <span>Today's Foods</span>
-                            <h2>@DateTime.Today.ToString("MMMM d, yyyy")</h2>
+                            <h2>@LoginSession.CurrentLocalTime.Date.ToString("MMMM d, yyyy")</h2>
                         </div>
                         <strong>@TodayEntries.Count entries</strong>
                     </div>
@@ -347,7 +347,7 @@
                     <div class="card-heading">
                         <div>
                             <span>Today's Foods</span>
-                            <h2>@DateTime.Today.ToString("MMMM d, yyyy")</h2>
+                            <h2>@LoginSession.CurrentLocalTime.Date.ToString("MMMM d, yyyy")</h2>
                         </div>
                         <strong>@TodayEntries.Count entries</strong>
                     </div>
@@ -446,7 +446,7 @@
                     }
                     else
                     {
-                        @RenderFoodTable(PagedHistory, includeServing: false, includeActions: true)
+                        @RenderFoodTable(PagedHistory, includeServing: false, includeActions: true, includeAddToToday: true)
                         @RenderHistoryPager()
                     }
                 </article>
@@ -472,6 +472,11 @@
                             <strong>@FilteredHistory.Count entries</strong>
                         </div>
 
+                        @if (!string.IsNullOrWhiteSpace(_message))
+                        {
+                            <div class="@_messageClass" role="status">@_message</div>
+                        }
+
                         <div class="data-table-wrap nutrition-history-modal-table">
                             <table class="data-table nutrition-history-table">
                                 <thead>
@@ -490,6 +495,7 @@
                                         }
                                         <th>Serving</th>
                                         <th>Actions</th>
+                                        <th>Add to Today</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -511,6 +517,9 @@
                                             <td>@DisplayValue(item.ServingDescription)</td>
                                             <td>
                                                 <button type="button" class="secondary-link compact-action" @onclick="() => RequestDeleteEntry(item)" @onclick:stopPropagation="true" disabled="@LoginSession.IsDemo">Delete</button>
+                                            </td>
+                                            <td>
+                                                @RenderAddToTodayButton(item)
                                             </td>
                                         </tr>
                                     }
@@ -682,7 +691,7 @@
     {
         get
         {
-            var historyStart = DateTime.Today.AddMonths(-_historyRangeMonths);
+            var historyStart = LoginSession.CurrentLocalTime.Date.AddMonths(-_historyRangeMonths);
             var rangeHistory = _history.Where(x => x.ConsumedAt.Date >= historyStart).ToList();
 
             if (string.IsNullOrWhiteSpace(_searchText))
@@ -708,11 +717,11 @@
 
     private List<FoodPhosphorusIntake> TodayEntries =>
         _history
-            .Where(x => x.ConsumedAt.Date == DateTime.Today)
+            .Where(x => x.ConsumedAt.Date == LoginSession.CurrentLocalTime.Date)
             .OrderByDescending(x => x.ConsumedAt)
             .ToList();
 
-    private NutritionDaySummary TodaySummary => BuildDaySummary(DateTime.Today, TodayEntries);
+    private NutritionDaySummary TodaySummary => BuildDaySummary(LoginSession.CurrentLocalTime.Date, TodayEntries);
 
     private string DeleteEntrySummary =>
         _pendingDeleteEntry is null
@@ -723,7 +732,7 @@
         Enumerable.Range(0, 7)
             .Select(offset =>
             {
-                var date = DateTime.Today.AddDays(-offset);
+                var date = LoginSession.CurrentLocalTime.Date.AddDays(-offset);
                 var entries = _history.Where(x => x.ConsumedAt.Date == date).ToList();
                 return BuildDaySummary(date, entries);
             })
@@ -985,14 +994,14 @@
 
     private bool HasEntriesOlderThan(int months)
     {
-        var cutoff = DateTime.Today.AddMonths(-months);
+        var cutoff = LoginSession.CurrentLocalTime.Date.AddMonths(-months);
         return _history.Any(x => x.ConsumedAt.Date < cutoff);
     }
 
     private int GetHistoryRangeCount(int months)
     {
         var rangeMonths = months is 6 or 12 ? months : 3;
-        var cutoff = DateTime.Today.AddMonths(-rangeMonths);
+        var cutoff = LoginSession.CurrentLocalTime.Date.AddMonths(-rangeMonths);
         return _history.Count(x => x.ConsumedAt.Date >= cutoff);
     }
 
@@ -1255,6 +1264,63 @@
         }
     }
 
+    private void AddToToday(FoodPhosphorusIntake item)
+    {
+        if (LoginSession.IsDemo)
+        {
+            ShowError(DemoModeGuard.ReadOnlyMessage);
+            return;
+        }
+
+        if (!LoginSession.PersonId.HasValue || item.PersonId != LoginSession.PersonId.Value)
+        {
+            ShowError("This food entry is not available for the current person.");
+            return;
+        }
+
+        var consumedAt = LoginSession.CurrentLocalTime;
+        try
+        {
+            FoodService.Insert(
+                personId: LoginSession.PersonId.Value,
+                foodName: item.FoodName,
+                phosphorusMg: item.PhosphorusMg,
+                calories: item.Calories,
+                sodiumMg: item.SodiumMg,
+                proteinG: item.ProteinG,
+                potassiumMg: item.PotassiumMg,
+                fluidMl: item.FluidMl,
+                binders: item.Binders,
+                consumedAt: consumedAt,
+                notes: item.Notes,
+                servingDescription: item.ServingDescription,
+                estimatedByAi: item.EstimatedByAi,
+                aiProvider: item.AiProvider,
+                aiConfidence: item.AiConfidence,
+                sourceNotes: item.SourceNotes,
+                enteredBy: LoginSession.UserName ?? string.Empty,
+                mealType: item.MealType);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Adding a nutrition history entry to today failed.");
+            ShowError("Food could not be added to today. Please try again.");
+            return;
+        }
+
+        try
+        {
+            LoadHistory();
+            RefreshSelectedDayTotal();
+            ShowSuccess($"{item.FoodName} added to today's foods at {consumedAt:h:mm tt}.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Nutrition history refresh failed after adding food to today.");
+            ShowError("Food was added to today, but the list could not refresh. Reload the page to see it.");
+        }
+    }
+
     private void SaveFoodNotesFor(FoodPhosphorusIntake item)
     {
         var profileId = item.FoodPhosphorusFoodId ?? FoodService.EnsureFoodProfileForIntake(item);
@@ -1403,7 +1469,9 @@
             Binders = entries.Sum(x => x.Binders)
         };
 
-    private RenderFragment RenderFoodTable(IReadOnlyList<FoodPhosphorusIntake> entries, bool includeServing, bool includeActions) => @<div class="data-table-wrap nutrition-table-wrap">
+    private RenderFragment RenderAddToTodayButton(FoodPhosphorusIntake item) => @<button type="button" class="secondary-link compact-action" aria-label="@($"Add {item.FoodName} to today's foods")" @onclick="() => AddToToday(item)" @onclick:stopPropagation="true" disabled="@LoginSession.IsDemo">Add to Today</button>;
+
+    private RenderFragment RenderFoodTable(IReadOnlyList<FoodPhosphorusIntake> entries, bool includeServing, bool includeActions, bool includeAddToToday = false) => @<div class="data-table-wrap nutrition-table-wrap">
         <table class="data-table">
             <thead>
                 <tr>
@@ -1426,6 +1494,10 @@
                     @if (includeActions)
                     {
                         <th>Actions</th>
+                    }
+                    @if (includeAddToToday)
+                    {
+                        <th>Add to Today</th>
                     }
                 </tr>
             </thead>
@@ -1454,6 +1526,10 @@
                             <td>
                                 <button type="button" class="secondary-link compact-action" @onclick="() => RequestDeleteEntry(item)" @onclick:stopPropagation="true" disabled="@LoginSession.IsDemo">Delete</button>
                             </td>
+                        }
+                        @if (includeAddToToday)
+                        {
+                            <td>@RenderAddToTodayButton(item)</td>
                         }
                     </tr>
                 }
