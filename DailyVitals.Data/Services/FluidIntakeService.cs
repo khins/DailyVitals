@@ -1,6 +1,7 @@
 using DailyVitals.Data.Configuration;
 using DailyVitals.Domain.Models;
 using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 
@@ -262,7 +263,9 @@ namespace DailyVitals.Data.Services
             cmd.Parameters.AddWithValue("entered_amount", enteredAmount);
             cmd.Parameters.AddWithValue("entered_unit", enteredUnit);
             cmd.Parameters.AddWithValue("beverage_name", beverageName);
-            cmd.Parameters.AddWithValue("notes", (object?)notes ?? DBNull.Value);
+            // The audit INSERT uses notes only in jsonb_build_object, which cannot
+            // infer a PostgreSQL type for a null parameter.
+            cmd.Parameters.Add("notes", NpgsqlDbType.Text).Value = (object?)notes ?? DBNull.Value;
         }
 
     }
