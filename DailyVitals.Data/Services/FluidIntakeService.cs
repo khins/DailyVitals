@@ -22,6 +22,16 @@ namespace DailyVitals.Data.Services
             conn.Open();
             using var transaction = conn.BeginTransaction();
 
+            var id = Insert(conn, transaction, personId, consumedAt, fluidMl, enteredAmount, enteredUnit, beverageName, notes, enteredBy);
+            transaction.Commit();
+            return id;
+        }
+
+        internal static long Insert(NpgsqlConnection conn, NpgsqlTransaction transaction,
+            long personId, DateTime consumedAt, int fluidMl, decimal enteredAmount,
+            string enteredUnit, string beverageName, string? notes, string enteredBy)
+        {
+
             const string insertSql = @"
                 INSERT INTO public.fluid_intake (
                     person_id,
@@ -105,7 +115,6 @@ namespace DailyVitals.Data.Services
             logCommand.Parameters.AddWithValue("entered_by", enteredBy);
             logCommand.ExecuteNonQuery();
 
-            transaction.Commit();
             return fluidIntakeId;
         }
 
