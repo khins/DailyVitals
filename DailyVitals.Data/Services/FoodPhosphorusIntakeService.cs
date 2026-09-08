@@ -27,10 +27,17 @@ namespace DailyVitals.Data.Services
             string? aiConfidence,
             string? sourceNotes,
             string enteredBy,
-            string? mealType = null)
+            string? mealType = null,
+            decimal? fluidEnteredAmount = null,
+            string? fluidEnteredUnit = null)
         {
             using var conn = DbConnectionFactory.Create();
             conn.Open();
+            using var transaction = conn.BeginTransaction();
+            if (fluidEnteredAmount.HasValue &&
+                (fluidEnteredAmount <= 0 || fluidMl is null or <= 0 ||
+                 (fluidEnteredUnit != "fl oz" && fluidEnteredUnit != "mL")))
+                throw new ArgumentException("A positive fluid amount and valid unit are required.");
             var foodProfileId = UpsertFoodProfile(
                 conn,
                 personId,
@@ -156,7 +163,12 @@ namespace DailyVitals.Data.Services
             if (result is null or DBNull)
                 throw new Exception("Food phosphorus intake insert failed. No ID returned.");
 
-            return Convert.ToInt64(result);
+            var id = Convert.ToInt64(result);
+            if (fluidEnteredAmount.HasValue)
+                FluidIntakeService.Insert(conn, transaction, personId, consumedAt, fluidMl!.Value,
+                    fluidEnteredAmount.Value, fluidEnteredUnit!, foodName, null, enteredBy);
+            transaction.Commit();
+            return id;
         }
 
         public void Update(

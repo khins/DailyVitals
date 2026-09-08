@@ -532,6 +532,46 @@
                 </div>
             }
 
+            @if (_pendingAddEntry is not null)
+            {
+                <div class="modal-backdrop" role="presentation" @onclick="CancelAddToToday" @onkeydown="HandleAddKeyDown">
+                    <section class="info-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="nutrition-add-title" @onclick:stopPropagation="true">
+                        <div class="info-modal-header">
+                            <h2 id="nutrition-add-title">Add to Today?</h2>
+                            <button type="button" class="modal-close-button" aria-label="Cancel adding food" @onclick="CancelAddToToday">×</button>
+                        </div>
+                        <p class="confirm-modal-detail">@_pendingAddEntry.FoodName</p>
+                        <p>The same serving and nutrition values will be added with the current time.</p>
+                        <EditForm Model="this" OnSubmit="ConfirmAddToToday">
+                            <label><input type="checkbox" @bind="_addFluid" /> Also log fluid intake</label>
+                            @if (_addFluid)
+                            {
+                                <div class="form-field">
+                                    <label for="nutrition-fluid-amount">Amount consumed</label>
+                                    <input id="nutrition-fluid-amount" class="form-input" type="number" min="0.01" max="1000000" step="any" required @bind="_addFluidAmount" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="nutrition-fluid-unit">Unit</label>
+                                    <select id="nutrition-fluid-unit" class="form-input" @bind="_addFluidUnit">
+                                        <option value="fl oz">fl oz</option>
+                                        <option value="mL">mL</option>
+                                    </select>
+                                </div>
+                                <p>Logs @_pendingAddEntry.FoodName in today's Fluid Intake too.</p>
+                            }
+                            @if (_addError is not null)
+                            {
+                                <p role="alert">@_addError</p>
+                            }
+                            <div class="confirm-modal-actions">
+                                <button type="button" class="secondary-link" @onclick="CancelAddToToday">Cancel</button>
+                                <button type="submit" class="primary-action">Confirm Add to Today</button>
+                            </div>
+                        </EditForm>
+                    </section>
+                </div>
+            }
+
             @if (_pendingDeleteEntry is not null)
             {
                 <div class="modal-backdrop" role="presentation" @onclick="CancelDelete">
@@ -1264,8 +1304,56 @@
         }
     }
 
+    private FoodPhosphorusIntake? _pendingAddEntry;
+    private bool _addFluid;
+    private decimal? _addFluidAmount;
+    private string _addFluidUnit = "fl oz";
+    private string? _addError;
+    private bool _restoreHistoryModal;
+
     private void AddToToday(FoodPhosphorusIntake item)
     {
+        if (LoginSession.IsDemo || item.PersonId != LoginSession.PersonId) return;
+        _pendingAddEntry = item;
+        _addFluid = item.FluidMl is > 0;
+        _addFluidUnit = _addFluid ? "mL" : "fl oz";
+        _addFluidAmount = _addFluid ? item.FluidMl : null;
+        _addError = null;
+        _restoreHistoryModal = _showHistoryModal;
+        _showHistoryModal = false;
+    }
+
+    private void CancelAddToToday()
+    {
+        _pendingAddEntry = null;
+        _showHistoryModal = _restoreHistoryModal;
+    }
+
+    private void HandleAddKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") CancelAddToToday();
+    }
+
+    private void ConfirmAddToToday()
+    {
+        var item = _pendingAddEntry;
+        if (item is null) return;
+        int? fluidMl = item.FluidMl;
+        if (_addFluid)
+        {
+            if (_addFluidAmount is null or <= 0 or > 1000000)
+            {
+                _addError = "Enter an amount greater than zero and no more than 1,000,000.";
+                return;
+            }
+            fluidMl = (int)Math.Round(_addFluidAmount.Value *
+                (_addFluidUnit == "fl oz" ? 29.5735295625m : 1m), 0, MidpointRounding.AwayFromZero);
+            if (fluidMl <= 0)
+            {
+                _addError = "Enter an amount of at least 1 mL.";
+                return;
+            }
+        }
         if (LoginSession.IsDemo)
         {
             ShowError(DemoModeGuard.ReadOnlyMessage);
@@ -1289,7 +1377,7 @@
                 sodiumMg: item.SodiumMg,
                 proteinG: item.ProteinG,
                 potassiumMg: item.PotassiumMg,
-                fluidMl: item.FluidMl,
+                fluidMl: fluidMl,
                 binders: item.Binders,
                 consumedAt: consumedAt,
                 notes: item.Notes,
@@ -1299,20 +1387,23 @@
                 aiConfidence: item.AiConfidence,
                 sourceNotes: item.SourceNotes,
                 enteredBy: LoginSession.UserName ?? string.Empty,
-                mealType: item.MealType);
+                mealType: item.MealType,
+                fluidEnteredAmount: _addFluid ? _addFluidAmount : null,
+                fluidEnteredUnit: _addFluid ? _addFluidUnit : null);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Adding a nutrition history entry to today failed.");
-            ShowError("Food could not be added to today. Please try again.");
+            _addError = "Nothing was added. Please try again.";
             return;
         }
 
+        _pendingAddEntry = null;
         try
         {
             LoadHistory();
             RefreshSelectedDayTotal();
-            ShowSuccess($"{item.FoodName} added to today's foods at {consumedAt:h:mm tt}.");
+            ShowSuccess($"{item.FoodName} added to today's foods{(_addFluid ? " and fluid intake" : "")} at {consumedAt:h:mm tt}.");
         }
         catch (Exception ex)
         {
