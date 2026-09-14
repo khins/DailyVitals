@@ -1,0 +1,103 @@
+@using DailyVitals.Data.Services
+@using DailyVitals.Domain.Models
+@using DailyVitals.Web.Services
+@using System.Text.Json
+@inject SavedMealService Meals
+@inject LocalLoginSession Session
+@inject ILogger<SavedMeals> Logger
+
+<article class="dashboard-card">
+    <div class="card-heading"><div><span>Nutrition</span><h2>Saved meals</h2></div>
+        <button type="button" class="secondary-link" disabled="@(Session.IsDemo || Entries.Count == 0)" @onclick="Open">Save as meal</button>
+    </div>
+    <p>Keep a group of foods, such as your usual breakfast, as a meal template.</p>
+    @if (!string.IsNullOrEmpty(_message)) { <p role="status">@_message</p> }
+    @if (_meals.Count == 0 && string.IsNullOrEmpty(_message)) { <p>No saved meals yet.</p> }
+    @foreach (var meal in _meals)
+    {
+        <details @key="meal.SavedMealId">
+            <summary>@meal.Name · @meal.MealType</summary>
+            <ul>@foreach (var food in ReadFoods(meal)) { <li>@food.GetProperty("food_name").GetString() — @(food.GetProperty("serving_description").GetString() ?? "Serving not specified")</li> }</ul>
+        </details>
+    }
+</article>
+
+@if (_open)
+{
+    <div class="modal-backdrop" @onkeydown="OnKeyDown">
+        <section class="info-modal nutrition-history-modal" role="dialog" aria-modal="true" aria-labelledby="saved-meal-title" style="max-height:90vh;overflow-y:auto">
+            <div class="info-modal-header"><h2 id="saved-meal-title">Save as meal</h2><button type="button" class="modal-close-button" aria-label="Close save meal" @onclick="Close">×</button></div>
+            <div class="field-group"><label for="meal-name">Meal name</label><input @ref="_nameInput" id="meal-name" class="form-input" maxlength="100" @bind="_name" placeholder="My usual breakfast" /></div>
+            <div class="field-group"><label for="meal-type">Meal type</label><select id="meal-type" class="form-input" @bind="_type"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></div>
+            <div class="field-group"><label for="meal-food-date">Foods logged on</label><input id="meal-food-date" class="form-input" type="date" @bind="_date" /></div>
+            <fieldset><legend>Select foods</legend>
+                @foreach (var food in Entries.Where(x => x.ConsumedAt.Date == _date.Date))
+                {
+                    <label style="display:block;padding:8px 0" @key="food.FoodPhosphorusIntakeId">
+                        <input type="checkbox" checked="@_selected.Contains(food.FoodPhosphorusIntakeId)" @onchange="e => Select(food, e.Value is true)" />
+                        @food.FoodName — @(food.ServingDescription ?? "Serving not specified") · @food.MealType · @food.ConsumedAt.ToString("h:mm tt")
+                    </label>
+                }
+                @if (!Entries.Any(x => x.ConsumedAt.Date == _date.Date)) { <p>No foods logged on this date.</p> }
+            </fieldset>
+            <p>@SelectedFoods.Count selected foods. You can select foods from more than one date.</p>
+            @if (SelectedFoods.Count > 0)
+            {
+                <ul>@foreach (var food in SelectedFoods) { <li>@food.FoodName — @(food.ServingDescription ?? "Serving not specified") <button type="button" class="secondary-link" aria-label="@($"Remove {food.FoodName} from meal selection")" @onclick="() => Select(food, false)">Remove</button></li> }</ul>
+            }
+            <p>Food servings, nutrient values, and estimate sources are saved. Your diary will not change. Binder use is not included.</p>
+            @if (!string.IsNullOrEmpty(_error)) { <p role="alert">@_error</p> }
+            <div class="confirm-modal-actions"><button type="button" @onclick="Close">Cancel</button><button type="button" disabled="@(SelectedFoods.Count == 0 || _saving)" @onclick="Save">Save meal</button></div>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<FoodPhosphorusIntake> Entries { get; set; } = [];
+    private List<SavedMeal> _meals = [];
+    private readonly HashSet<long> _selected = [];
+    private List<FoodPhosphorusIntake> SelectedFoods => Entries.Where(x => _selected.Contains(x.FoodPhosphorusIntakeId)).ToList();
+    private bool _open, _saving, _focus;
+    private ElementReference _nameInput;
+    private string _name = "", _type = "Breakfast", _error = "", _message = "";
+    private DateTime _date;
+    protected override void OnInitialized() => Load();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focus) { _focus = false; await _nameInput.FocusAsync(); }
+    }
+    private static List<JsonElement> ReadFoods(SavedMeal meal) => JsonSerializer.Deserialize<List<JsonElement>>(meal.FoodsJson) ?? [];
+    private void Load()
+    {
+        if (Session.IsDemo || !Session.PersonId.HasValue) return;
+        try { _meals = Meals.GetMeals(Session.PersonId.Value); }
+        catch (Exception ex) { Logger.LogError(ex, "Loading saved meals failed."); _message = "Saved meals are unavailable. Please try again later."; }
+    }
+    private void Open()
+    {
+        if (Session.IsDemo) return;
+        _name = ""; _type = "Breakfast"; _error = ""; _selected.Clear();
+        _date = Entries.Count > 0 ? Entries.Max(x => x.ConsumedAt).Date : Session.CurrentLocalTime.Date;
+        _open = true; _focus = true;
+    }
+    private void Close() => _open = false;
+    private void OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e) { if (e.Key == "Escape") Close(); }
+    private void Select(FoodPhosphorusIntake food, bool selected)
+    {
+        if (selected) _selected.Add(food.FoodPhosphorusIntakeId); else _selected.Remove(food.FoodPhosphorusIntakeId);
+    }
+    private void Save()
+    {
+        if (Session.IsDemo || !Session.PersonId.HasValue || _saving) return;
+        _saving = true;
+        try
+        {
+            Meals.Save(Session.PersonId.Value, _name, _type, SelectedFoods.Select(x => x.FoodPhosphorusIntakeId).ToArray());
+            _open = false; _message = "Meal saved. Your diary has not changed."; _selected.Clear(); Load();
+        }
+        catch (ArgumentException ex) { _error = ex.Message; }
+        catch (Npgsql.PostgresException ex) when (ex.SqlState == "23505") { _error = "A meal with this name already exists. Choose another name."; }
+        catch (Exception ex) { Logger.LogError(ex, "Saving meal failed."); _error = "Could not save this meal. Please try again."; }
+        finally { _saving = false; }
+    }
+}

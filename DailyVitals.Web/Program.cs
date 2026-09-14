@@ -81,6 +81,7 @@ builder.Services.AddScoped<BloodGlucoseService>();
 builder.Services.AddScoped<WeightService>();
 builder.Services.AddScoped<ExerciseService>();
 builder.Services.AddScoped<FoodPhosphorusIntakeService>();
+builder.Services.AddScoped<SavedMealService>();
 builder.Services.AddScoped<FoodPhosphorusEstimateService>();
 builder.Services.AddScoped<NutritionCoachService>();
 builder.Services.AddScoped<FluidIntakeService>();
